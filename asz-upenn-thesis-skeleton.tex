@@ -1,0 +1,201 @@
+%% Antal Spector-Zabusky's UPenn thesis formatting skeleton, 2021
+%%
+%% Feel free to use any of this as necessary; you can contact me about it at
+%% <antal.b.sz@gmail.com>.  This isn't all the styling in my thesis; it's mostly
+%% limited to things that help you satisfy the formatting guidelines instead of
+%% style choices.  It does not contain styling for things I didn't include, such
+%% as a dedication or an index.  I wrote this for a CS thesis, so some details
+%% may be specific to that.
+%%
+%% This should follow the formatting guidelines from
+%% <https://guides.library.upenn.edu/dissertation_manual/formatting> as of
+%% Spring 2021.
+%%
+%% Explanatory comments are annotated with ASZ; you can delete them if you
+%% want.
+%%
+%% Good luck!
+
+%% ASZ: 12 point font, single-sided (don't alternate left/right margins), and
+%% sensible defaults.
+\documentclass[12pt,oneside]{amsbook}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% ASZ: My usual "make things look nice and behave well" block
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{accsupp}
+\usepackage{etoolbox}
+\usepackage{newunicodechar}
+\usepackage[dvipsnames,svgnames,x11names]{xcolor}
+
+%% ASZ: `amsbook` didn't style `\paragraph`s appropriately
+\patchcmd{\paragraph}{\normalfont}{\itshape}
+  {} % Success
+  {\GenericError
+     {} % Continuation for \MessageBreak (unused)
+     {Could not redefine \string\paragraph\space to be italic}
+     {(This is a hack in the preamble.)} % Where to look for more info?
+     {I tried to replace \string\normalfont\space with \string\itshape, but I
+      couldn't.}}
+
+%% ASZ: Change the spacing in the list of figures – I don't know if you need
+%% this or not
+\makeatletter
+\patchcmd{\l@figure}{1.5pc}{2.25pc}
+  {} % Success
+  {\GenericError
+     {} % Continuation for \MessageBreak (unused)
+     {Could not fix the spacing in the list of figures}
+     {(This is a hack in the preamble.)} % Where to look for more info?
+     {I tried to replace the 1.5pc figure number--figure description separation
+      with a 2.25pc separation in \string\l@figure\space, but I couldn't.}}
+
+%% ASZ: I like it when tables of contents know where they are
+\patchcmd{\@starttoc}{\ifx\contentsname}{\iffalse}
+  {} % Success
+  {\GenericError
+     {} % Continuation for \MessageBreak (unused)
+     {Could not add a line to the table of contents for itself}
+     {(This is a hack in the preamble.)} % Where to look for more info?
+     {I tried to replace the check in \string\@starttoc\space that suppresses a
+      table of contents entry for the table of contents, but I couldn't.}}
+
+%% ASZ: The other half of the above
+\patchcmd{\@starttoc}{\@tocwrite}{\phantomsection\@tocwrite}
+  {} % Success
+  {\GenericError
+     {} % Continuation for \MessageBreak (unused)
+     {Could not add link targets to the table of contents/front matter lists}
+     {(This is a hack in the preamble.)} % Where to look for more info?
+     {I tried to add \string\phantomsection\space to \string\@starttoc\space so
+      that it would generate hyperlink targets, but I couldn't.}}
+\makeatother
+
+%% ASZ: Set the page layout correctly: 1.5" margins on the left, 1" margins
+%% everywhere else, page numbers count
+\usepackage{fullpage}
+\usepackage[margin=1in,left=1.5in,includeheadfoot]{geometry}
+
+%% ASZ: Make footnote numbers run continuously, rather than restart at the start
+%% of every chapter; this is required by the formatting guidelines
+\counterwithout*{footnote}{chapter}
+
+%% ASZ: I found these to be much clearer
+\numberwithin{section}{chapter}
+\numberwithin{figure}{chapter}
+\numberwithin{equation}{chapter}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% ASZ: This is a package for generating and styling the various "preliminary
+%% pages": title page, copyright page, and abstract
+\usepackage{upenn-dissertation-preliminary-pages} % local
+\NoSignatureLines %% ASZ: For COVID – turns off adding lines on the title page
+                  %% for people to sign.  The default is \YesSignatureLines.
+\SingleSpaceAbstract %% ASZ: I think it looks better than a double-spaced
+                     %% abstract, although in deference to the guidelines,
+                     %% \DoubleSpaceAbstract is the default.
+
+%% ASZ: Fill out your own information here :-)  Some notes:
+%%
+%% * You need to specify your advisor, the graduate chair, and your committee
+%%   members, even if there's overlap between these groups.
+%%
+%%   * Your external committee member(s) need both their title and their
+%%   affiliation; below, just imagine that everyone but Gödel works at Penn.
+%%
+%% * Note that some of the faculty involved for you may be assistant or
+%%   associate professors (but I couldn't bring myself to apply that title to
+%%   any of these luminaries).  I don't believe extra titles (e.g., "ENIAC
+%%   President's Distinguished Professor") are necessary.
+%%
+%% * Only one committee chair is supported; you'll need to modify
+%%   `upenn-dissertation-preliminary-pages.sty` (or email me about it) to change
+%%   that.
+%%
+%% * When rendering the title page, your chair (if present) comes first,
+%%   followed by the rest of the committee in the same order as in the TeX.
+%%
+%% * Using a Creative Commons license is optional, and thus so is specifying
+%%   `\creativecommons`.  If you want to use one, choose from the licenses
+%%   available at <https://creativecommons.org/licenses/>, perhaps by using the
+%%   license chooser at <https://creativecommons.org/choose/>.  You'll have to
+%%   copy the name of the  license (including the short string) and the URL
+%%   separately, as you can see with the text below (the license I used); I
+%%   didn't build a LaTeX Creative Commons license parser (yet? :-)).
+\title{On Improving Computer Science}
+\author{Your Name}
+\graduategroup{Computer and Information Science}
+\graduationyear{2021}
+\advisor{Alan Turing}{Professor of Computer and Information Science}
+\graduatechair{Ada Lovelace}{Professor of Computer and Information Science}
+\committeechair{Ada Lovelace}{Professor of Computer and Information Science}
+\committeemember{Alonzo Church}{Professor of Computer and Information Science}
+\committeemember{Grace Hopper}{Professor of Computer and Information Science}
+\committeemember{Kurt Gödel}{Professor of Mathematics, House of Wisdom}
+\creativecommons
+  {Attribution-Non\-Commercial-Share\-Alike 4.0 International (CC BY-NC-SA 4.0)}
+  {https://creativecommons.org/licenses/by-nc-sa/4.0/}
+
+\begin{document}
+
+%% ASZ: Roman page numbers
+\frontmatter
+
+\maketitle
+
+\copyrightpage
+
+\chapter*{Acknowledgments}
+\label{chap:acknowledgments}
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum
+dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,
+sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+%% ASZ: ... the rest of your acknowledgments go here ...
+
+%% ASZ: The `upenn-dissertation-preliminary-pages` package will correctly style
+%% this, including your thesis name, your name, and your advisor's name.
+\begin{abstract}{chap:abstract}
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+  incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+  nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+  consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+  cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+  proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+
+%% ASZ: Arabic page numbers
+\mainmatter
+
+\chapter{Introduction}
+\label{chap:introduction}
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum
+dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,
+sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+%% ASZ: ... the rest of your thesis goes here ...
+
+%% ASZ: I don't know that there are standards for the bibliography style; this
+%% is (roughly) what I happened to use.
+\bibliographystyle{plainnat}
+\bibliography{bibliography}
+  %% ASZ: AucTeX (the Emacs package for LaTeX I used) doesn't support a `.bib`
+  %% file and a `.tex` file with the same name
+
+\end{document}
