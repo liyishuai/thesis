@@ -1,0 +1,35 @@
+\RequirePackage{etoolbox}
+
+\colorlet{StringColor}{Blue}
+\colorlet{CommentColor}{Firebrick3}
+\colorlet{PragmaColor}{SteelBlue4}
+\colorlet{Keyword1Color}{violet}
+\colorlet{Keyword2Color}{Green}
+\colorlet{TacticColor}{Blue}
+\colorlet{TerminatorTacticColor}{Crimson}
+\colorlet{IteratorTacticColor}{DeepPink3}
+
+\newcommand*{\basecodestyle}{\ttfamily}
+\newcommand*{\codestyle}{\small\basecodestyle}
+\newcommand*{\footnotecodestyle}{\footnotesize\basecodestyle}
+
+\lstset{
+  basicstyle       = \codestyle,
+  showspaces       = false,
+  showstringspaces = false,
+  upquote          = true,
+  keepspaces       = true,
+  breaklines       = false,
+  columns          = fullflexible,
+  aboveskip        = \medskipamount,
+  %
+  stringstyle  = {\codestyle\color{StringColor}},
+  commentstyle = {\codestyle\itshape\color{CommentColor}}
+}
+
+\pretocmd{\@makefntext}{\lstset{basicstyle=\footnotecodestyle}}
+  {}
+  {\PackageError{lstparams}
+     {Could not set up footnote-sized code font}
+     {I either couldn't find the \protect\@makefntext\space command or
+      couldn't patch it.}}

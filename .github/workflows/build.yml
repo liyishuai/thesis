@@ -13,7 +13,7 @@ jobs:
           root_file: thesis.tex
           args: >
             -pdf -file-line-error -halt-on-error -interaction=nonstopmode
-            -jobname=docs/%A
+            -outdir=docs
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages

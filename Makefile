@@ -1,8 +1,6 @@
-all: thesis.pdf
-
-%.pdf: %.tex
+all:
 	latexmk -pdf -file-line-error -halt-on-error -interaction=nonstopmode \
-		-jobname=docs/%A $*
+		-outdir=docs
 
 clean:
-	latexmk -C thesis
+	latexmk -C -outdir=docs
