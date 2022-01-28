@@ -32,6 +32,18 @@
 \usepackage{newunicodechar}
 \usepackage[dvipsnames,svgnames,x11names]{xcolor}
 \usepackage{hyperref}
+\usepackage{xspace}
+\usepackage[
+  backend=biber]{biblatex}
+\addbibresource{bibliography.bib}
+
+\usepackage{draft} % local
+\newif\ifdraft\drafttrue
+\newnote{lys}{BrickRed}
+\newnote{bcp}{Chocolate}
+\newnote{sz}{violet}
+
+\newcommand{\http}{HTTP/1.1\xspace}
 
 %% ASZ: `amsbook` didn't style `\paragraph`s appropriately
 \patchcmd{\paragraph}{\normalfont}{\itshape}
@@ -128,19 +140,19 @@
 %%   copy the name of the  license (including the short string) and the URL
 %%   separately, as you can see with the text below (the license I used); I
 %%   didn't build a LaTeX Creative Commons license parser (yet? :-)).
-\title{On Improving Computer Science}
-\author{Your Name}
+\title{Language-Based Interactive Testing}
+\author{Yishuai Li}
 \graduategroup{Computer and Information Science}
-\graduationyear{2021}
-\advisor{Alan Turing}{Professor of Computer and Information Science}
-\graduatechair{Ada Lovelace}{Professor of Computer and Information Science}
-\committeechair{Ada Lovelace}{Professor of Computer and Information Science}
-\committeemember{Alonzo Church}{Professor of Computer and Information Science}
-\committeemember{Grace Hopper}{Professor of Computer and Information Science}
-\committeemember{Kurt Gödel}{Professor of Mathematics, House of Wisdom}
+\graduationyear{2022}
+\advisor{Benjamin C. Pierce}{Professor of Computer and Information Science}
+\graduatechair{Mayur Naik}{Professor of Computer and Information Science}
+\committeechair{Steve Zdancewic}{Professor of Computer and Information Science}
+\committeemember{Mayur Naik}{Professor of Computer and Information Science}
+\committeemember{Boon Thau Loo}{Professor of Computer and Information Science}
+\committeemember{John Hughes}{Professor of Computing Science, Chalmers University of Technology}
 \creativecommons
-  {Attribution-Non\-Commercial-Share\-Alike 4.0 International (CC BY-NC-SA 4.0)}
-  {https://creativecommons.org/licenses/by-nc-sa/4.0/}
+  {Attribution-Share\-Alike 4.0 International (CC BY-SA 4.0)}
+  {https://creativecommons.org/licenses/by-sa/4.0/}
 
 \begin{document}
 
@@ -183,19 +195,80 @@ sunt in culpa qui officia deserunt mollit anim id est laborum.
 \chapter{Introduction}
 \label{chap:introduction}
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum
-dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,
-sunt in culpa qui officia deserunt mollit anim id est laborum.
+The security and robustness of networked systems rest in large part on the
+correct behavior of various sorts of servers.  This can be validated either by
+full-blown verification or model checking against formal specifications, or
+less expensively by rigorous testing.
+
+Rigorous testing requires a rigorous specification of the protocol that we
+expect the server to obey.  Protocol specifications can be written as (i) a {\em
+  server model} that describes {\em how} valid servers should handle messages,
+or (ii) a {\em property} that defines {\em what} server behaviors are valid.
+From these specifications, we can conduct (i) {\em model-based
+  testing}~\cite{broy2005model} or (ii) {\em property-based testing}~\cite{pbt},
+respectively.
+
+When testing server implementations against protocol specifications, one
+critical challenge is {\em nondeterminism}, which arises in two forms---we call
+them (1) {\em internal nondeterminism} and (2) {\em network nondeterminism}:
+
+(1) {\em Within} the server, correct behavior may be \mbox{underspecified}.
+For example, to handle HTTP conditional requests \cite{rfc7232}, a server
+generates strings called entity tags (ETags), but the RFC specification does
+not limit {what} values these ETags should be.  Thus, to create test
+messages containing ETags, the tester must remember and reuse the ETags it
+has been given in previous messages from the server.
+
+(2) {\em Beyond} the server, messages and responses between the server and
+different clients might be delayed and reordered by the network and
+operating-system buffering.  If the tester cannot control how the execution
+environment reorders messages---{\it e.g.,} when testing over the Internet---it
+needs to specify what servers are valid as observed over the network.
+
+These sources of nondeterminism pose challenges in various aspects of testing network
+protocols: (i) The {\em validation logic} should accept various implementations,
+as long as the behavior is included in the specification's space of
+uncertainties; (ii) To capture bugs effectively, the {\em test harness} should
+generate test cases based on runtime observations; (iii) When {\em shrinking} a
+counterexample, the test harness should adjust the test cases based on the
+server's behavior, which might vary from one execution to another.
+
+To address these challenges, I introduce symbolic languages for writing
+specifications and representing test cases:
+
+(i) The specification is written as a reference implementation---a
+nondeterministic program that exhibits all possible behavior allowed by
+the protocol.  Inter-implementation and inter-execution uncertainties are
+represented by symbolic variables, and the space of nondeterministic behavior is
+defined by all possible assignments of the variables.
+
+The validation logic is derived from the reference implementation, by {\em
+  dualising} the server-side program into a client-side observer.
+
+(ii) Test generation heuristics are defined as computations from the observed
+trace (list of sent and received messages) to the next message to send.  I
+introduce a symbolic intermediate representation for specifying the relation
+between the next message and previous messages.
+
+(iii) The symbolic language for generating test cases also enables effective
+shrinking of test cases.  The test harness minimizes the counterexample by
+shrinking its symbolic representation.  When running the test with a shrunk
+input, the symbolic representations can be re-instantiated into request messages
+that reflect the original heuristics.
+
+\paragraph{Thesis claim}
+Symbolic abstract representation can address challenges in testing networked systems with uncertain behavior.
+Specifying protocols with symbolic reference implementation enables validating
+the system's behavior systematically.  Representing test input as abstract
+messages allows generating and shrinking interesting test cases.  Combining
+these methods result in a rigorous tester that can capture protocol violations
+effectively.
+
+This thesis is structured as follows:
 
 %% ASZ: ... the rest of your thesis goes here ...
 
-%% ASZ: I don't know that there are standards for the bibliography style; this
-%% is (roughly) what I happened to use.
-\bibliographystyle{plainnat}
-\bibliography{bibliography}
+\printbibliography
   %% ASZ: AucTeX (the Emacs package for LaTeX I used) doesn't support a `.bib`
   %% file and a `.tex` file with the same name
 
