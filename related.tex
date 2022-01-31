@@ -1,0 +1,52 @@
+\section{Specifying and Testing Protocols}
+Modelling languages for specifying protocols can be partitioned into three
+styles, according to \textcite{anand2013orchestrated}: (1) {\em Process-oriented}
+notations that describe the SUT's behavior in a procedural style, using various
+domain-specific languages like our interaction trees; (2) {\em State-oriented}
+notations that specify what behavior the SUT should exhibit in a given state,
+which includes variants of labelled transition systems (LTS); and (3) {\em
+  Scenario-oriented} notations that describe the expected behavior from an
+outside observer's point of view ({\it i.e.,} ``god's-eye view'').
+
+The area of model-based testing is well-studied, diverse, and difficult to
+navigate~\cite{anand2013orchestrated}.  Here we focus on techniques that have
+been practiced in testing real-world programs, which includes notations (1) and
+(2).  Notation (3) is infeasible for protocols with nontrivial nondeterminism,
+because the specification needs to define observer-side knowledge of the SUT's
+all possible internal states, making it complex to implement and hard to reason
+about, as shown in \autoref{fig:etag-tester}.
+
+Language of Temporal Ordering Specification (LOTOS)~\cite{Bolognesi1987} is the
+ISO standard for specifying OSI protocols.  It defines distributed concurrent
+systems as {\em processes} that interact via {\em channels}, and represents
+internal nondeterminism as choices among processes.
+
+Using a formal language strongly insired by LOTOS, \textcite{torxakis-dropbox}
+implemented a test generation tool for symbolic transition systems called
+TorXakis, which has been used for testing Dropbox~\cite{torxakis-dropbox}.
+
+TorXakis provides limited support for internal nondeterminism.  Unlike our
+testing framework that incorporates symbolic evalutation, TorXakis enumerates
+all possible values of internally generated data, until finding a corresponding
+case that matches the tester's observation.  This requires the server model to
+generate data within a reasonably small range, and thus cannot handle generic
+choices like HTTP entity tags, which can be arbitrary strings.
+
+\textcite{netsem} have developed rigorous specifications for transport-layer
+protocols TCP, UDP, and the Sockets API, and validated the specifications
+against mainstream implementations in FreeBSD, Linux, and WinXP.  Their
+specification represents internal nondeterminism as symbolic states of the
+model, which is then evaluated using a special-purpose symbolic model checker.
+They focused on developing a post-hoc specification that matches existing
+systems, and wrote a separate tool for generating test cases.
+
+\section{Reasoning about Network Delays}
+For property-based testing against distributed applications like Dropbox,
+\textcite{testing-dropbox} have introduced ``conjectured events'' to represent
+uploading and downloading events that nodes may perform at any time invisibly.
+
+\textcite{pkt-dyn} symbolised the time elapsed to transmit packets from one end
+to another, and developed a symbolic-execution-based tester that found
+transmission-related bugs in Linux TFTP upon certain network delays.  Their
+tester used a fixed trace of packets to interact with the server, and the
+generated test cases were the packets' delay time.

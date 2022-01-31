@@ -1,0 +1,34 @@
+During the testing practice in \autoref{chap:practices}, the tester's quality was
+evaluated by mutation testing, {\it i.e.} running the tester against buggy
+implementations to see if it rejects.  To formally prove that the tester is
+good, I develop a theory for reasoning on testers' good properties.
+
+{\em Interactive testing} is a process that reveals the SUT's interactions and
+determines whether it satisfies the specification.  There are two kinds of
+interactions: (1) {\em inputs} that the tester can specify, and (2) {\em
+  outputs} that are observed from the SUT.  In particular, when testing
+networked systems, the input is a message sent by the tester, and the output is
+a message received from the SUT.
+
+When viewing the SUT as a function from inputs to outputs, we can test the
+system by (1) providing an input, (2) get the output, and (3) validating the
+input-output pair.  This process is called {\em synchronous testing}.
+
+However, the nature of networked systems is that multiple messages might arrive
+at the system simultaneously, and a high-throughput system should handle the
+messages concurrently.  To check the system's validity upon concurrent inputs,
+the tester should send multiple messages, rather than executing ``one client at
+a time''.  This non-blocking process is called {\em asynchronous testing}.
+
+My goal is to formalise the techniques in \textcite{issta21} into a generic
+theory for asynchronous testing.
+
+A tester consists of two parts: (i) a test harness that interacts with the SUT
+and observes the interactions, and (ii) a validator that determines whether the
+observations satisfy the specification.
+
+The test harness needs to produce counterexamples effectively, and provide good
+coverage of test cases.  The goal is to locate unknown bugs within a fixed
+budget, which is more practical than theoretical, and will be discussed in
+\autoref{sec:harness}.  The test theory in this dissertation focuses on
+guaranteeing the soundness and completeness of the validator logic.

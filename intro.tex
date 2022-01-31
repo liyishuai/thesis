@@ -1,0 +1,120 @@
+We trust programs by testing them, but how do we trust our testers?
+
+Software engineering requires rigorous testing of rapidly evolving programs,
+which costs manpower comparable to developing the product itself.  To guarantee
+programs' compliance with the specification, we need testers that can tell
+compliant implementations from violating ones.
+
+\section{Interactive Testing}
+Suppose we want to test a web server that supports GET and PUT methods:
+\begin{lstlisting}[style=customcoq]
+  CoFixpoint server (data: key -> value) :=
+    request <- recv;;
+    match request with
+    | GET k   => send (data k);; server  data
+    | PUT k v => send  Done   ;; server (data [k |-> v])
+    end.
+\end{lstlisting}
+We can write a tester client that interacts with the server and determines
+whether it behaves correctly:
+\begin{lstlisting}[style=customcoq]
+  CoFixpoint tester (data: key -> value) :=
+    request <- random;;
+    send request;;
+    response <- recv;;
+    match request with
+    | GET k   => if response =? data k
+                 then tester data
+                 else reject
+    | PUT k v => if response =? Done
+                 then tester (data [k |-> v])
+                 else reject
+    end.
+\end{lstlisting}
+This tester implements a reference server internally that computes the expected
+behavior.  The behavior is then compared against that produced by the system
+under test (SUT).  The tester rejects the SUT upon any difference from the
+computed expectation.
+
+Such method only works for deterministic systems whose behavior can be precisely
+computed from its input.
+
+Many systems are allowed to behave
+nondeterministically.
+For example, \http servers may generate entity tags (ETags) to represent its
+resources' versions~\cite{rfc7232}.  Servers may implement ETags with arbitrary
+algorithms {\it e.g.} hashing, timestamps {\it etc}.
+
+If the client cannot compute the expected behavior, then it should check whether
+the observed behavior is valid or not.  This requires specifying the space of
+valid behavior, and determining whether a given behavior is included in that
+space.
+
+
+
+Rigorous testing requires a rigorous specification of the protocol that we
+expect the server to obey.  Protocol specifications can be written as (i) a {\em
+  server model} that describes {\em how} valid servers should handle messages,
+or (ii) a {\em property} that defines {\em what} server behaviors are valid.
+From these specifications, we can conduct (i) {\em model-based
+  testing}~\cite{broy2005model} or (ii) {\em property-based testing}~\cite{pbt},
+respectively.
+
+When testing server implementations against protocol specifications, one
+critical challenge is {\em nondeterminism}, which arises in two forms---we call
+them (1) {\em internal nondeterminism} and (2) {\em network nondeterminism}:
+
+(1) {\em Within} the server, correct behavior may be \mbox{underspecified}.
+For example, to handle HTTP conditional requests \cite{rfc7232}, a server
+generates strings called entity tags (ETags), but the RFC specification does
+not limit {what} values these ETags should be.  Thus, to create test
+messages containing ETags, the tester must remember and reuse the ETags it
+has been given in previous messages from the server.
+
+(2) {\em Beyond} the server, messages and responses between the server and
+different clients might be delayed and reordered by the network and
+operating-system buffering.  If the tester cannot control how the execution
+environment reorders messages---{\it e.g.,} when testing over the Internet---it
+needs to specify what servers are valid as observed over the network.
+
+These sources of nondeterminism pose challenges in various aspects of testing network
+protocols: (i) The {\em validation logic} should accept various implementations,
+as long as the behavior is included in the specification's space of
+uncertainties; (ii) To capture bugs effectively, the {\em test harness} should
+generate test cases based on runtime observations; (iii) When {\em shrinking} a
+counterexample, the test harness should adjust the test cases based on the
+server's behavior, which might vary from one execution to another.
+
+To address these challenges, I introduce symbolic languages for writing
+specifications and representing test cases:
+
+(i) The specification is written as a reference implementation---a
+nondeterministic program that exhibits all possible behavior allowed by
+the protocol.  Inter-implementation and inter-execution uncertainties are
+represented by symbolic variables, and the space of nondeterministic behavior is
+defined by all possible assignments of the variables.
+
+The validation logic is derived from the reference implementation, by {\em
+  dualising} the server-side program into a client-side observer.
+
+(ii) Test generation heuristics are defined as computations from the observed
+trace (list of sent and received messages) to the next message to send.  I
+introduce a symbolic intermediate representation for specifying the relation
+between the next message and previous messages.
+
+(iii) The symbolic language for generating test cases also enables effective
+shrinking of test cases.  The test harness minimizes the counterexample by
+shrinking its symbolic representation.  When running the test with a shrunk
+input, the symbolic representations can be re-instantiated into request messages
+that reflect the original heuristics.
+
+\section{Contribution}
+Symbolic abstract representation can address challenges in testing networked systems with uncertain behavior.
+Specifying protocols with symbolic reference implementation enables validating
+the system's behavior systematically.  Representing test input as abstract
+messages allows generating and shrinking interesting test cases.  Combining
+these methods result in a rigorous tester that can capture protocol violations
+effectively.
+
+\section{Outline}
+This thesis is structured as follows:
