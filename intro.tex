@@ -37,28 +37,17 @@ under test (SUT).  The tester rejects the SUT upon any difference from the
 computed expectation.
 
 Such method only works for deterministic systems whose behavior can be precisely
-computed from its input.
-
-Many systems are allowed to behave
+computed from its input.  Whereas, many systems are allowed to behave
 nondeterministically.
+
 For example, \http servers may generate entity tags (ETags) to represent its
-resources' versions~\cite{rfc7232}.  Servers may implement ETags with arbitrary
-algorithms {\it e.g.} hashing, timestamps {\it etc}.
+resources' versions~\cite{rfc7232}.  The server may implement ETags with
+arbitrary algorithms {\it e.g.} hashing, timestamps {\it etc.}, making its value
+unpredictable from the clients' requests.  As a result, the tester should not
+compare the server's behavior against some expectation, but evaluate whether its
+behavior is producible by some valid implementation.
 
-If the client cannot compute the expected behavior, then it should check whether
-the observed behavior is valid or not.  This requires specifying the space of
-valid behavior, and determining whether a given behavior is included in that
-space.
-
-
-
-Rigorous testing requires a rigorous specification of the protocol that we
-expect the server to obey.  Protocol specifications can be written as (i) a {\em
-  server model} that describes {\em how} valid servers should handle messages,
-or (ii) a {\em property} that defines {\em what} server behaviors are valid.
-From these specifications, we can conduct (i) {\em model-based
-  testing}~\cite{broy2005model} or (ii) {\em property-based testing}~\cite{pbt},
-respectively.
+\section{Nondeterminism}
 
 When testing server implementations against protocol specifications, one
 critical challenge is {\em nondeterminism}, which arises in two forms---we call
