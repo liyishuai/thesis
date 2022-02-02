@@ -1,0 +1,91 @@
+Testers are programs that determine whether implementations are compliant or not
+by observing their behavior.  This section defines the basic concepts and
+notations in testing.
+
+\begin{definition}[Implementations and Behaviors]
+  {\em Implementations} are programs that can interact with their environment.
+  {\em Behaviors} are traces of the implementation's interactions with the
+  environment and consist of (i) {\em Outputs}, which are performed by the
+  implementation and can be observed in the environment, and (ii) {\em Inputs},
+  which can be manipulated for testing purposes, causing (potentially) different
+  outputs of the implementation.
+
+  ``Implementation $i$ can {\em produce} behavior $b$'' is written as
+  ``$\behaves i b$''.
+\end{definition}
+
+\begin{definition}[Specifications, Validity, and Compliance]
+  A {\em specification} is a description of valid behavior.  ``Behavior $b$ is
+  {\em valid} per specification $s$'' is written as ``$\valid s b$''.
+  
+  An implementation $i$ {\em complies} with a specification $s$ (written
+  ``$\complies s i$'') if it only produces behaviors that are valid per the
+  specification:
+  \[\complies s i\quad\triangleq\quad\forall b,(\behaves i b)\implies\valid s b\]
+\end{definition}
+
+\begin{definition}[Tester components and correctness]
+  A tester consists of (i) a {\em validator} that accepts or rejects
+  implementations' behavior, and (ii) a {\em test harness} that triggers
+  different behavior with various input.
+
+  A tester is {\em correct} if its acceptances and rejections are sound and
+  complete.  A tester is {\em rejection-sound} if it only rejects incompliant
+  implementations; it is {\em rejection-complete} if it can reject all
+  incompliant implementations, provided sufficient time of
+  execution.\footnote{The semantics of ``soundness'' and ``completeness'' vary
+    among contexts.  This paper inherits terminologies from existing
+    literature~\cite{Tretmans}, but explicitly use ``rejection-'' prefix for
+    clarity.  ``Rejection soundness'' is equivalent to ``acceptance
+    completeness'', and vice versa.}
+
+  The tester's correctness is based on its components properties: A
+  rejection-sound tester requires its validator to be {\em rejection-sound}; A
+  rejection-complete tester consists of (i) a {\em rejection-complete} validator
+  and (ii) an {\em exhaustive} test harness that can eventually trigger invalid
+  behavior.
+\end{definition}
+
+\begin{definition}[Soundness and completeness of validators]
+  A validator $v$ is {\em rejection-sound} with respect to specification $s$
+  (written as ``$\rejSound v s$'') if it only rejects behaviors that are invalid
+  per $s$:
+  \[\rejSound v s\quad\triangleq\quad\forall b,\rejects v b\implies\invalid s b\]
+
+  A validator $v$ is {\em rejection-complete} with respect to specification $s$
+  (written as ``$\rejComplete v s$'') if it rejects all behaviors that are
+  invalid per $s$:
+  \[\rejComplete v s\quad\triangleq\quad\forall b,\invalid s b\implies\rejects v b\]
+\end{definition}
+
+In property-based testing (PBT)~\cite{pbt}, validators' soundness and
+completeness are trivial, because the specification itself defines ``how to
+compute whether some behavior is valid or not''.  The validator is identical to
+the specification.
+
+Whereas, in model-based testing (MBT)~\cite{broy2005model}, the specification
+defines ``how to produce valid behavior''.  The validator needs to compute
+whether the observed behavior {\em can be produced} by the specification.
+
+PBT and MBT are different views of the system under test: the former observes
+from outside, and the latter abstracts the internal computation.  When the
+system might perform nondeterministic behavior, MBT allows specifying the system
+in a more reasonable way, which is explained in
+\autoref{sec:challenge-nondeterminism}.
+
+\begin{definition}[Exhaustiveness of test harness]
+  A test harness $h$ is {\em exhaustive} with respect to specification $s$
+  (written as ``$\exhaustive s h$'') if, for any implementation that does not
+  comply with the specification, the test harness can eventually trigger some
+  invalid behavior to reveal such incompliance:
+  \begin{align*}
+    \exhaustive s h\quad\triangleq\quad\forall i,\;&\ncomplies s i \\
+    &\implies \exists b,(\triggers i h b)\wedge\invalid s b
+  \end{align*}
+\end{definition}
+
+Exhaustive test harnesses can be built na\"ively by enumerating all test cases.
+However, to capture bugs within realistic budget, the test harness should
+produce test cases that are (i) more likely to trigger bugs, and (ii) of minimal
+size to help analyzing and locating the bug.  These challenges are further
+discussed in \autoref{sec:challenge-harness}.

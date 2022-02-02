@@ -42,6 +42,10 @@
 \newnote{lys}{BrickRed}
 \newnote{bcp}{Chocolate}
 \newnote{sz}{violet}
+\newnote{ly}{orange}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
 
 \def\sectionautorefname{Section}
 \def\subsectionautorefname{Subsection}
@@ -69,6 +73,64 @@
 \newcommand{\inlinec}[1]{\lstinline[style=customc]{#1}}
 \newcommand{\ilc}[1]{\lstinline[style=customcoq]{#1}}
 \newcommand{\ilj}[1]{\lstinline[style=json]{#1}}
+
+\usepackage{amssymb}
+\newcommand{\complies}[2]{\mathsf{comply}_{#1}~{#2}}
+\newcommand{\ncomplies}[2]{\neg(\complies{#1}{#2})}
+\newcommand{\valid}[2]{\mathsf{valid}_{#1}~{#2}}
+\newcommand{\invalid}[2]{\neg(\valid{#1}{#2})}
+\newcommand{\accepts}[2]{\mathsf{accept}_{#1}~{#2}}
+\newcommand{\rejects}[2]{\neg(\accepts{#1}{#2})}
+\newcommand{\rejSound}[2]{#1\;\mathsf{sound}_{#2}^\mathfrak{Rej}}
+\newcommand{\rejComplete}[2]{#1\;\mathsf{complete}_{#2}^\mathfrak{Rej}}
+\newcommand{\exhaustive}[2]{\mathsf{exhaustive}_{#1}~{#2}}
+\newcommand{\triggers}[3]{#1\overset{#3}\longrightarrow_{#2}}
+\newcommand{\behaves}[2]{\triggers{#1}{}{#2}}
+\newcommand{\letin}[2]{\mathsf{let}\;#1=#2\;\mathsf{in}\;}
+\newcommand{\option}{\mathsf{option}\;}
+\newcommand{\Some}[1]{\mathsf{Some}\;#1}
+\newcommand{\None}{\mathsf{None}}
+\newcommand{\sigT}[2]{\{\exists#1,#2\}}
+\newcommand{\existT}[3]{\mathsf{pack}\;#1=#2\;\mathsf{with}\;#3}
+\newcommand{\sstep}{\mathsf{sstep}}
+\newcommand{\vstep}{\mathsf{vstep}}
+\newcommand{\Server}{\mathsf{Server}}
+\newcommand{\Validator}{\mathsf{Validator}}
+\newcommand{\stepServer}{\mathsf{stepServer}}
+\newcommand{\stepValidator}{\mathsf{stepValidator}}
+\newcommand{\lam}[2]{\lambda#1\Rightarrow#2}
+\newcommand{\Set}{\mathsf{set}\;}
+\newcommand{\List}{\mathsf{list}\;}
+\newcommand{\nil}{\varepsilon}
+\newcommand{\If}{\mathsf{if}\;}
+\newcommand{\Then}{\;\mathsf{then}\;}
+\newcommand{\eelse}{\mathsf{else}\;}
+\newcommand{\Else}{\;\eelse}
+\newcommand{\Unit}{()}
+\newcommand{\Tt}{()}
+\newcommand{\Nat}{\mathbb N}
+\newcommand{\Bool}{\mathbb B}
+\newcommand{\Is}{\;\mathsf{is}\;}
+\newcommand{\Prog}{\mathsf{Prog}}
+\newcommand{\serverOf}{\mathsf{serverOf}}
+\newcommand{\validatorOf}{\mathsf{validatorOf}}
+\newcommand{\Return}{\mathsf{return}}
+\newcommand{\Sexp}{\mathsf{SExp}}
+\newcommand{\Mem}{\mathsf{mem}}
+\newcommand{\Exec}{\mathsf{exec}}
+\newcommand{\Eval}{\mathsf{eval}}
+\newcommand{\update}[3]{#1[#2\mapsto#3]}
+\newcommand{\constraint}{\mathsf{constraint}}
+\newcommand{\Fresh}{\mathsf{fresh}\;}
+\newcommand{\solvable}{\mathsf{solvable}\;}
+\newcommand{\Vexp}{\mathsf{VExp}}
+\newcommand{\Reflects}[2]{#1\sim #2}
+\newcommand{\satisfy}[2]{#1\;\mathsf{satisfy}\;#2}
+\newcommand{\Jref}[3]{#1.#2.#3}
+\newcommand{\Jpath}{\mathsf{Jpath}}
+\newcommand{\This}{\mathsf{this}}
+\newcommand{\Number}{\#}
+\newcommand{\At}{@}
 
 %% ASZ: `amsbook` didn't style `\paragraph`s appropriately
 \patchcmd{\paragraph}{\normalfont}{\itshape}
@@ -221,12 +283,9 @@ sunt in culpa qui officia deserunt mollit anim id est laborum.
 \label{chap:introduction}
 \input{intro}
 
-\chapter{Motivation}
-\label{chap:motivation}
-\input{motivation}
-
 \chapter{Validator Theory}
 \label{chap:theory}
+\input{theory}
 
 \chapter{Validator in Practice}
 \label{chap:practices}
@@ -248,5 +307,10 @@ sunt in culpa qui officia deserunt mollit anim id est laborum.
 \printbibliography
   %% ASZ: AucTeX (the Emacs package for LaTeX I used) doesn't support a `.bib`
   %% file and a `.tex` file with the same name
+
+\appendix
+
+\chapter{Unstructured contents}
+\input{issta}
 
 \end{document}
