@@ -54,11 +54,16 @@
 \usepackage{textcomp,listings,lstparams,lstcoq,graphicx}
 \lstdefinestyle{customcoq}{
   language=Coq,
+  morekeywords={is},
   literate={<>}{$\ne$}1
   {->}{$\to$}1
   {<-}{$\gets$}1
   {=>}{$\Rightarrow$}1
   {|->}{$\mapsto$}1
+  {fun}{$\lambda$}1
+  {\\in}{$\in$}1
+  {\\\/}{$\vee$}1
+  {<>}{$\neq$}1
 }
 \lstdefinestyle{json}{
   language=Coq,
