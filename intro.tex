@@ -12,8 +12,9 @@ with respect to the protocol specification.
 
 This section introduces the basic concepts of interactive testing
 (\autoref{sec:interactive-testing}), why nondeterminism made this problem
-difficult (Sections~\ref{sec:internal-external-nondeterminism}), and how language
-designs address the challenges introduced by nondeterminism
+difficult
+(Sections~\ref{sec:internal-external-nondeterminism}--\ref{sec:inter-execution-nondeterminism}),
+and how language designs address the challenges introduced by nondeterminism
 (\autoref{sec:contribution}).
 
 \section{Interactive Testing}
@@ -212,7 +213,6 @@ previously rejected an \inlinec{If-Match} request, it must reject the same
 request until its target has been modified.''
 
 \begin{figure}
-  \begin{minipage}{\textwidth}
 \begin{lstlisting}[style=customcoq]
   Definition validate request response
              (data      : key -> value)
@@ -250,13 +250,12 @@ request until its target has been modified.''
     end.
 \end{lstlisting}
   \caption[Ad hoc tester for \http conditional requests.]{Ad hoc tester for
-    \http conditional requests.\footnote{\ilc{PUT k t v} represents a PUT
-      request that changes \ilc k's value into \ilc v only if its ETag matches
-      \ilc t; \ilc{GET k t} is a GET request for \ilc k's value only if its ETag
-      does not match \ilc t; \ilc{OK t v} indicates that the request target's
-      value is \ilc v and its ETag is \ilc t.}}
+    \http conditional requests.  \ilc{PUT k t v} represents a PUT request that
+    changes \ilc k's value into \ilc v only if its ETag matches \ilc t; \ilc{GET
+      k t} is a GET request for \ilc k's value only if its ETag does not match
+    \ilc t; \ilc{OK t v} indicates that the request target's value is \ilc v and
+    its ETag is \ilc t.}
   \label{fig:etag-tester}
-  \end{minipage}
 \end{figure}
 
 This idea of remembering matched and mismatched ETags is implemented in
@@ -273,62 +272,144 @@ validator, based on thorough comprehension of the specification.  For more
 complex protocols, we hope to construct the validator in a reasonable way.
 
 \subsection{External nondeterminism}
+To discuss the nondeterminism caused by the environment, we need to define the
+environment concept in testing scenario.
+\begin{definition}[Environment, input, output, and observations]
+  {\em Environment} is the substance that the tester and the SUT interact with.
+  {\em Input} is the subset of the environment that the tester can manipulate.
+  {\em Output} is the subset of the environment that the SUT can alter.  {\em
+    Observation} is the tester's view of the environment.
+\end{definition}
+When testing servers, the environment is the network stack between the client
+and the server.  The input is the request sent by the client, and the output is
+the response sent by the server.  The response is transmitted via the network,
+until reaching the client side as observations.
 
-Beyond the server, messages and responses between the server and
-different clients might be delayed and reordered by the network and
-operating-system buffering.  If the tester cannot control how the execution
-environment reorders messages---{\it e.g.,} when testing over the Internet---it
-needs to specify what servers are valid as observed over the network.
+\begin{figure}
+  TODO linear trace
+  \caption[Linear trace upon no concurrency.]{Upon no concurrency, the
+    observation is identical to the output.}
+  \label{fig:linear-trace}
+\end{figure}
+\begin{figure}
+  TODO reordered valid trace
+  \caption[Reordered trace upon network delays.]{An observation that can be
+    explained by a valid output reordered by the network environment.}
+  \label{fig:reordered-trace}
+\end{figure}
+\begin{figure}
+  TODO invalid trace
+  \caption[Invalid trace that violates the specification.]{An observation that
+    cannot be explained by any valid output implies violation against the
+    specification.}
+  \label{fig:invalid-trace}
+\end{figure}
+The tester shown in \autoref{sec:interactive-testing} runs one client at a time.
+It waits for the response before sending the next request, as shown in
+\autoref{fig:linear-trace}.  Such tester's observation is guaranteed identical
+to the SUT's output, so it only needs to scan the requests and responses with
+one stateful validator.
 
-These sources of nondeterminism pose challenges in various aspects of testing network
-protocols: (i) The {\em validation logic} should accept various implementations,
-as long as the behavior is included in the specification's space of
-uncertainties; (ii) To capture bugs effectively, the {\em test harness} should
-generate test cases based on runtime observations; (iii) When {\em shrinking} a
-counterexample, the test harness should adjust the test cases based on the
-server's behavior, which might vary from one execution to another.
+To reveal the server's behavior upon concurrent requests, the tester needs to
+simulate multiple clients, sending new requests before receiving previous
+responses.  The network delay might cause the server to receive requests in a
+different order from that on the tester side.  Vice versa, responses sent by the
+server might be reordered before arriving at the tester, as shown in
+\autoref{fig:reordered-trace}.  Such tester's observation can be explained by
+various outputs on the SUT side.  The validator needs to consider all possible
+outputs that can explain such observation, and see if anyone of them complies
+with the specification.  If the observation cannot be explained by any output,
+then the tester should reject the SUT, as shown in \autoref{fig:invalid-trace}.
 
-To address these challenges, I introduce symbolic languages for writing
-specifications and representing test cases:
+We hope to construct a tester that can handle external nondeterminism
+systematically, and provide a generic way for reasoning on the environment.
 
-(i) The specification is written as a reference implementation---a
+\section{Test harness and inter-execution nondeterminism}
+\label{sec:inter-execution-nondeterminism}
+A good tester consists of (i) a validator that accurately determines whether its
+observations are valid or not, and (ii) a test harness that can reveal invalid
+observations effectively.  \autoref{sec:internal-external-nondeterminism} has
+explained the challenges in the validator.  Here we discuss the test harness.
+
+\subsection{Test harness}
+\begin{figure}
+  Validator, generator, shrinker
+  \caption{Tester architecture.}
+  \label{fig:test-harness}
+\end{figure}
+Explain \autoref{fig:test-harness}.
+
+\subsection{Inter-execution nondeterminism}
+\begin{figure}
+  Server example, preferably using timestamps.
+  \caption{Inter-execution nondeterminism}
+  \label{fig:inter-execution}
+\end{figure}
+Explain \autoref{fig:inter-execution}.
+
+\lys{Inter-execution nondeterminism is usually mentioned in parallel with
+  inter-implementation nondeterminism, but the latter concept doesn't contribute
+  to this thesis, thus ignoring.}
+
+
+\section{Contribution}
+\label{sec:contribution}
+\lys{To be polished.}
+To address the challenges in testing caused by different forms of
+nondeterminism, I introduce symbolic languages for writing specifications and
+representing test cases:
+
+\begin{enumerate}
+\item The specification is written as a reference implementation---a
 nondeterministic program that exhibits all possible behavior allowed by
 the protocol.  Inter-implementation and inter-execution uncertainties are
 represented by symbolic variables, and the space of nondeterministic behavior is
 defined by all possible assignments of the variables.
 
-The validation logic is derived from the reference implementation, by {\em
+The validator is derived from the reference implementation, by {\em
   dualising} the server-side program into a client-side observer.
 
-(ii) Test generation heuristics are defined as computations from the observed
+\item Test generation heuristics are defined as computations from the observed
 trace (list of sent and received messages) to the next message to send.  I
 introduce a symbolic intermediate representation for specifying the relation
 between the next message and previous messages.
 
-(iii) The symbolic language for generating test cases also enables effective
+\item The symbolic language for generating test cases also enables effective
 shrinking of test cases.  The test harness minimizes the counterexample by
 shrinking its symbolic representation.  When running the test with a shrunk
 input, the symbolic representations can be re-instantiated into request messages
 that reflect the original heuristics.
+\end{enumerate}
 
-\section{Contribution}
-\label{sec:contribution}
-Symbolic abstract representation can address challenges in testing networked systems with uncertain behavior.
-Specifying protocols with symbolic reference implementation enables validating
-the system's behavior systematically.  Representing test input as abstract
-messages allows generating and shrinking interesting test cases.  Combining
-these methods result in a rigorous tester that can capture protocol violations
-effectively.
+\subsection*{Thesis claim}
+Symbolic abstract representation can address challenges in testing networked
+systems with uncertain behavior.  Specifying protocols with symbolic reference
+implementation enables validating the system's behavior systematically.
+Representing test input as abstract messages allows generating and shrinking
+interesting test cases.  Combining these methods result in a rigorous tester
+that can capture protocol violations effectively.
+
+This claim is supported by the following publications:
+\begin{enumerate}
+\item {\it From C to Interaction Trees: Specifying, Verifying, and Testing a
+  Networked Server}~\cite{cpp19}, with Nicolas Koh, Yao Li, Li-yao Xia, Lennart
+  Beringer, Wolf Honor\'e, and William Mansky, where I developed a tester
+  program based on the swap server's ITree specification, and evaluated the
+  tester's effectiveness by mutation testing.
+\item {\it Verifying an HTTP Key-Value Server with Interaction Trees and
+  VST}~\cite{itp21}, with Hengchu Zhang, Wolf Honor\'e, Nicolas Koh, Yao Li,
+  Li-yao Xia, Lennart Beringer, and William Mansky, where I developed the
+  top-level specification for \http, and derived a tester client that revealed
+  liveness and interrupt-handling bugs in our HTTP server, despite it was
+  formally verified.
+\item {\it Model-Based Testing of Networked Applications}~\cite{issta21}, which
+  describes my technique of specifying \http with symbolic reference
+  implementations, and from the specification, automatically deriving a tester
+  program that can find bugs in Apache and Nginx.
+\item {\it Testing by Dualization} (to be submitted to OOPSLA), a theory for
+  interactive testing, explaining how to specify protocols using abstract model
+  implementations, and how to guarantee the soundness and completeness of the
+  validator logic derived from the abstract model.
+\end{enumerate}
 
 This thesis is structured as follows:
-
-\section*{Introduce motivation in this section entirely}
-
-For example, \http servers may generate entity tags (ETags) to represent its
-resources' versions~\cite{rfc7232}.  The server may implement ETags with
-arbitrary algorithms {\it e.g.} hashing, timestamps {\it etc.}, making its value
-unpredictable from the clients' requests.  As a result, the tester should not
-compare the server's behavior against some expectation, but evaluate whether its
-behavior is producible by some valid implementation.
-
-\input{motivation}
