@@ -204,25 +204,6 @@ an HTTP proxy\bcp{again, it feels like proxies are coming out of nowhere
   \lys{I'll try to make proxy more like a part of HTTP than an extension.}}
 (shown in \autoref{fig:proxy-model}) is written as:
 
-\begin{figure}
-  \includegraphics[width=0.4\linewidth]{figures/proxy-linear}
-  \caption{Proxy model specifying a server that forwards a message immediately
-    upon receiving it.}
-  \label{fig:proxy-model}
-\end{figure}
-
-\begin{figure}
-  \includegraphics[width=\linewidth]{figures/proxy-valid-trace}
-  \caption{A reordered observation, with two valid network-level explanations.}
-  \label{fig:proxy-valid-trace}
-\end{figure}
-
-\begin{figure}
-  \includegraphics[width=0.7\linewidth]{figures/proxy-invalid-trace}
-  \caption{Example of invalid observation.}
-  \label{fig:proxy-invalid-trace}
-\end{figure}
-
 \begin{lstlisting}[style=customcoq]
 let proxy() =
     msg := recv();

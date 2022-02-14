@@ -1,5 +1,3 @@
-We trust programs by testing them, but how do we trust our testers?
-
 Software engineering requires rigorous testing of rapidly evolving programs,
 which costs manpower comparable to developing the product itself.  To guarantee
 programs' compliance with the specification, we need testers that can tell
@@ -286,22 +284,73 @@ the response sent by the server.  The response is transmitted via the network,
 until reaching the client side as observations.
 
 \begin{figure}
-  TODO linear trace
+  \centering
+  \begin{minipage}[c]{.3\textwidth}
+\begin{lstlisting}[style=customcoq]
+  (* Observation: *)
+  1> PUT k "new"
+  1< Done
+  2> GET k
+  2< "new"
+\end{lstlisting}
+  \end{minipage}\begin{minipage}[c]{.4\textwidth}
+  \includegraphics[width=\linewidth]{figures/linear-trace}
+  \end{minipage}\begin{minipage}[c]{.3\textwidth}
+\begin{lstlisting}[style=customcoq]
+  (* Output: *)
+  1> PUT k "new"
+  1< Done
+  2> GET k
+  2< "new"
+\end{lstlisting}
+  \end{minipage}
   \caption[Linear trace upon no concurrency.]{Upon no concurrency, the
     observation is identical to the output.}
   \label{fig:linear-trace}
 \end{figure}
 \begin{figure}
-  TODO reordered valid trace
-  \caption[Reordered trace upon network delays.]{An observation that can be
-    explained by a valid output reordered by the network environment.}
+  \centering
+  \begin{minipage}[c]{.3\textwidth}
+\begin{lstlisting}[style=customcoq]
+  (* Observation: *)
+  1> PUT k "new"
+  2> GET k
+  1< Done
+  2< "old"
+\end{lstlisting}
+  \end{minipage}\begin{minipage}[c]{.4\textwidth}
+    \includegraphics[width=\linewidth]{figures/network-trace}
+  \end{minipage}\begin{minipage}[c]{.3\textwidth}
+\begin{lstlisting}[style=customcoq]
+  (* Output: *)
+  2> GET k
+  2< "old"
+  1> PUT k "new"
+  1< Done
+\end{lstlisting}
+  \end{minipage}
+  \caption[Reordered trace upon network delays.]{Acceptable: The observation can
+    be explained by a valid output reordered by the network environment.}
   \label{fig:reordered-trace}
 \end{figure}
 \begin{figure}
-  TODO invalid trace
-  \caption[Invalid trace that violates the specification.]{An observation that
-    cannot be explained by any valid output implies violation against the
-    specification.}
+  \centering
+  \begin{minipage}[c]{.3\textwidth}
+\begin{lstlisting}[style=customcoq]
+  (* Observation: *)
+  1> PUT k "new"
+  1< Done
+  2> GET k
+  2< "old"
+\end{lstlisting}
+  \end{minipage}\begin{minipage}[c]{.4\textwidth}
+  \includegraphics[width=\linewidth]{figures/invalid-trace}
+  \end{minipage}\begin{minipage}[c]{.3\textwidth}\
+  \end{minipage}
+  \caption[Invalid trace that violates the specification.]{Unacceptable: The
+    tester received the \ilc{Done} response before sending the \ilc{GET}
+    request, thus the SUT must have processed the \ilc{PUT} request before the
+    \ilc{GET} request.  Therefore, the \ilc{"old"} response must be invalid.}
   \label{fig:invalid-trace}
 \end{figure}
 The tester shown in \autoref{sec:interactive-testing} runs one client at a time.
@@ -318,8 +367,8 @@ server might be reordered before arriving at the tester, as shown in
 \autoref{fig:reordered-trace}.  Such tester's observation can be explained by
 various outputs on the SUT side.  The validator needs to consider all possible
 outputs that can explain such observation, and see if anyone of them complies
-with the specification.  If the observation cannot be explained by any output,
-then the tester should reject the SUT, as shown in \autoref{fig:invalid-trace}.
+with the specification.  If no valid output can explain the observation, then
+the tester should reject the SUT, as shown in \autoref{fig:invalid-trace}.
 
 We hope to construct a tester that can handle external nondeterminism
 systematically, and provide a generic way for reasoning on the environment.
@@ -332,6 +381,7 @@ observations effectively.  \autoref{sec:internal-external-nondeterminism} has
 explained the challenges in the validator.  Here we discuss the test harness.
 
 \subsection{Test harness}
+
 \begin{figure}
   Validator, generator, shrinker
   \caption{Tester architecture.}
