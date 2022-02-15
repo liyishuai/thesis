@@ -33,6 +33,9 @@
 \usepackage[dvipsnames,svgnames,x11names]{xcolor}
 \usepackage{hyperref}
 \usepackage{xspace}
+\usepackage{advdate}
+\usepackage[iso]{datetime}
+\newdateformat{httpdate}{\shortdayofweekname{\THEDAY}{\THEMONTH}{\THEYEAR},~\THEDAY~\shortmonthname[\THEMONTH]~\THEYEAR}
 \usepackage[
   backend=biber]{biblatex}
 \addbibresource{bibliography.bib}

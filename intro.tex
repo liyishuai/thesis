@@ -89,6 +89,7 @@ messages, just like solids transmit voice faster than liquids and gases, we call
 it {\em external nondeterminism}.
 
 \subsection{Internal nondeterminism}
+\label{sec:internal-nondeterminism}
 Within the SUT, correct behavior may be \mbox{underspecified}.  For example,
 HTTP~\cite{rfc7232} allows requests to be conditional: If the client has a local
 copy of some resource and the copy on the server has not changed, then the
@@ -381,26 +382,77 @@ observations effectively.  \autoref{sec:internal-external-nondeterminism} has
 explained the challenges in the validator.  Here we discuss the test harness.
 
 \subsection{Test harness}
-
+Intuitively, a tester generates test input and executes the test.  It then
+validates the observation and accepts/rejects the SUT, as shown in
+\autoref{fig:gen-only}.
 \begin{figure}
-  Validator, generator, shrinker
-  \caption{Tester architecture.}
-  \label{fig:test-harness}
+  \includegraphics[width=.5\linewidth]{figures/gen-only}
+  \caption{Simple tester architecture without shrinking.}
+  \label{fig:gen-only}
 \end{figure}
-Explain \autoref{fig:test-harness}.
+
+However, to achieve better coverage, a randomized generator might produce huge
+test input.  Suppose the tester has revealed invalid observation after thousands
+of interactions, such report provides limited intuition of where the bug was
+introduced.  To help developers locate the bug more effectively, the tester
+should present a {\em minimal counterexample} that can reproduce the violation.
+This is done by {\em shrinking} the failing input and rerunning the test with
+the input's substructures.  As shown in \autoref{fig:gen-shrink}, if a test
+input has no substructure that can cause any failure, then we report it as the
+minimal counterexample.
+\begin{figure}
+  \includegraphics[width=.8\linewidth]{figures/gen-shrink}
+  \caption{Tester architecture with shrinking mechanism.}
+  \label{fig:gen-shrink}
+\end{figure}
+
+The test harness consists of generator, shrinker, and executor.  This thesis
+studies the generator and the shrinker that produce the test input.  The
+executor that produces observations based on the input is discussed in the
+related works chapter.
+
+Interesting test inputs are those that are more likely to reveal invalid
+observations.  Such subset is usually sparse and cannot be enumerated within
+reasonable budget {\it e.g.} in \autoref{sec:internal-nondeterminism}, request
+ETags that match the target resources'.  The tester needs to manipulate the
+inputs' distribution, by implementing heuristics that emphasize certain input
+patterns.  Such heuristics is challenged by another form of nondeterminism
+discussed as follows.
 
 \subsection{Inter-execution nondeterminism}
-\begin{figure}
-  Server example, preferably using timestamps.
-  \caption{Inter-execution nondeterminism}
-  \label{fig:inter-execution}
-\end{figure}
-Explain \autoref{fig:inter-execution}.
+Consider \http, where requests may be conditioned over timestamps.  If a client
+has cached a version with a certain timestamp, then it can send the timestamp as
+\inlinec{If-Modified-Since} precondition.  The server should not transmit the
+request target's content if its \inlinec{Last-Modified} timestamp is not newer
+than the precondition's:
+\begin{lstlisting}[style=customc,escapeinside={(*}{*)}]
+  /* Client: */
+  GET /index.html HTTP/1.1
+  If-Modified-Since: (*\httpdate\DayAfter[-1]~\currenttime *) GMT
+                             /* Server: */
+                             HTTP/1.1 200 OK
+                             Last-Modified: (*\httpdate\today~\currenttime *) GMT
+                             ... content of target ...
+  /* Client: */
+  GET /index.html HTTP/1.1
+  If-Modified-Since: (*\httpdate\today~\currenttime *) GMT
+                             /* Server: */
+                             HTTP/1.1 304 Not Modified
+\end{lstlisting}
+In this scenario, an interesting candidate for the \inlinec{If-Modified-Since}
+precondition is the \inlinec{Last-Modified} timestamp of a previous response.
+To emphasize this request pattern, the tester needs to implement heuristics that
+generates test inputs based on previous observations.
 
-\lys{Inter-execution nondeterminism is usually mentioned in parallel with
-  inter-implementation nondeterminism, but the latter concept doesn't contribute
-  to this thesis, thus ignoring.}
+In case the tester has revealed invalid observations from the server, it needs
+to rerun the test with shrunk input.  The timestamps on the server might be
+different from the previous execution, so an interesting timestamp in a previous
+run might become trivial in this run.
 
+Such inter-execution nondeterminism poses challenges to the input minimization
+process: To preserve the input pattern, the shrunk \http request should use the
+timestamps from the new execution.  We hope to implement a generic shrinking
+mechanism that can reproduce the heuristics in the test generator's design.
 
 \section{Contribution}
 \label{sec:contribution}
