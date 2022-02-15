@@ -456,48 +456,64 @@ mechanism that can reproduce the heuristics in the test generator's design.
 
 \section{Contribution}
 \label{sec:contribution}
-\lys{To be polished.}
-To address the challenges in testing caused by different forms of
-nondeterminism, I introduce symbolic languages for writing specifications and
-representing test cases:
+This thesis addresses the challenges in testing caused by various forms of
+nondeterminism.  I introduce symbolic languages for specifying the protocol and
+representing test input, and {\em dualize} the specification into the tester's
+(1) validator, (2) generator, and (3) shrinker:
 
 \begin{enumerate}
 \item The specification is written as a reference implementation---a
-nondeterministic program that exhibits all possible behavior allowed by
-the protocol.  Inter-implementation and inter-execution uncertainties are
-represented by symbolic variables, and the space of nondeterministic behavior is
-defined by all possible assignments of the variables.
+  nondeterministic program that exhibits all possible behavior allowed by the
+  protocol.  Internal and external nondeterminism are represented by symbolic
+  variables, and the space of nondeterministic behavior is defined by all
+  possible assignments of the variables.
 
-The validator is derived from the reference implementation, by {\em
-  dualising} the server-side program into a client-side observer.
+  For internal nondeterminism, the validator computes the symbolic
+  representation of the SUT's output.  The symbolic output expectation is then
+  {\em unified} against the tester's observations, reducing the protocol
+  compliance problem into constraint solving.
 
-\item Test generation heuristics are defined as computations from the observed
-trace (list of sent and received messages) to the next message to send.  I
-introduce a symbolic intermediate representation for specifying the relation
-between the next message and previous messages.
+  For external nondeterminism, I introduce a model that specifies the
+  environment.  The environment model describes the relation between the SUT's
+  output and the tester's observations.  By composing the environment model with
+  the reference implementation, we get a tester-side specification that defines
+  the space of valid observations.
+\item Test generation heuristics are defined as computations from observations
+  to the next input.  To specify such heuristics in a generic way, I introduce
+  intermediate representations for observations and test inputs, which are
+  protocol-independent.
 
-\item The symbolic language for generating test cases also enables effective
-shrinking of test cases.  The test harness minimizes the counterexample by
-shrinking its symbolic representation.  When running the test with a shrunk
-input, the symbolic representations can be re-instantiated into request messages
-that reflect the original heuristics.
+  Heuristics in this framework produces symbolic test inputs that are
+  parameterized over observations.  During execution, the test harness computes
+  the concrete input by {\em instantiating} the symbolic input's arguments with
+  runtime observations.
+\item The language for test inputs is designed with inter-execution
+  nondeterminism in mind.  By instantiating the inputs' symbolic intermediate
+  representation with different observations, the test harness gets different
+  test inputs but preserves the pattern.
+
+  To minimize counterexamples, the test harness only needs to shrink the inputs'
+  symbolic representation.  When rerunning the test, the shrunk input is
+  reinstantiated with the new observations, thus reproduces the heuristics by
+  the test generator.
 \end{enumerate}
 
 \subsection*{Thesis claim}
-Symbolic abstract representation can address challenges in testing networked
+Symbolic abstract representation can address challenges in testing interactive
 systems with uncertain behavior.  Specifying protocols with symbolic reference
-implementation enables validating the system's behavior systematically.
-Representing test input as abstract messages allows generating and shrinking
-interesting test cases.  Combining these methods result in a rigorous tester
-that can capture protocol violations effectively.
+implementation enables validating observations of systems with internal and
+external nondeterminism.  Representing test input and observations symbolically
+allows generating and shrinking interesting test cases despite inter-execution
+nondeterminism.  Combining these methods result in a rigorous tester that can
+capture protocol violations effectively.
 
 This claim is supported by the following publications:
 \begin{enumerate}
 \item {\it From C to Interaction Trees: Specifying, Verifying, and Testing a
   Networked Server}~\cite{cpp19}, with Nicolas Koh, Yao Li, Li-yao Xia, Lennart
   Beringer, Wolf Honor\'e, and William Mansky, where I developed a tester
-  program based on the swap server's ITree specification, and evaluated the
-  tester's effectiveness by mutation testing.
+  program based on a swap server's specification written as ITrees~\cite{itree},
+  and evaluated the tester's effectiveness by mutation testing.
 \item {\it Verifying an HTTP Key-Value Server with Interaction Trees and
   VST}~\cite{itp21}, with Hengchu Zhang, Wolf Honor\'e, Nicolas Koh, Yao Li,
   Li-yao Xia, Lennart Beringer, and William Mansky, where I developed the
@@ -510,8 +526,9 @@ This claim is supported by the following publications:
   program that can find bugs in Apache and Nginx.
 \item {\it Testing by Dualization} (to be submitted to OOPSLA), a theory for
   interactive testing, explaining how to specify protocols using abstract model
-  implementations, and how to guarantee the soundness and completeness of the
-  validator logic derived from the abstract model.
+  implementations, and how to guarantee the soundness and completeness of
+  validators derived from the abstract model.
 \end{enumerate}
 
+\subsection*{Outline}
 This thesis is structured as follows:
