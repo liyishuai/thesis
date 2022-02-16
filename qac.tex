@@ -1,0 +1,79 @@
+To illustrate how to write specifications for testing purposes, this section
+introduces the ``query-answer-choice'' (QAC) language family for specifying
+network protocols that involve internal nondeterminism.
+
+\begin{definition}[Deterministic server model]
+Network protocols can be specified with ``reference implementations'' {\it i.e.}
+model programs that exhibit the space of valid behavior.  Networked servers can
+be modelled as infinite stateful programs that compute the answer for each
+query.
+
+Let $Q$ be the query type, $A$ be the response type, and $S$ be some server
+state type.  Then a deterministic server is an infinite loop, defined by a loop
+body and an initial state.  The loop body is a state monad that takes a query,
+produces the response based on its current state, and computes the next server
+state:
+\[ \mathsf{DeterministicServer}\triangleq\sigT{S}{(Q \times S \to A \times S) \times S} \]
+\end{definition}
+
+For example, consider an CMP-INC protocol: The server stores a number \inlinec S.
+If the client sends zero, then the server increases \inlinec S by one.
+Otherwise, the server responds with \inlinec 1 if and only if the request is
+equal to the current value of \inlinec S:
+\begin{lstlisting}[style=customc]
+  int S = 0;
+  while (true) {
+    int request = recv();
+    if (request == 0) { ++S; send(0); }
+    else send(request == S ? 1 : 0);
+  }
+\end{lstlisting}
+
+Such server can be modelled as:
+\begin{align*}
+  \existT{S}{\Nat}{(&\lam{(q,s)}{\begin{cases}
+        (0,s+1)&q\Is0\\
+        (\If q\Is s\Then1\Else0,s)&\mathrm{otherwise}
+    \end{cases}},\\
+    &0)}
+\end{align*}
+
+\begin{definition}[Nondeterministic server model]
+In general, servers' responses and transitions might depend on choices that are
+invisible to the testers.  These choices include inter-implementation
+nondetermism like algorithm design, and inter-execution nondeterminism like
+random numbers and timestamps.  Let $C$ be the space of invisible choices, then
+a nondeterministic server is specified as:
+\begin{align*}
+  &\Server\triangleq\sigT{S}{(Q \times C \times S \to A \times S) \times S} \\
+  &\stepServer:Q\times C \times \Server \to A\times \Server \\
+  &\stepServer(q,c,\existT{S}{\sigma}{(\sstep, state)})\triangleq\\
+  &\qquad\letin{(a,state')}{\sstep(q,c,state)} \\
+  &\qquad(a, \existT{S}{\sigma}{(\sstep, state')})
+\end{align*}
+
+Here $\existT{S}{\sigma}{(\sstep, state)}$ is an instance of the $\Server$
+existential type~\cite{tapl}, where $\sstep$ is of type $Q\times
+C\times\sigma\to A\times\sigma$, and $state$ has type $\sigma$.
+\end{definition}
+
+Consider changing the aforementioned CMP-INC into CMP-RST: Upon request zero,
+the server resets \inlinec S to a random number:
+\begin{lstlisting}[style=customc]
+  int S = 0;
+  while (true) {
+    int request = recv();
+    if (request == 0) { S = rand(); send(0); }
+    else send(request == S ? 1 : 0);
+  }
+\end{lstlisting}
+Its corresponding server model can be written as
+\begin{align*}
+  \existT{S}{\Nat}{(&\lam{(q,c,s)}{
+      \begin{cases}
+        (0,c)& q\Is0\\
+        (\If q\Is s\Then 1\Else 0,s)&\mathrm{otherwise}
+      \end{cases}
+    },\\
+    &0)}
+\end{align*}

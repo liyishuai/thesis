@@ -54,6 +54,7 @@
 \def\subsectionautorefname{Subsection}
 \def\subsubsectionautorefname{Subsubsection}
 \def\lstnumberautorefname{Line}
+\renewcommand{\equationautorefname}{Hypothesis}
 \usepackage{textcomp,listings,lstparams,lstcoq,graphicx}
 \lstdefinestyle{customcoq}{
   language=Coq,
@@ -75,12 +76,29 @@
   {ref}{$\ottkw{ref}$}3
 }
 \lstdefinestyle{customc}{
-  language=C
+  language=C,
+  keywordstyle={\bfseries\codestyle\color{Keyword1Color}},
+  showstringspaces=false,
+  morekeywords={true,false,bool}
 }
 \newcommand{\http}{HTTP/1.1\xspace}
 \newcommand{\inlinec}[1]{\lstinline[style=customc]{#1}}
 \newcommand{\ilc}[1]{\lstinline[style=customcoq]{#1}}
 \newcommand{\ilj}[1]{\lstinline[style=json]{#1}}
+
+\usepackage{mathtools}
+%% https://tex.stackexchange.com/a/127018
+\usepackage{etoolbox}
+\expandafter\patchcmd\csname \string\lstinline\endcsname{%
+  \leavevmode
+  \bgroup
+}{%
+  \leavevmode
+  \ifmmode\hbox\fi
+  \bgroup
+}{}{%
+  \typeout{Patching of \string\lstinline\space failed!}%
+}
 
 \usepackage{amssymb}
 \newcommand{\complies}[2]{\mathsf{comply}_{#1}~{#2}}
@@ -118,6 +136,8 @@
 \newcommand{\Tt}{()}
 \newcommand{\Nat}{\mathbb N}
 \newcommand{\Bool}{\mathbb B}
+\newcommand{\True}{\mathsf{true}}
+\newcommand{\False}{\mathsf{false}}
 \newcommand{\Is}{\;\mathsf{is}\;}
 \newcommand{\Prog}{\mathsf{Prog}}
 \newcommand{\serverOf}{\mathsf{serverOf}}
@@ -292,16 +312,17 @@ sunt in culpa qui officia deserunt mollit anim id est laborum.
 \label{chap:introduction}
 \input{intro}
 
-\chapter{Validator Theory}
+\chapter{Dualization Theory}
 \label{chap:theory}
 \input{theory}
 
-\chapter{Validator in Practice}
+\chapter{Testing in Practice}
 \label{chap:practices}
 \input{practice}
 
 \chapter{Test Harness Design}
 \label{chap:harness}
+
 
 \chapter{Related Work}
 \label{chap:related-work}
