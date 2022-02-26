@@ -11,9 +11,14 @@ notations in interactive testing.
   written as ``$\behaves i t$''.
 \end{definition}
 
-\begin{definition}[Specification and Validity]
+\begin{definition}[Specification, Validity, and Compliance]
   A {\em specification} is a description of valid traces.  ``Trace $t$ is {\em
     valid} per specification $s$'' is written as ``$\valid s t$''.
+
+  An implementation $i$ {\em complies} with a specification $s$ (written
+  ``$\complies s i$'') if it only produces traces that are valid per the
+  specification:
+  \[\complies s i\quad\triangleq\quad\forall t,(\behaves i t)\implies\valid s t\]
 \end{definition}
 
 \begin{definition}[Tester components and correctness]
@@ -30,7 +35,7 @@ notations in interactive testing.
     clarity.  ``Rejection soundness'' is equivalent to ``acceptance
     completeness'', and vice versa.}
 
-  The tester's correctness is based on its components properties: A
+  The tester's correctness is based on its components' properties: A
   rejection-sound tester requires its validator to be {\em rejection-sound}; A
   rejection-complete tester consists of (i) a {\em rejection-complete} validator
   and (ii) an {\em exhaustive} test harness that can eventually trigger invalid

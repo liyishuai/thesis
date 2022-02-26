@@ -2,18 +2,27 @@ To illustrate how to write specifications for testing purposes, this section
 introduces the ``query-answer-choice'' (QAC) language family for specifying
 network protocols that involve internal nondeterminism.
 
-\begin{definition}[Deterministic server model]
+\subsection{Specifying protocols with server models}
 Network protocols can be specified with ``reference implementations'' {\it i.e.}
 model programs that exhibit the space of valid behavior.  Networked servers can
 be modelled as infinite stateful programs that compute the answer for each
 query.
-
+\begin{definition}[Deterministic server model]
 Let $Q$ be the query type, $A$ be the response type, and $S$ be some server
 state type.  Then a deterministic server is an infinite loop, defined by a loop
 body and an initial state.  The loop body is a state monad that takes a query,
 produces the response based on its current state, and computes the next server
 state:
-\[ \mathsf{DeterministicServer}\triangleq\sigT{S}{(Q \times S \to A \times S) \times S} \]
+\begin{align*}
+  &\mathsf{DeterministicServer}\triangleq\sigT{S}{(Q \times S \to A \times S) \times S} \\
+  &\mathsf{stepDeterministicServer}:Q\times \mathsf{DeterministicServer} \to A\times \mathsf{DeterministicServer} \\
+  &\mathsf{stepDeterministicServer}(q,\existT{S}{\sigma}{(\sstep, state)})\triangleq\\
+  &\qquad\letin{(a,state')}{\sstep(q,state)} \\
+  &\qquad(a, \existT{S}{\sigma}{(\sstep, state')})
+\end{align*}
+Here $\existT{S}{\sigma}{(\sstep, state)}$ is an instance of the
+$\mathsf{DeterministicServer}$ existential type~\cite{tapl}, where $\sstep$ is
+of type $Q\times\sigma\to A\times\sigma$, and $state$ has type $\sigma$.
 \end{definition}
 
 For example, consider an CMP-INC protocol: The server stores a number \inlinec S.
@@ -38,12 +47,13 @@ Such server can be modelled as:
     &0)}
 \end{align*}
 
-\begin{definition}[Nondeterministic server model]
 In general, servers' responses and transitions might depend on choices that are
 invisible to the testers.  These choices include inter-implementation
 nondetermism like algorithm design, and inter-execution nondeterminism like
-random numbers and timestamps.  Let $C$ be the space of invisible choices, then
-a nondeterministic server is specified as:
+random numbers and timestamps.
+\begin{definition}[Nondeterministic server model]
+  Let $C$ be the space of invisible choices, then a nondeterministic server is
+  specified as:
 \begin{align*}
   &\Server\triangleq\sigT{S}{(Q \times C \times S \to A \times S) \times S} \\
   &\stepServer:Q\times C \times \Server \to A\times \Server \\
@@ -51,10 +61,6 @@ a nondeterministic server is specified as:
   &\qquad\letin{(a,state')}{\sstep(q,c,state)} \\
   &\qquad(a, \existT{S}{\sigma}{(\sstep, state')})
 \end{align*}
-
-Here $\existT{S}{\sigma}{(\sstep, state)}$ is an instance of the $\Server$
-existential type~\cite{tapl}, where $\sstep$ is of type $Q\times
-C\times\sigma\to A\times\sigma$, and $state$ has type $\sigma$.
 \end{definition}
 
 Consider changing the aforementioned CMP-INC into CMP-RST: Upon request zero,
@@ -77,3 +83,90 @@ Its corresponding server model can be written as
     },\\
     &0)}
 \end{align*}
+
+\subsection{Validating traces}
+In the QAC language family, a trace is a list of $Q\times A$ pairs.  The
+validator takes a trace and determines whether it is valid per the protocol
+specification.
+\begin{definition}[Trace validity]
+  Trace $t$ is valid per protocol specification $s$ (written as ``$\valid s
+  t$'') if and only if it can be {\em produced} by the specification {\it i.e.}
+  server model:
+  \[\valid s t\quad\triangleq\quad\exists s',\behaves s t s'\]
+  Here the producibility relation in \autoref{sec:concepts} is expanded with an
+  argument $s'$ representing the post-transition state, pronounced
+  ``specification $s$ can produce trace $t$ and step to specification $s'$~'':
+  \begin{enumerate}
+  \item A server model can produce an empty trace and step to itself:
+    \[\behaves s \nil s\]
+  \item A server model can produce a non-empty trace if it can produce the head
+    of the trace, and step to some server model that produces the tail of the
+    trace:
+    \[\behaves s {t+(q,a)} s_2\quad\triangleq\quad\exists s_1,\behaves s t s_1\wedge
+    \exists c,\stepServer(q,c,s_1)=(a,s_2)\]
+  \end{enumerate}
+\end{definition}
+
+The validator is encoded as an infinite loop, where the loop body is a state
+monad that determines whether each $Q\times A$ pair is valid.
+\begin{definition}[Validator]
+Let $V$ be some validator state type, then a validator starts from an initial
+state, takes a query and its corresponding response, determines whether the
+interaction are valid, and computes the next validator state upon valid:
+\begin{align*}
+  &\Validator\triangleq\sigT{V}{(Q \times A \times V \to \option V) \times V} \\
+  &\stepValidator:Q\times A \times \Validator \to \option \Validator \\
+  &\stepValidator(q,a,\existT{V}{\beta}{(\vstep, state)})\\
+  &\qquad\triangleq\begin{cases}
+  \Some{(\existT{V}{\beta}{(\vstep,state')})} & \vstep(q,a,state)=\Some{state'} \\
+  \None & \vstep(q,a,state)=\None
+  \end{cases}
+\end{align*}
+\end{definition}
+
+For example, a validator for the CMP-INC protocol is written as:
+\begin{align*}
+  \existT{V}{\Nat}{(&\lam{(q,a,v)}{
+      \begin{cases}
+        \If a\Is0\Then\Some (v+1)\Else\None&q\Is0\\
+        \If a\Is q\Then\Some v\Else\None&\mathrm{otherwise}
+      \end{cases}
+    },\\
+    &0)}
+\end{align*}
+
+\begin{definition}[Trace acceptance]
+A validator accepts a trace if its step function {\em consumes} the entire
+trace:
+\[\accepts v t\quad\triangleq\quad\exists v',\behaves v t v'\]
+
+Here the cossumability relation ``$\behaves v t v'$~'' is pronounced ``validator
+$v$ can consume trace $t$ and step into validator $v'$~'':
+\begin{enumerate}
+\item A validator can consume an empty trace and step to itself:
+  \[\behaves v\nil v\]
+\item A validator consumes a non-empty trace if it can consume the head of the
+  trace, and step to some validator that can consume the tail of the trace:
+  \[\behaves v {t+(q,a)} v_2\quad\triangleq\quad\exists v_1,\behaves v t v_1\wedge
+  \stepValidator (q,a,v_1)=\Some v_2\]
+\end{enumerate}
+\end{definition}
+
+\subsection{Soundness and completeness of validators}
+We can now phrase the correctness properties in \autoref{sec:concepts} in terms
+of the QAC language family:
+\begin{enumerate}
+  \item A rejection-sound ({\it i.e.} acceptance-complete) validator consumes
+    all traces that are producible by the protocol specification:
+    \begin{align*}
+      \rejSound v s\quad\triangleq\quad&\forall t,\rejects v t\implies\invalid s t\\
+      \triangleq\quad&\forall t,(\exists s',\behaves s t s')\implies\exists v',\behaves v t v'
+    \end{align*}
+  \item A rejection-complete ({\it i.e.} acceptance-sound) validator only
+    consumes traces that are producible by the protocol specification:
+    \begin{align*}
+      \rejComplete v s\quad\triangleq\quad&\forall t,\invalid s t\implies\rejects v t\\
+      \triangleq\quad&\forall t,(\exists v',\behaves v t v')\implies\exists s',\behaves s t s'
+    \end{align*}
+\end{enumerate}
+

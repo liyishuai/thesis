@@ -1,7 +1,13 @@
-\subsection{Encoding servers and validators}
-The QAC language family allows specifying a wide variaty of protocols with state
-monads.  To derive a validator from a server model, we need to analyze the
-computations of the model program, which is represented in some programming
+So far we have defined the QAC language family, where specifications and
+validators are represented as state monads.  This section will show how to
+derive validators from the specification.
+
+\subsection{Encoding specifications and validators}
+To write an algorithm from the specification to the validator, we need to
+analyze the computations defined by the specification's model program.  The QAC
+language family only provides a state monad interface, which is not destructable
+by itself.  We need to introduce a programming language to represent the
+specification, and derive validators by interpreting programs written in that
 language.
 
 \begin{definition}[Server and validator of a program]
@@ -13,9 +19,8 @@ language.
   validators:
   \[\validatorOf:\Prog\to\Validator\]
 \end{definition}
-
-For example, protocols like CMP-RST can be encoded with a simple $\Prog$
-language:
+To encode specifications for protocols like CMP-RST, we introduce a simple
+$\Prog$ language, which supports arithmetic operations and memory access:
 \[\begin{array}{l@{\;}r@{\;}ll}
 \Prog&\triangleq&\Return&\text{respond with value at address $!0$}\\
 &\mid&!dst\coloneqq\Sexp;\Prog&\text{write to memory}\\\null
@@ -26,14 +31,22 @@ language:
 \end{array}
 \]
 
-This language assumes $Q$, $A$, $C$ to be natural numbers, and the server state
-to be a key-value store of natural numbers.  The initial server state maps all
-keys to zero:
-\[\serverOf(p)\triangleq\existT{S}{\Nat\to\Nat}{(\sstep_p,(\_\mapsto0))}\]
-The server's loop body $\sstep_p$ is defined as follows: First write the
-internal choice to address $!1$, and write the query to address $!0$.  Then
-execute the program $p$ until it returns.  Finally, send back the value stored
-in address $!0$ as response:
+Servers specified in this $\Prog$ language are defined as follows:
+\begin{itemize}
+\item The server state is a key-value store of natural numbers.
+\item The initial server state maps all keys to zero:
+  \[\serverOf(p)\triangleq\existT{S}{\Nat\to\Nat}{(\sstep_p,(\_\mapsto0))}\]
+\item The server's query, response, and choices ($Q$, $A$, $C$) are all
+  natural numbers.
+\item At the beginning of each server loop, the query is written to address
+  $!0$, and the internal choice is written to address $!1$.
+\item After writing the query and response, the server $\Exec$utes the $\Prog$
+  model, which manipulates the key-value store.
+\item When the $\Prog$ model $\Return$s, the server sends back the value stored
+  in address $!0$ as the response.
+\end{itemize}
+Let $(p:\Prog)$ be the model program, then the server's loop body $\sstep_p$ is
+defined as:
 \[\begin{array}{l@{\;}r@{\;}l}
 \sstep_p(q,c,s_0)&\triangleq&\letin{s_1}{\update{s_0}{1}{c}}\\
 &&\letin{s_2}{\update{s_1}{0}{q}}\\
@@ -57,24 +70,29 @@ Accordingly, the model program $p$ should read the query from address $!0$, and
 parameterize the space of nondeterministic behavior over the internal choice in
 address $!1$.  When the program returns, it should have stored the computed
 response in address $!0$.  Addresses greater than $!1$ are only writable by the
-specification, and can be used for storing the server state.  For example, the
-$\Prog$ representation of the CMP-RST server is:
+specification, and can be used for storing the server state.
+
+For example, the CMP-RST specification in \autoref{sec:qac} can be written in
+$\Prog$ as:
 \[\begin{array}{ll}
 \If !0\equiv0\Then !2\coloneqq!1;\Return&(1)\\
 \eelse\If !0\equiv!2\Then!0\coloneqq1;\Return&(2)\\
 \eelse!0\coloneqq0;\Return&(3)
 \end{array}\]
-
 Here ``$\If e_1\equiv e_2\Then p_1\Else p_2$'' is a syntactic sugar for:
 \[\If e_1\le e_2\Then(\If e_2\le e_1\Then p_1\Else p_2)\Else p_2\]
 
 When the query is zero (case 1), the nondeterministic value is stored in address
 $!2$, and compared against non-zero queries.  Address $!0$ is untouched, so the
-server echoes the request back as response.
+server echoes the zero request back as response.
 
 For non-zero queries (cases 2 and 3), the server checks whether the request is
 equal to the value stored in address $!2$, and stores the corresponding response
 to address $!0$.
+
+This $\Prog$ language features arithmetic operations, conditional branches,
+memory access, and internal nondeterminism.  It also exhibits a tree structure
+that allows inductive reasoning.
 
 \subsection{Dualize model program into validator}
 The validator for this $\Prog$ language needs to determine whether the trace is
