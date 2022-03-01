@@ -18,7 +18,7 @@
 
 %% ASZ: 12 point font, single-sided (don't alternate left/right margins), and
 %% sensible defaults.
-\documentclass[12pt,oneside]{amsbook}
+\documentclass[12pt,oneside,reqno]{amsbook}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -129,12 +129,14 @@
 \newcommand{\List}{\mathsf{list}\;}
 \newcommand{\nil}{\varepsilon}
 \newcommand{\If}{\mathsf{if}\;}
-\newcommand{\Then}{\;\mathsf{then}\;}
+\newcommand{\tthen}{\mathsf{then}\;}
+\newcommand{\Then}{\;\tthen}
 \newcommand{\eelse}{\mathsf{else}\;}
 \newcommand{\Else}{\;\eelse}
 \newcommand{\Unit}{()}
 \newcommand{\Tt}{()}
 \newcommand{\Nat}{\mathbb N}
+\newcommand{\Int}{\mathbb Z}
 \newcommand{\Bool}{\mathbb B}
 \newcommand{\True}{\mathsf{true}}
 \newcommand{\False}{\mathsf{false}}
@@ -152,6 +154,7 @@
 \newcommand{\Fresh}{\mathsf{fresh}\;}
 \newcommand{\solvable}{\mathsf{solvable}\;}
 \newcommand{\Vexp}{\mathsf{VExp}}
+\newcommand{\Var}{\mathsf{var}}
 \newcommand{\Reflects}[2]{#1\sim #2}
 \newcommand{\satisfy}[2]{#1\;\mathsf{satisfy}\;#2}
 \newcommand{\Jref}[3]{#1.#2.#3}

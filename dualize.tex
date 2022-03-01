@@ -21,21 +21,22 @@ language.
 \end{definition}
 To encode specifications for protocols like CMP-RST, we introduce a simple
 $\Prog$ language, which supports arithmetic operations and memory access:
-\[\begin{array}{l@{\;}r@{\;}ll}
-\Prog&\triangleq&\Return&\text{respond with value at address $!0$}\\
-&\mid&!dst\coloneqq\Sexp;\Prog&\text{write to memory}\\\null
+\[\begin{array}{lrll}
+\Prog&\triangleq&\Return&\text{end computation and send response}\\
+&\mid&!dst\coloneqq\Sexp;\Prog&\text{write to address }dst\in\Nat\\\null
 &\mid&\If\Sexp\le\Sexp\Then\Prog\Else\Prog&\text{conditional branch}\\
-\Sexp&\triangleq&\Nat&\text{constant number}\\
-&\mid&!src&\text{read from memory}\\
+\Sexp&\triangleq&\Int&\text{constant integer}\\
+&\mid&!src&\text{read from address }src\in\Nat\\
 &\mid&\Sexp\;op\;\Sexp&op\in\{+,-,\times,\div\}
 \end{array}
 \]
 
 Servers specified in this $\Prog$ language are defined as follows:
-\begin{itemize}
-\item The server state is a key-value store of natural numbers.
+\begin{enumerate}
+\item The server state is a key-value mapping, where the keys are natural
+  numbers, and the values are integers.
 \item The initial server state maps all keys to zero:
-  \[\serverOf(p)\triangleq\existT{S}{\Nat\to\Nat}{(\sstep_p,(\_\mapsto0))}\]
+  \[\serverOf(p)\triangleq\existT{S}{\Nat\to\Int}{(\sstep_p,(\_\mapsto0))}\]
 \item The server's query, response, and choices ($Q$, $A$, $C$) are all
   natural numbers.
 \item At the beginning of each server loop, the query is written to address
@@ -44,10 +45,10 @@ Servers specified in this $\Prog$ language are defined as follows:
   model, which manipulates the key-value store.
 \item When the $\Prog$ model $\Return$s, the server sends back the value stored
   in address $!0$ as the response.
-\end{itemize}
-Let $(p:\Prog)$ be the model program, then the server's loop body $\sstep_p$ is
+\end{enumerate}
+Let $p\in\Prog$ be the model program, then the server's loop body $\sstep_p$ is
 defined as:
-\[\begin{array}{l@{\;}r@{\;}l}
+\[\begin{array}{lrl}
 \sstep_p(q,c,s_0)&\triangleq&\letin{s_1}{\update{s_0}{1}{c}}\\
 &&\letin{s_2}{\update{s_1}{0}{q}}\\
 &&\letin{s_3}{\Exec(p,s_2)}\\
@@ -60,17 +61,25 @@ defined as:
 \end{cases}\\
 e^s&\triangleq&
 \begin{cases}
-  n&e\Is n:\Nat\\
+  z&e\Is z:\Int\\
   s!src&e\Is !src\\
   {e_1}^s\;op\;{e_2}^s&e\Is e_1\;op\;e_2
 \end{cases}
 \end{array}\]
+Here ``$e^s$'' is pronounced ``evaluating expression $e$ with state $s$''.  It
+substitutes all occurences of ``$!src$'' to the value stored at address $src$ of
+mapping $s$, written as ``$s!src$''.  ``$s[k\mapsto v]$'' is pronounced
+``updating mapping $s$ at address $k$ to value $v$''.  It produces a new state
+where $k$ is mapped to $v$, while other addresses remain unchanged from $s$:
+\[s[k\mapsto v]!k'\triangleq\begin{cases}v&k'=k\\
+s!k'&k'\neq k\end{cases}\]
 
-Accordingly, the model program $p$ should read the query from address $!0$, and
-parameterize the space of nondeterministic behavior over the internal choice in
-address $!1$.  When the program returns, it should have stored the computed
-response in address $!0$.  Addresses greater than $!1$ are only writable by the
-specification, and can be used for storing the server state.
+To specify protocols with this $\Prog$ language, the model program should read
+the query from address $!0$, and parameterize the space of nondeterministic
+behavior over the internal choice in address $!1$.  When the model program
+returns, it should have stored the computed response in address $!0$.  Addresses
+greater than $!1$ are only writable by the specification, and can be used for
+storing the server state.
 
 For example, the CMP-RST specification in \autoref{sec:qac} can be written in
 $\Prog$ as:
@@ -81,10 +90,9 @@ $\Prog$ as:
 \end{array}\]
 Here ``$\If e_1\equiv e_2\Then p_1\Else p_2$'' is a syntactic sugar for:
 \[\If e_1\le e_2\Then(\If e_2\le e_1\Then p_1\Else p_2)\Else p_2\]
-
 When the query is zero (case 1), the nondeterministic value is stored in address
-$!2$, and compared against non-zero queries.  Address $!0$ is untouched, so the
-server echoes the zero request back as response.
+$!2$, and compared against later non-zero queries.  Address $!0$ is untouched,
+so the server echoes the zero request back as response.
 
 For non-zero queries (cases 2 and 3), the server checks whether the request is
 equal to the value stored in address $!2$, and stores the corresponding response
@@ -92,54 +100,91 @@ to address $!0$.
 
 This $\Prog$ language features arithmetic operations, conditional branches,
 memory access, and internal nondeterminism.  It also exhibits a tree structure
-that allows inductive reasoning.
+that allows inductive reasoning.  The rest of this section derives validators
+from $\Prog$ models, and prove the correctness of such derived validators.
 
 \subsection{Dualize model program into validator}
-The validator for this $\Prog$ language needs to determine whether the trace is
-produceable by the server model.  More specifically, whether the responses in
-the trace can be {\em explained} by their corresponding symbolic expressions in
-the server model.
+The validator of a model $p\in\Prog$ needs to determine whether the trace is
+producible by $p$.  More specifically, whether the responses in the trace can be
+{\em explained} by $p$'s return value stored at address $!0$.
 
-To achieve this goal, the validator maintains ``validation states'' that consist
-of: (1) a mapping from server model's addresses to {\em symbolic variables} that
-represent the value stored therein, and (2) a set of {\em constraints} over the
-symbolic variables.  The key idea is to compute the symbolic representation of
-the server's outputs, and determine whether the actual responses observed in the
-trace can be explained by ({\it i.e.} unified with) these symbolic expressions:
-\[\validatorOf(p)\triangleq\existT{V}{\Set((\Nat\to\Nat)\times\Set\constraint)}{(\vstep_p,\{(\_\mapsto\#0,\{\#0\equiv0\})\})}\]
+The idea is similar to \ilc{tester} in \autoref{sec:interactive-testing}, which
+\ilc{validate}s the trace by executing the \ilc{serverSpec}, and comparing the
+expected response against the tester's observation.
 
-Here the initial validation state says ``the server server state has all
-addresses storing the value represented by variable $\#0$'', and has a single
-constraint that ``variable $\#0$'s value is equal to zero''.
+However, when the specification is nondeterministic, the expectation of response
+$A$ is parameterized over the internal choice $C$.  Therefore, the validator
+should determine whether there exists such $C$ that led the specification to
+produce the observed $A$.
 
-The validator's loop body is derived as follows:
+This reduces the trace validation problem to constraint solving.  Upon observing
+a response, the validator adds a constraint that the observation can be
+explained by running the specification with certain value of choices.
+
+More specifically, the validator executes the $\Prog$ model and represents
+internal choices with {\em symbolic variables}.  These variables are carried
+along the program execution, so the expected responses are computed as {\em
+  symbolic expressions} that might depend on those variables.  The validator
+then constraints that the symbolic response is equal to the concrete
+observation.
+
+To achieve this goal, the validator needs to store the symbolic expression for
+each address of the server model.  It also needs to remember all the constraints
+added upon observation.  We store these information as ``validation states'':
+\[(\Nat\to\Vexp)\times\Set\constraint\]
+Here the $\constraint$s are relations between validator expressions ($\Vexp$s)
+that may depend on symbolic $\Var$iables:
+\[\begin{array}{lrl@{\qquad}l}
+\constraint&\triangleq&\Vexp\;cmp\;\Vexp&cmp\in\{<,\le,\equiv\}\\
+\Vexp&\triangleq&\Int&\text{constant integer}\\
+&\mid&\#x&\text{variable }x\in\Var\\
+&\mid&\Vexp\;op\;\Vexp&op\in\{+,-,\times,\div\}\\
+\end{array}\]
+
+In practice, we use an equivalent definition for the validator state:
+\[(\Nat\to\Var)\times\Set\constraint\]
+The key-expression mapping $(k\mapsto e)$ above can be simulated with the
+key-variable $(k\mapsto x)$ mapping here, by adding $(\#x\equiv e)$ to the set
+of constraints.  We alter the type interface for convenience of developing the
+validator, which will be later explained in more details.
+
+Notice that the internal choices might affect branch conditions, so the
+validator doesn't know which branch in the specification was taken.  Therefore,
+it should maintain multiple validation states, one for each possible execution
+path of the specification:
+\[\Set((\Nat\to\Var)\times\Set\constraint)\]
+
+The initial state of the validator is a single validation state that corresponds
+to the specification's initial state:
+\[\{(\_\mapsto\#0,\{\#0\equiv0\})\}\]
+Here the initial validation state says ``all addresses are mapped to variable
+$\#0$, and the value of variable $\#0$ is constrained to be zero''.  This
+reflects the initial server state that maps all addresses to zero value.
+
+The validator's loop body is derived by dualzing the server model:
 \begin{enumerate}
   \item When the server performs a write operation $!dst\coloneqq exp$, the
     validator creates a fresh variable $x$ to represent the new value stored in
-    address $!dst$, and adds a constraint that says $x$'s value is equal to
-    that of $exp$.
+    address $!dst$, and adds a constraint that says $x$'s value is equal to that
+    of $exp$.
   \item When the server makes a nondeterministic branch $\If e_1\le e_2\Then
     p_1\Else p_2$, consider both cases: (a) If $p_1$ was taken, then the
-    validator should add a constraint $e_1<e_2$ or $e_1\equiv e_2$; or (b) If $p_2$
-    was taken, then the validator should add a constraint $e_1>e_2$.
-  \item Before executing the program, the server writes the nonderministic value
-    $c$ to address $!1$.  Accordingly, the validator creates a fresh variable to
-    represent the new value stored in address $!1$, without adding any
-    constraint.
+    validator should add a constraint $e_1\le e_2$; or (b) If $p_2$ was taken,
+    then the validator should add constraint $e_2<e_1$.
+  \item Before executing the program, the server writes the internal
+    choice $c$ to address $!1$.  Accordingly, the validator creates a fresh
+    variable to represent the new value stored in address $!1$, without adding
+    any constraint.
   \item After executing the program, the server sends back the value stored in
     $!0$ as response.  Accordingly, the validator adds a constraint that says
     the variable representing address $!0$ is equal to the observed response.
+  \item If the constraints of a validation state is unsatisfiable, 
 \end{enumerate}
-A validation state is rejecting if its constraints are not satisfiable, {\it
-  i.e.} the observed response cannot unify with its symbolic representation
-defined in the server model.
 
-Notice that derivation rule (2) needs to take both branches into account.  This
-requires the validator to maintain a set of validation states , one for each
-possible execution path of the server model.  The validator should reject the
-trace if all of its validation states are rejecting, indicating that no branch
-in the server model can explain the trace:
+\begin{figure}
 \[\begin{array}{l@{\;}r@{\;}l}
+\validatorOf(p)&\triangleq&\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}{\\
+  &&(\vstep_p,\{(\_\mapsto\#0,\{\#0\equiv0\})\})}\\
 \vstep_p(q,a,v)&\triangleq&\letin{v'}{\vstep'_p(q,a,v)}\\
 &&\If v'\Is\varnothing\Then\None\Else\Some v'\\
 \vstep'_p(q,a,v)&\triangleq&(vs_0,cs_0)\gets v;\\
@@ -161,23 +206,49 @@ in the server model can explain the trace:
     \letin{v_1}{(vs,cs\cup\{{e_1}^{vs}\le{e_2}^{vs}\})}\\
     \letin{v_2}{(vs,cs\cup\{{e_2}^{vs}<{e_1}^{vs}\})}\\
     \Eval(p_1,v_1)\cup\Eval(p_2,v_2)
-  \end{array}\right)&p\Is\If e_1\le e_2\Then p_1\Else p_2
+  \end{array}\right)&\begin{array}{@{}l}p\Is\\
+    \If e_1\le e_2\\
+    \tthen p_1\Else p_2\end{array}
 \end{cases}\\
-\constraint&\triangleq&\Vexp\;cmp\;\Vexp\qquad\qquad\;\;\,\text{where }cmp\in\{<,\le,\equiv\}\\
-\Vexp&\triangleq&\Nat\mid\#x\mid\Vexp\;op\;\Vexp\qquad\text{where }op\in\{+,-,\times,\div\}\\
 e^{vs}&\triangleq&\begin{cases}
   n&e\Is n:\Nat\\
   \#(vs!src)&e\Is!src\\
   {e_1}^{vs}\;op\;{e_2}^{vs}&e\Is e_1\;op\;e_2
 \end{cases}
 \end{array}\]
+\caption[Dualizing server model into validator]{Dualizing server model into
+  validator.  }
+\label{fig:dualize}
+\end{figure}
 
-Here the notation $x\gets v; f(x)$ is a monadic bind for sets: Let $f$ map each
-element $(vs,cs)$ in $v$ to a set of validation states
+
+
+This
+requires the validator to maintain a set of validation states , one for each
+possible execution path of the server model.  The validator should reject the
+trace if all of its validation states are rejecting, indicating that no branch
+in the server model can explain the trace:
+
+
+When the constraints of a validation state becomes unsatisfiable, it indicates
+that the server model cannot explain the observation.  This is because either
+(i) the observation is invalid {\it i.e.} not producible by the server model, or
+(ii) the observation is valid, but was produced by a different execution path of
+the server model.
+
+
+A validation state is rejecting if its constraints are not satisfiable, {\it
+  i.e.} the observed response cannot unify with its symbolic representation
+defined in the server model.
+
+
+This mechanism is formalized in \autoref{fig:dualize}.  Here notation ``$x\gets
+v;f(x)$'' is a monadic bind for sets: Let $f$ map each element $(vs,cs)$ in $v$
+to a set of validation states
 $(f(vs,cs):\Set((\Nat\to\Nat)\times\Set\constraint))$.  The return value of
 $\vstep_p'$ is the union of all result sets.
 
-This validator assumes a constraint solver that can determine whether a set of
+The validator assumes a constraint solver that can determine whether a set of
 constraints is satisfiable, {\it i.e.} there exists an assignment of all
 variables that satisfy all the constraints:
 \begin{gather*}

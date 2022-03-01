@@ -40,7 +40,7 @@ equal to the current value of \inlinec S:
 
 Such server can be modelled as:
 \begin{align*}
-  \existT{S}{\Nat}{(&\lam{(q,s)}{\begin{cases}
+  \existT{S}{\Int}{(&\lam{(q,s)}{\begin{cases}
         (0,s+1)&q\Is0\\
         (\If q\Is s\Then1\Else0,s)&\mathrm{otherwise}
     \end{cases}},\\
@@ -75,7 +75,7 @@ the server resets \inlinec S to a random number:
 \end{lstlisting}
 Its corresponding server model can be written as
 \begin{align*}
-  \existT{S}{\Nat}{(&\lam{(q,c,s)}{
+  \existT{S}{\Int}{(&\lam{(q,c,s)}{
       \begin{cases}
         (0,c)& q\Is0\\
         (\If q\Is s\Then 1\Else 0,s)&\mathrm{otherwise}
@@ -126,7 +126,7 @@ interaction are valid, and computes the next validator state upon valid:
 
 For example, a validator for the CMP-INC protocol is written as:
 \begin{align*}
-  \existT{V}{\Nat}{(&\lam{(q,a,v)}{
+  \existT{V}{\Int}{(&\lam{(q,a,v)}{
       \begin{cases}
         \If a\Is0\Then\Some (v+1)\Else\None&q\Is0\\
         \If a\Is q\Then\Some v\Else\None&\mathrm{otherwise}
@@ -158,15 +158,14 @@ of the QAC language family:
 \begin{enumerate}
   \item A rejection-sound ({\it i.e.} acceptance-complete) validator consumes
     all traces that are producible by the protocol specification:
-    \begin{align*}
-      \rejSound v s\quad\triangleq\quad&\forall t,\rejects v t\implies\invalid s t\\
-      \triangleq\quad&\forall t,(\exists s',\behaves s t s')\implies\exists v',\behaves v t v'
-    \end{align*}
+    \[\begin{array}{lrl}
+      \rejSound v s&\triangleq&\forall t,\rejects v t\implies\invalid s t\\
+      &\triangleq&\forall t,(\exists s',\behaves s t s')\implies\exists v',\behaves v t v'
+    \end{array}\]
   \item A rejection-complete ({\it i.e.} acceptance-sound) validator only
     consumes traces that are producible by the protocol specification:
-    \begin{align*}
-      \rejComplete v s\quad\triangleq\quad&\forall t,\invalid s t\implies\rejects v t\\
-      \triangleq\quad&\forall t,(\exists v',\behaves v t v')\implies\exists s',\behaves s t s'
-    \end{align*}
+    \[\begin{array}{lrl}
+      \rejComplete v s&\triangleq&\forall t,\invalid s t\implies\rejects v t\\
+      &\triangleq&\forall t,(\exists v',\behaves v t v')\implies\exists s',\behaves s t s'
+    \end{array}\]
 \end{enumerate}
-
