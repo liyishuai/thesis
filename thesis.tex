@@ -49,6 +49,7 @@
 
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}[chapter]
 
 \def\sectionautorefname{Section}
 \def\subsectionautorefname{Subsection}
@@ -156,6 +157,8 @@
 \newcommand{\Fresh}{\mathsf{fresh}\;}
 \newcommand{\solvable}{\mathsf{solvable}\;}
 \newcommand{\Vexp}{\mathsf{VExp}}
+\newcommand{\oop}{\;op\;}
+\newcommand{\ccmp}{\;cmp\;}
 \newcommand{\Var}{\mathsf{var}}
 \newcommand{\Reflects}[2]{#1\sim #2}
 \newcommand{\satisfy}[2]{#1\;\mathsf{satisfy}\;#2}
@@ -164,6 +167,8 @@
 \newcommand{\This}{\mathsf{this}}
 \newcommand{\Number}{\#}
 \newcommand{\At}{@}
+\newcommand{\Write}{\mathsf{write}}
+\newcommand{\Havoc}{\mathsf{havoc}}
 
 %% ASZ: `amsbook` didn't style `\paragraph`s appropriately
 \patchcmd{\paragraph}{\normalfont}{\itshape}

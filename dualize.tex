@@ -28,7 +28,7 @@ $\Prog$ language, which supports arithmetic operations and memory access:
 &\mid&\If\Sexp\le\Sexp\Then\Prog\Else\Prog&\text{conditional branch}\\
 \Sexp&\triangleq&\Int&\text{constant integer}\\
 &\mid&!src&\text{read from address }src\in\Nat\\
-&\mid&\Sexp\;op\;\Sexp&op\in\{+,-,\times,\div\}
+&\mid&\Sexp\oop\Sexp&op\in\{+,-,\times,\div\}
 \end{array}
 \]
 
@@ -64,7 +64,7 @@ e^s&\triangleq&
 \begin{cases}
   z&e\Is z:\Int\\
   s!src&e\Is !src\\
-  {e_1}^s\;op\;{e_2}^s&e\Is e_1\;op\;e_2
+  {e_1}^s\oop{e_2}^s&e\Is e_1\oop e_2
 \end{cases}
 \end{array}\]
 Here ``$e^s$'' is pronounced ``evaluating server expression $(e:\Sexp)$ with
@@ -131,10 +131,10 @@ added upon observation.  We store these information as ``validation states'':
 Here the $\constraint$s are relations between validator expressions ($\Vexp$s)
 that may depend on symbolic $\Var$iables:
 \[\begin{array}{lrl@{\qquad}l}
-\constraint&\triangleq&\Vexp\;cmp\;\Vexp&cmp\in\{<,\le,\equiv\}\\
+\constraint&\triangleq&\Vexp\ccmp\Vexp&cmp\in\{<,\le,\equiv\}\\
 \Vexp&\triangleq&\Int&\text{constant integer}\\
 &\mid&\#x&\text{variable }x\in\Var\\
-&\mid&\Vexp\;op\;\Vexp&op\in\{+,-,\times,\div\}\\
+&\mid&\Vexp\oop\Vexp&op\in\{+,-,\times,\div\}\\
 \end{array}\]
 
 In practice, we use an equivalent definition for the validator state:
@@ -194,21 +194,15 @@ The validator's loop body is derived by dualzing the server model:
   &&(\vstep_p,\{(\_\mapsto\#0,\{\#0\equiv0\})\})}\\
 \vstep_p(q,a,v)&\triangleq&\letin{v'}{\vstep'_p(q,a,v)}\\
 &&\If v'\Is\varnothing\Then\None\Else\Some v'\hfill(\ref{rule:reject})\\
-\vstep'_p(q,a,v)&\triangleq&(vs_0,cs_0)\gets v;\\
-&&\letin{x_c}{\Fresh vs_0}\\
-&&\letin{vs_1}{\update{vs_0}{1}{x_c}}\hfill(\ref{rule:choice})\\
-&&\letin{x_q}{\Fresh vs_1}\\
-&&\letin{v_2}{(\update{vs_1}{0}{x_q},cs_0\cup\{\#x_q\equiv q\})}\hfill(\ref{rule:write})\\
+\vstep'_p(q,a,v)&\triangleq&v_0\gets v;\\
+&&\letin{v_1}{\Havoc(1,v_0)}\\
+&&\letin{v_2}{\Write(0,q,v_1)}\\
 &&(vs_3,cs_3)\gets\Exec(p,v_2);\\
 &&\letin{cs_4}{cs_3\cup\{\#(vs_3!0)\equiv a\}}\hfill(\ref{rule:return})\\
 &&\If\solvable cs_4\Then\{(vs_3,cs_4)\}\Else\varnothing\hfill(\ref{rule:unsat})\\
 \Exec(p,(vs,cs))&\triangleq&\begin{cases}
   \{(vs,cs)\}&p\Is\Return\\
-  \left(\begin{array}{@{}l}
-    \letin{x_e}{\Fresh vs}\\
-    \letin{v'}{(\update{vs}{d}{x_e},cs\cup\{\#x_e\equiv e^{vs}\})}\\
-    \Exec(p',v')\hfill(\ref{rule:write})
-  \end{array}\right)&p\Is !d\coloneqq e;p'\\
+  \Exec(p',\Write(d,e,(vs,cs)))&p\Is !d\coloneqq e;p'\\
   \left(\begin{array}{@{}l}
     \letin{v_1}{(vs,cs\cup\{{e_1}^{vs}\le{e_2}^{vs}\})}\\
     \letin{v_2}{(vs,cs\cup\{{e_2}^{vs}<{e_1}^{vs}\})}\\
@@ -217,10 +211,13 @@ The validator's loop body is derived by dualzing the server model:
     \If e_1\le e_2\\
     \tthen p_1\Else p_2\end{array}
 \end{cases}\\
+\Write(d,e,(vs,cs))&\triangleq&\letin{x_e}{\Fresh (vs,cs)}\hfill(\ref{rule:write})\\
+&&(\update{vs}{d}{x_e},cs\cup\{\#x_e\equiv e^{vs}\})\\
+\Havoc(d,(vs,cs))&\triangleq&\letin{x_c}{\Fresh (vs,cs)}(\update{vs}{d}{x_c},cs)\hfill(\ref{rule:choice})\\
 e^{vs}&\triangleq&\begin{cases}
   n&e\Is n:\Nat\\
   \#(vs!src)&e\Is!src\\
-  {e_1}^{vs}\;op\;{e_2}^{vs}&e\Is e_1\;op\;e_2
+  {e_1}^{vs}\oop{e_2}^{vs}&e\Is e_1\oop e_2
 \end{cases}
 \end{array}\]
 \caption[Dualizing server model into validator]{Dualizing server model into
@@ -240,11 +237,11 @@ of variables $(\Var\to\Int)$ that satisfy all the constraints:
 \begin{gather*}
   \forall cs,\solvable cs\iff\exists (asgn:\Var\to\Int),\satisfy{asgn}cs\\
   \begin{array}{r@{\;}l}
-    \satisfy{asgn}cs\triangleq&\forall(e_1\;cmp\;e_2)\in cs, {e_1}^{asgn}\;cmp\;{e_2}^{asgn}\\
+    \satisfy{asgn}cs\triangleq&\forall(e_1\ccmp e_2)\in cs, {e_1}^{asgn}\ccmp{e_2}^{asgn}\\
     e^{asgn}\triangleq&\begin{cases}
       z&e\Is z:\Int\\
       asgn!x&e\Is \#x\\
-      {e_1}^{asgn}\;op\;{e_2}^{asgn}&e\Is e_1\;op\;e_2
+      {e_1}^{asgn}\oop{e_2}^{asgn}&e\Is e_1\oop e_2
     \end{cases}
   \end{array}
 \end{gather*}
@@ -271,18 +268,18 @@ complete in the following section.
      (&\lam{(q,a,v)}{&\llet v'=\begin{array}[t]{@{}l@{}l@{}ll}
        \multicolumn{3}{@{}l}{(vs_0,cs_0)\gets v;}\\
        \letin{vs_1&}{\update{vs_0}{1}{\Fresh vs_0}&}&\text{(1)}\\
-       \letin{x_q&}{\Fresh vs_1&}\\
+       \letin{x_q&}{\Fresh (vs_1,cs_0)&}\\
        \letin{vs_2&}{\update{vs_1}{0}{x_q}&}\\
        \letin{cs_2&}{cs_0\cup\{\#x_q\equiv q\}&}\\
        \letin{cs_{3a0}&}{cs_2\cup\{\#(vs_2!0)\le\#(vs_2!2))\}&}&\text{(2a)}\\
-       \letin{x_{3a1}&}{\Fresh vs_2&}\\
+       \letin{x_{3a1}&}{\Fresh (vs_2,cs_{3a0})&}\\
        \letin{vs_{3a1}&}{\update{vs_2}{0}{x_{3a1}}&}\\
        \letin{cs_{3a1}&}{cs_{3a0}\cup\{\#x_{3a1}\equiv0\}&}\\
        \letin{cs_{3b0}&}{cs_2\cup\{\#(vs_2!2)<\#(vs_2!0)\}&}&\text{(2b)}\\
-       \letin{x_{3b1}&}{\Fresh vs_2&}\\
+       \letin{x_{3b1}&}{\Fresh (vs_2,cs_{3b0})&}\\
        \letin{vs_{3b1}&}{\update{vs_2}{0}{x_{3b1}}&}\\
        \letin{cs_{3b1}&}{cs_{3b0}\cup\{\#x_{3b1}\equiv1\}&}\\
-       \letin{x_{3b2}&}{\Fresh vs_{3b1}&}\\
+       \letin{x_{3b2}&}{\Fresh (vs_{3b1},cs_{3b1})&}\\
        \letin{vs_{3b2}&}{\update{vs_{3b1}}{2}{x_{3b2}}&}\\
        \letin{cs_{3b2}&}{cs_{3b1}\cup\{\#x_{3b2}\equiv\#(vs_{3b2}!1)\}&}\\
        \multicolumn{3}{@{}l}{((vs_4,cs_4)\gets\{(vs_{3a1},cs_{3a1}),(vs_{3b2},cs_{3b2})\};}&\text{(3)}\\

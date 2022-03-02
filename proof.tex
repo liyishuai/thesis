@@ -112,19 +112,110 @@ constraints.  This assignment evaluates internal choices' symbolic variables
 into concrete values, and evaluates the validator's key-variable mapping
 $(\Nat\to\Var)$ to the server's key-value mapping $(\Nat\to\Int)$.
 
+Therefore, we only need to show that each server and validator step preserves
+the existence of such assignment that relates their states.
+
+For the rest of this section, $\beta=\Set((\Nat\to\Var)\times\Set\constraint)$
+represents the validator state type, and $\sigma=\Nat\to\Int$ represents the
+server state type.
+
 \begin{definition}[Invariant between $\Prog$-based specification and validator]
   Validator state $v$ {\em simulates} server state $s$ if it contains a
-  validation state $(vs,cs)$ that {\em reflects} the server state: (1) There
-  exists an assignment $asgn$ that can satisfy the constraints $cs$; and (2) The
-  address-variable mapping $vs$ can be {\em instantiated} with the assignment
-  (written as ``$vs^{asgn}$'') into an address-data mapping that is equivalent
-  with $s$:
-  \begin{align*}
-    \Reflects v s\quad\triangleq\quad& \exists((vs,cs)\in v)(asgn:\Var\to\Int),\satisfy{asgn}
-    cs\wedge vs^{asgn}=s\\ vs^{asgn}\quad\triangleq\quad&addr\mapsto
-    asgn!(vs!addr)
-  \end{align*}
+  validation state $(vs,cs)$ that {\em reflects} the server state, {\it i.e.}
+  (1) There exists an assignment $asgn$ that can satisfy the constraints $cs$;
+  and (2) The key-variable mapping $vs$ can be evaluated with $asgn$ (written as
+  $vs^{asgn}$) into a key-value mapping that is equivalent with
+  $s$:
+  \[\begin{array}{lll} \Reflects{(v:\beta)}{(s:\sigma)}&\triangleq&
+  \exists((vs,cs)\in v)(asgn:\Var\to\Int),\satisfy{asgn} cs\wedge vs^{asgn}\equiv s\\
+  vs^{asgn}&\triangleq&addr\mapsto asgn!(vs!addr) \end{array}\]
 \end{definition}
+
+\begin{lemma}[\ref{eq:rs1}]
+\[\begin{array}{ll}
+\text{If:}&
+vs=(\_\mapsto\#0)\qquad
+cs=\{\#0\equiv0\}\qquad
+s=(\_\mapsto0)\\
+\text{Then:}&\Reflects{\{(vs,cs)\}}{s}
+\end{array}\]
+\end{lemma}
+\begin{proof}
+Since $(vs,cs)$ is the only element in the validator state, we only need to show
+that:
+\[\exists(asgn:\Var\to\Int),\satisfy{asgn} cs\wedge vs^{asgn}\equiv s\]
+
+By constructing the assignment as: \[asgn=(\_\mapsto0)\]
+
+We have: \[\#0^{asgn}\equiv0\]
+
+Thus: \[\satisfy{asgn} cs\]
+
+We also know that: \[\forall addr, asgn!(vs!addr)=0\equiv s!addr)\]
+
+Thus: \[(vs^{asgn}\equiv s)\]
+\end{proof}
+
+\begin{lemma}[\ref{eq:rs2}]
+  \begin{align*}
+    &\forall(p:\Prog)(q,c,a:\Int)(s_0,s':\sigma)(v:\beta),\\
+    &\sstep_p(q,c,s_0)=(a,s')\wedge\Reflects{v}{s_0}\\
+    &\implies\exists v':\beta,\vstep_p(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}
+  \end{align*}
+\end{lemma}
+\begin{proof}
+The invariant $\Reflects{v}{s_0}$ tells us that $v$ contains a validation state
+that reflects the server state $s_0$:
+\[\exists((vs_0,cs_0)\in v)(asgn_0:\Var\to\Int),\satisfy{asgn_0} cs_0\wedge {vs_0}^{asgn_0}\equiv s_0\]
+
+The corresponding validator step is constructed by analyzing the server step,
+and proving small-step bisimulation for each derivation rule
+in \autoref{sec:dualization}.
+\begin{enumerate}
+\item The server first writes the internal choice $c$ to address $!1$.
+According to \autoref{rule:choice}, the validator creates a fresh variable for
+address $!1$.
+
+We need to show that:
+\[\exists asgn_1,\satisfy{asgn_1} cs_0\wedge vs_1^{asgn_1}\equiv s_1\]
+
+\begin{proof}
+We can construct the following assignment:
+\[asgn_1=\update{asgn_0}{x_c}{c}\]
+
+Since $x_c$ is fresh in $cs_0$, we have:
+\[\forall (e_1\ccmp e_2)\in cs_0,{e_1}^{asgn_1}={e_1}^{asgn_0}\wedge{e_2}^{asgn_1}={e_2}^{asgn_0}\]
+
+Thus:
+\begin{align*}
+&\forall (e_1\ccmp e_2)\in cs_0, {e_1}^{asgn_1}\ccmp {e_2}^{asgn_1}\\
+&\textit{i.e. }\satisfy{asgn_1} cs_0
+\end{align*}
+
+Since $x_c$ is also fresh in $vs_0$, we have:
+\[\forall addr, asgn_1!(vs_1!addr)=\begin{cases}
+asgn_1!x_c=c\equiv s_1!addr&addr\Is1\\
+asgn_0!(vs_0!addr)=s_0!addr\equiv s_1!addr&\text{otherwise}
+\end{cases}\]
+
+Thus: \[{vs_1}^{asgn_1}\equiv s_1\]
+\end{proof}
+
+\item When the server writes some expression $(e:\Sexp)$ to an address $!dst$,
+the validator creates a fresh variable $x_e$ for address $!dst$, and constraints
+that $\#x_e\equiv e^{vs},$\footnote{If unspecified, $(vs,cs)$ represents the
+validator state at the current point of derivation, and $s$ represents the
+current server state.} according to \autoref{rule:write}.
+
+We need to show that:
+\begin{align*}
+\forall vs,cs,s,asgn,&\satisfy{asgn}{cs}\wedge vs^{asgn}\equiv s\\
+&\implies\forall d,e,\letin{}{}
+\end{align*}
+\end{enumerate}
+
+\end{proof}
+
 This bisimulation definition satisfies the hypotheses for proving soundness and
 completeness:
 
