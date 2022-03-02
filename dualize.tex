@@ -3,6 +3,7 @@ validators are represented as state monads.  This section will show how to
 derive validators from the specification.
 
 \subsection{Encoding specifications and validators}
+\label{sec:proglang}
 To write an algorithm from the specification to the validator, we need to
 analyze the computations defined by the specification's model program.  The QAC
 language family only provides a state monad interface, which is not destructable
@@ -84,19 +85,13 @@ storing the server state.
 For example, the CMP-RST specification in \autoref{sec:qac} can be written in
 $\Prog$ as:
 \[\begin{array}{ll}
-\If !0\equiv0\Then !2\coloneqq!1;\Return&(1)\\
-\eelse\If !0\equiv!2\Then!0\coloneqq1;\Return&(2)\\
-\eelse!0\coloneqq0;\Return&(3)
+\If !0\le!2\Then !0\coloneqq0;\Return&(1)\\
+\eelse!0\coloneqq1;!2\coloneqq!1;\Return&(2)
 \end{array}\]
-Here ``$\If e_1\equiv e_2\Then p_1\Else p_2$'' is a syntactic sugar for:
-\[\If e_1\le e_2\Then(\If e_2\le e_1\Then p_1\Else p_2)\Else p_2\]
-When the query is zero (case 1), the nondeterministic value is stored in address
-$!2$, and compared against later non-zero queries.  Address $!0$ is untouched,
-so the server echoes the zero request back as response.
-
-For non-zero queries (cases 2 and 3), the server checks whether the request is
-equal to the value stored in address $!2$, and stores the corresponding response
-to address $!0$.
+When the query is less than or equal to the value stored in $!2$ (case 1), the
+server writes response $0$ to address $!0$, and leave address $!2$ untouched.
+For queries greater than the value in $!2$ (case 2), the server writes $1$ as
+response, and updates address $!2$ with the internal choice stored in $!1$.
 
 This $\Prog$ language features arithmetic operations, conditional branches,
 memory access, and internal nondeterminism.  It also exhibits a tree structure
@@ -163,22 +158,33 @@ reflects the initial server state that maps all addresses to zero value.
 
 The validator's loop body is derived by dualzing the server model:
 \begin{enumerate}
-  \item When the server performs a write operation $!dst\coloneqq exp$, the
-    validator creates a fresh variable $x$ to represent the new value stored in
-    address $!dst$, and adds a constraint that says $x$'s value is equal to that
-    of $exp$.
-  \item When the server makes a nondeterministic branch $\If e_1\le e_2\Then
-    p_1\Else p_2$, consider both cases: (a) If $p_1$ was taken, then the
-    validator should add a constraint $e_1\le e_2$; or (b) If $p_2$ was taken,
-    then the validator should add constraint $e_2<e_1$.
-  \item Before executing the program, the server writes the internal
+\item \label{rule:write} When the server performs a write operation
+  $!dst\coloneqq exp$, the validator creates a fresh variable $x$ to represent
+  the new value stored in address $!dst$, and adds a constraint that says $x$'s
+  value is equal to that of $exp$.
+\item \label{rule:branch} When the server makes a nondeterministic branch $\If
+  e_1\le e_2\Then p_1\Else p_2$, consider both cases: (a) If $p_1$ was taken,
+  then the validator should add a constraint $e_1\le e_2$; or (b) If $p_2$ was
+  taken, then the validator should add constraint $e_2<e_1$.
+\item \label{rule:choice} Before executing the program, the server writes the internal
     choice $c$ to address $!1$.  Accordingly, the validator creates a fresh
     variable to represent the new value stored in address $!1$, without adding
     any constraint.
-  \item After executing the program, the server sends back the value stored in
-    $!0$ as response.  Accordingly, the validator adds a constraint that says
-    the variable representing address $!0$ is equal to the observed response.
-  \item If the constraints of a validation state is unsatisfiable, 
+\item \label{rule:return} After executing the program, the server sends back the
+  value stored in $!0$ as response.  Accordingly, the validator adds a
+  constraint that says the variable representing address $!0$ is equal to the
+  observed response.
+\item \label{rule:unsat} When the constraints of a validation state becomes
+  unsatisfiable, it indicates that the server model cannot explain the
+  observation.  This is because either (i) the observation is invalid {\it i.e.}
+  not producible by the server model, or (ii) the observation is valid, but was
+  produced by a different execution path of the server model.
+\item \label{rule:reject} The validator accepts the trace if it can be produced
+  by any execution path of the server model.  Since each execution path
+  corresponds to a validation state, the validator only needs to remove the
+  unsatisfiable state from the set of states.  If the set of validation states
+  becomes empty, it indicates that the observation cannot be explained by any
+  execution path of the specification, so the validator should reject the trace.
 \end{enumerate}
 
 \begin{figure}
@@ -186,26 +192,26 @@ The validator's loop body is derived by dualzing the server model:
 \validatorOf(p)&\triangleq&\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}{\\
   &&(\vstep_p,\{(\_\mapsto\#0,\{\#0\equiv0\})\})}\\
 \vstep_p(q,a,v)&\triangleq&\letin{v'}{\vstep'_p(q,a,v)}\\
-&&\If v'\Is\varnothing\Then\None\Else\Some v'\\
+&&\If v'\Is\varnothing\Then\None\Else\Some v'\hfill(\ref{rule:reject})\\
 \vstep'_p(q,a,v)&\triangleq&(vs_0,cs_0)\gets v;\\
 &&\letin{x_c}{\Fresh vs_0}\\
-&&\letin{vs_1}{\update{vs_0}{1}{x_c}}\\
+&&\letin{vs_1}{\update{vs_0}{1}{x_c}}\hfill(\ref{rule:choice})\\
 &&\letin{x_q}{\Fresh vs_1}\\
-&&\letin{v_2}{(\update{vs_1}{0}{x_q},cs_0\cup\{\#x_q\equiv q\})}\\
-&&(vs_3,cs_3)\gets\Eval(p,v_2);\\
-&&\letin{cs_4}{cs_3\cup\{\#(vs_3!0)\equiv a\}}\\
-&&\If\solvable cs_4\Then\{(vs_4,cs_4)\}\Else\varnothing\\
-\Eval(p,(vs,cs))&\triangleq&\begin{cases}
+&&\letin{v_2}{(\update{vs_1}{0}{x_q},cs_0\cup\{\#x_q\equiv q\})}\hfill(\ref{rule:write})\\
+&&(vs_3,cs_3)\gets\Exec(p,v_2);\\
+&&\letin{cs_4}{cs_3\cup\{\#(vs_3!0)\equiv a\}}\hfill(\ref{rule:return})\\
+&&\If\solvable cs_4\Then\{(vs_3,cs_4)\}\Else\varnothing\hfill(\ref{rule:unsat})\\
+\Exec(p,(vs,cs))&\triangleq&\begin{cases}
   \{(vs,cs)\}&p\Is\Return\\
   \left(\begin{array}{@{}l}
     \letin{x_e}{\Fresh vs}\\
     \letin{v'}{(\update{vs}{d}{x_e},cs\cup\{\#x_e\equiv e^{vs}\})}\\
-    \Eval(p',v')
+    \Exec(p',v')\hfill(\ref{rule:write})
   \end{array}\right)&p\Is !d\coloneqq e;p'\\
   \left(\begin{array}{@{}l}
     \letin{v_1}{(vs,cs\cup\{{e_1}^{vs}\le{e_2}^{vs}\})}\\
     \letin{v_2}{(vs,cs\cup\{{e_2}^{vs}<{e_1}^{vs}\})}\\
-    \Eval(p_1,v_1)\cup\Eval(p_2,v_2)
+    \Exec(p_1,v_1)\cup\Exec(p_2,v_2)\hfill(\ref{rule:branch})
   \end{array}\right)&\begin{array}{@{}l}p\Is\\
     \If e_1\le e_2\\
     \tthen p_1\Else p_2\end{array}
@@ -217,30 +223,9 @@ e^{vs}&\triangleq&\begin{cases}
 \end{cases}
 \end{array}\]
 \caption[Dualizing server model into validator]{Dualizing server model into
-  validator.  }
+  validator, with derivation rules annotated.}
 \label{fig:dualize}
 \end{figure}
-
-
-
-This
-requires the validator to maintain a set of validation states , one for each
-possible execution path of the server model.  The validator should reject the
-trace if all of its validation states are rejecting, indicating that no branch
-in the server model can explain the trace:
-
-
-When the constraints of a validation state becomes unsatisfiable, it indicates
-that the server model cannot explain the observation.  This is because either
-(i) the observation is invalid {\it i.e.} not producible by the server model, or
-(ii) the observation is valid, but was produced by a different execution path of
-the server model.
-
-
-A validation state is rejecting if its constraints are not satisfiable, {\it
-  i.e.} the observed response cannot unify with its symbolic representation
-defined in the server model.
-
 
 This mechanism is formalized in \autoref{fig:dualize}.  Here notation ``$x\gets
 v;f(x)$'' is a monadic bind for sets: Let $f$ map each element $(vs,cs)$ in $v$
@@ -263,11 +248,54 @@ variables that satisfy all the constraints:
   \end{array}
 \end{gather*}
 
-For example, the initial validation state can be satisfied by any assignment
-whose value at $\#0$ is equal to zero.  The $\vstep_p'$ function adds constraints
-to each validation state, until its constraints become unsolvable, and gets
-dropped from the result.
+When the $\Prog$ model writes to memories or makes conditional branches, the
+operands are represented as specification expressions ($\Sexp$) that refer to
+server addresses.  To construct the constraints over symbolic variables, the
+validator translates the expressions $(e:\Sexp)$ into validator expressions
+$(e^{vs}:\Vexp)$ by interpreting it with the validation state
+$(vs:\Nat\to\Var)$, which substitutes all addresses $(!src)$ with their
+corresponding variable $\#(vs!src)$.
 
-If the constraints in all validation states are unsolvable, then $\vstep_p'$
-returns an empty result set $\varnothing$, which leads to rejection of the trace
-($\vstep_p$ returning $\None$).
+For example, by dualizing the $\Prog$ model for CMP-RST in
+\autoref{sec:proglang}, we get a validator as shown in
+\autoref{fig:derived-validator}.  Such derived validators are proven sound and
+complete in the following section.
+\begin{figure}
+\begin{align*}
+&\validatorOf(\texttt{CMP-RST})\triangleq\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}\\
+  &\begin{array}{rll}
+     (&\lam{(q,a,v)}{&\llet v'=\begin{array}[t]{@{}l@{}l@{}ll}
+       \multicolumn{3}{@{}l}{(vs_0,cs_0)\gets v;}\\
+       \letin{vs_1&}{\update{vs_0}{1}{\Fresh vs_0}&}&\text{(1)}\\
+       \letin{x_q&}{\Fresh vs_1&}\\
+       \letin{vs_2&}{\update{vs_1}{0}{x_q}&}\\
+       \letin{cs_2&}{cs_0\cup\{\#x_q\equiv q\}&}\\
+       \letin{cs_{3a0}&}{cs_2\cup\{\#(vs_2!0)\le\#(vs_2!2))\}&}&\text{(2a)}\\
+       \letin{x_{3a1}&}{\Fresh vs_2&}\\
+       \letin{vs_{3a1}&}{\update{vs_2}{0}{x_{3a1}}&}\\
+       \letin{cs_{3a1}&}{cs_{3a0}\cup\{\#x_{3a1}\equiv0\}&}\\
+       \letin{cs_{3b0}&}{cs_2\cup\{\#(vs_2!2)<\#(vs_2!0)\}&}&\text{(2b)}\\
+       \letin{x_{3b1}&}{\Fresh vs_2&}\\
+       \letin{vs_{3b1}&}{\update{vs_2}{0}{x_{3b1}}&}\\
+       \letin{cs_{3b1}&}{cs_{3b0}\cup\{\#x_{3b1}\equiv1\}&}\\
+       \letin{x_{3b2}&}{\Fresh vs_{3b1}&}\\
+       \letin{vs_{3b2}&}{\update{vs_{3b1}}{2}{x_{3b2}}&}\\
+       \letin{cs_{3b2}&}{cs_{3b1}\cup\{\#x_{3b2}\equiv\#(vs_{3b2}!1)\}&}\\
+       \multicolumn{3}{@{}l}{((vs_4,cs_4)\gets\{(vs_{3a1},cs_{3a1}),(vs_{3b2},cs_{3b2})\};}&\text{(3)}\\
+       \letin{cs_5&}{cs_4\cup\{\#(vs_4!0)\equiv a\}&}\\
+       \multicolumn{3}{@{}l}{\If\solvable cs_5\Then\{(vs_4,cs_5)\}\Else\varnothing}\\
+       \end{array}\\
+       &&\iin\\
+       &&\If v'\Is\varnothing\Then\None\Else\Some v'
+     }\\
+     ,&\multicolumn{2}{l}{\{(\_\mapsto\#0,\{\#0\equiv0\})\}})
+   \end{array}
+\end{align*}
+\caption[Validator for protocol CMP-RST]{Validator for CMP-RST, derived from
+  $\Prog$ model.  This program consists of three parts: (1) symbolizing the
+  query and internal choice before executing the model, (2) considering both
+  branches in the model program, propagating a validation state for each branch,
+  (3) filtering the validation states by constraint satisfiability, removing
+  invalid states.}
+\label{fig:derived-validator}
+\end{figure}

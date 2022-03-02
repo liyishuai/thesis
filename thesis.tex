@@ -55,7 +55,8 @@
 \def\subsubsectionautorefname{Subsubsection}
 \def\lstnumberautorefname{Line}
 \renewcommand{\equationautorefname}{Hypothesis}
-\usepackage{textcomp,listings,lstparams,lstcoq,graphicx}
+\renewcommand{\itemautorefname}{Rule}
+\usepackage{textcomp,listings,lstparams,lstcoq,graphicx,enumitem}
 \lstdefinestyle{customcoq}{
   language=Coq,
   morekeywords={is},
@@ -112,7 +113,9 @@
 \newcommand{\exhaustive}[2]{\mathsf{exhaustive}_{#1}~{#2}}
 \newcommand{\triggers}[3]{#1\overset{#3}\longrightarrow_{#2}}
 \newcommand{\behaves}[2]{\triggers{#1}{}{#2}}
-\newcommand{\letin}[2]{\mathsf{let}\;#1=#2\;\mathsf{in}\;}
+\newcommand{\llet}{\mathsf{let}\;}
+\newcommand{\iin}{\mathsf{in}\;}
+\newcommand{\letin}[2]{\llet#1=#2\;\iin}
 \newcommand{\option}{\mathsf{option}\;}
 \newcommand{\Some}[1]{\mathsf{Some}\;#1}
 \newcommand{\None}{\mathsf{None}}
@@ -148,7 +151,6 @@
 \newcommand{\Sexp}{\mathsf{SExp}}
 \newcommand{\Mem}{\mathsf{mem}}
 \newcommand{\Exec}{\mathsf{exec}}
-\newcommand{\Eval}{\mathsf{eval}}
 \newcommand{\update}[3]{#1[#2\mapsto#3]}
 \newcommand{\constraint}{\mathsf{constraint}}
 \newcommand{\Fresh}{\mathsf{fresh}\;}

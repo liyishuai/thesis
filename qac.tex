@@ -25,24 +25,24 @@ $\mathsf{DeterministicServer}$ existential type~\cite{tapl}, where $\sstep$ is
 of type $Q\times\sigma\to A\times\sigma$, and $state$ has type $\sigma$.
 \end{definition}
 
-For example, consider an CMP-INC protocol: The server stores a number \inlinec S.
-If the client sends zero, then the server increases \inlinec S by one.
-Otherwise, the server responds with \inlinec 1 if and only if the request is
-equal to the current value of \inlinec S:
+For example, consider an CMP-SET protocol: The server stores a number
+\inlinec S.  If the client sends a request that is smaller than
+\inlinec S, then the server responds with \inlinec 0.  Otherwise, the
+server sets \inlinec S to the request, and responds with \inlinec 1:
 \begin{lstlisting}[style=customc]
   int S = 0;
   while (true) {
     int request = recv();
-    if (request == 0) { ++S; send(0); }
-    else send(request == S ? 1 : 0);
+    if (request <= S) send(0);
+    else { S = request; send(1); }
   }
 \end{lstlisting}
 
 Such server can be modelled as:
 \begin{align*}
   \existT{S}{\Int}{(&\lam{(q,s)}{\begin{cases}
-        (0,s+1)&q\Is0\\
-        (\If q\Is s\Then1\Else0,s)&\mathrm{otherwise}
+        (0,s)&q\le s\\
+        (1,q)&\mathrm{otherwise}
     \end{cases}},\\
     &0)}
 \end{align*}
@@ -63,22 +63,23 @@ random numbers and timestamps.
 \end{align*}
 \end{definition}
 
-Consider changing the aforementioned CMP-INC into CMP-RST: Upon request zero,
-the server resets \inlinec S to a random number:
+Consider changing the aforementioned CMP-SET into CMP-RST: When the
+request is greater than \inlinec S, the server resets \inlinec S to a
+random number:
 \begin{lstlisting}[style=customc]
   int S = 0;
   while (true) {
     int request = recv();
-    if (request == 0) { S = rand(); send(0); }
-    else send(request == S ? 1 : 0);
+    if (request <= S) send(0);
+    else { S = rand(); send(1); }
   }
 \end{lstlisting}
 Its corresponding server model can be written as
 \begin{align*}
   \existT{S}{\Int}{(&\lam{(q,c,s)}{
       \begin{cases}
-        (0,c)& q\Is0\\
-        (\If q\Is s\Then 1\Else 0,s)&\mathrm{otherwise}
+        (0,s)& q\le s\\
+        (1,c)&\mathrm{otherwise}
       \end{cases}
     },\\
     &0)}
@@ -124,12 +125,12 @@ interaction are valid, and computes the next validator state upon valid:
 \end{align*}
 \end{definition}
 
-For example, a validator for the CMP-INC protocol is written as:
+For example, a validator for the CMP-SET protocol is written as:
 \begin{align*}
   \existT{V}{\Int}{(&\lam{(q,a,v)}{
       \begin{cases}
-        \If a\Is0\Then\Some (v+1)\Else\None&q\Is0\\
-        \If a\Is q\Then\Some v\Else\None&\mathrm{otherwise}
+        \If a\Is 0\Then\Some v\Else\None&q\le v\\
+        \If a\Is 1\Then\Some q\Else\None&\mathrm{otherwise}
       \end{cases}
     },\\
     &0)}
