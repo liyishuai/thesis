@@ -67,11 +67,12 @@ e^s&\triangleq&
   {e_1}^s\;op\;{e_2}^s&e\Is e_1\;op\;e_2
 \end{cases}
 \end{array}\]
-Here ``$e^s$'' is pronounced ``evaluating expression $e$ with state $s$''.  It
-substitutes all occurences of ``$!src$'' to the value stored at address $src$ of
-mapping $s$, written as ``$s!src$''.  ``$s[k\mapsto v]$'' is pronounced
-``updating mapping $s$ at address $k$ to value $v$''.  It produces a new state
-where $k$ is mapped to $v$, while other addresses remain unchanged from $s$:
+Here ``$e^s$'' is pronounced ``evaluating server expression $(e:\Sexp)$ with
+state $(s:\Nat\to\Int)$''.  It substitutes all occurences of ``$!src$'' with the
+value stored at address $src$ of mapping $s$, written as ``$s!src$''.
+``$s[k\mapsto v]$'' is pronounced ``updating mapping $s$ at address $k$ to value
+$v$''.  It produces a new state where $k$ is mapped to $v$, while other
+addresses remain unchanged from $s$:
 \[s[k\mapsto v]!k'\triangleq\begin{cases}v&k'=k\\
 s!k'&k'\neq k\end{cases}\]
 
@@ -234,19 +235,22 @@ $(f(vs,cs):\Set((\Nat\to\Nat)\times\Set\constraint))$.  The return value of
 $\vstep_p'$ is the union of all result sets.
 
 The validator assumes a constraint solver that can determine whether a set of
-constraints is satisfiable, {\it i.e.} there exists an assignment of all
-variables that satisfy all the constraints:
+constraints is satisfiable, {\it i.e.} whether there exists an {\em assignment}
+of variables $(\Var\to\Int)$ that satisfy all the constraints:
 \begin{gather*}
-  \forall cs,\solvable cs\iff\exists (asgn:\Nat\to\Nat),\satisfy{asgn}cs\\
+  \forall cs,\solvable cs\iff\exists (asgn:\Var\to\Int),\satisfy{asgn}cs\\
   \begin{array}{r@{\;}l}
     \satisfy{asgn}cs\triangleq&\forall(e_1\;cmp\;e_2)\in cs, {e_1}^{asgn}\;cmp\;{e_2}^{asgn}\\
     e^{asgn}\triangleq&\begin{cases}
-      n&e\Is n:\Nat\\
+      z&e\Is z:\Int\\
       asgn!x&e\Is \#x\\
       {e_1}^{asgn}\;op\;{e_2}^{asgn}&e\Is e_1\;op\;e_2
     \end{cases}
   \end{array}
 \end{gather*}
+Here ``$e^{asgn}$'' is pronounced ``evaluating validator expression $(e:\Vexp)$
+with assignment $(asgn:\Var\to\Int)$''.  It substitutes all occurences of
+``$\#x$'' with their assigned value $(asgn!x)$.
 
 When the $\Prog$ model writes to memories or makes conditional branches, the
 operands are represented as specification expressions ($\Sexp$) that refer to

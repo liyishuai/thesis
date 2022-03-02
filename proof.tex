@@ -1,4 +1,6 @@
-Validators derived in this approach can be proven sound and complete:
+So far we have introduced the QAC language family for representing servers and
+validators, and demonstrated the derivation mechanism with a $\Prog$ language.
+Next I'll show how to prove that QAC validators are sound and complete:
 \[\begin{array}{r@{\;}l}
 \forall p:\Prog,&\letin{s}{\serverOf(p)}\\
 &\letin{v}{\validatorOf(p)}\\
@@ -8,71 +10,75 @@ Validators derived in this approach can be proven sound and complete:
 &\qquad\text{\it i.e. }\exists s',\behaves s t s'\iff\exists v',\behaves v t v'
 \end{array}\]
 
-In this subsection, I first present a generic framework for proving validators'
-correctness properties, and then demonstrate its usage by applying it to
+This section first presents a generic framework for proving validators'
+correctness properties, and then demonstrates its usage by applying it to
 $\Prog$-based validators.
 
-The ``equivalence between server production and validator consumption of all
-traces'' is proven by introducing a loop invariant.  The invariant is a
-bisimulation between the server and the validator, which is preserved for each
-step of the trace produced/consumed.
+\subsection{Proof strategy}
+Both the specification and the validator are infinite loops, and the correctness
+property is defined as equivalence between production and consumption of traces.
+Therefore, we can prove this bisimulation relation by introducing some loop
+invariant, and show that it is preserved in each step between the specification
+and the validator.
 
-\subsection{Proving rejection soundness}
-The proof of ``any trace produceable by the server is consumable by the
-validator'' is by forward induction on the server's execution path.  The
-corresponding validation path is constructed based on the following hypotheses:
+\paragraph{Rejection soundness (acceptance completeness)}
+To prove that any trace producible by server $\existT{S}{\sigma}{(\sstep,s_0)}$
+is consumable by validator $\existT{V}{\beta}{(\vstep,v_0)}$, we need forward
+induction on the server's execution path, and show that every step has a
+corresponding validator step:
 \begin{itemize}
-\item The initial server state reflects the initial validator state:
+\item The initial server state $s_0$ reflects the initial validator state $v_0$:
   \begin{equation}
     \tag{RejSound1}
     \label{eq:rs1}
-    \Reflects{(v_0:V)}{(s_0:S)}
+    \Reflects{(v_0:\beta)}{(s_0:\sigma)}
   \end{equation}
-\item Any server step whose pre-execution state reflects some pre-validation
-  state can be consumed by the validator into a post-validation state that
-  reflects the post-execution state:
+\item Any server step $\sstep(q,c,s)=(a,s')$ whose pre-execution state $s$
+  reflects some pre-validation state $v$ can be consumed by the validator
+  into a post-validation state $v'$ that reflects the post-execution state $s'$:
   \begin{align*}
     \tag{RejSound2}
     \label{eq:rs2}
-    &\forall(q:Q)(c:C)(a:A)(s,s':S)(v:V),\\
+    &\forall(q:Q)(c:C)(a:A)(s,s':\sigma)(v:\beta),\\
     &\sstep(q,c,s)=(a,s')\wedge\Reflects{v}{s}\\
-    &\implies\exists v':V,\vstep(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}
+    &\implies\exists v':\beta,\vstep(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}
   \end{align*}
   \begin{center}
     \includegraphics[width=.5\textwidth]{figures/sound}
   \end{center}
 \end{itemize}
 
-\subsection{Proving rejection completeness}
-The proof of ``any trace consumable by the validator is produceable by
-the server'' is by backward induction on the validator's execution
-path.  The corresponding server path is constructed based on the
-following hypotheses:
-
+\paragraph{Rejection completeness (acceptance soundness)}
+To prove that any trace consumable by validator
+$\existT{V}{\beta}{(\vstep,v_0)}$ is producible by server
+$\existT{S}{\sigma}{(\sstep,s_0)}$, we need backward induction on the
+validator's execution path, and show that every step has a corresponding server
+step:
 \begin{itemize}
-\item Any accepting validator step has some server state that reflects the
-  post-validation state:
+\item Any accepting validator step $\vstep(q,a,v)=\Some v'$ has some server
+  state $s'$ that reflects the post-validation state $v'$:
   \begin{align*}
     \tag{RejComplete1}
     \label{eq:rc1}
-    \forall(q:Q)(a:A)(v, v':V),\;&\vstep(q,a,v)=\Some{v'}\\
-    &\implies\exists s':S,\Reflects{v'}{s'} 
+    \forall(q:Q)(a:A)(v, v':\beta),\;&\vstep(q,a,v)=\Some{v'}\\
+    &\implies\exists s':\sigma,\Reflects{v'}{s'} 
   \end{align*}
-\item Any accepting validator step whose post-validation state reflects some
-  post-execution server state has a corresponding server step from a
-  pre-execution state that reflects the pre-validation state:
+\item Any accepting validator step $\vstep(q,a,v)=\Some v'$ whose
+  post-validation state $v'$ reflects some post-execution server state $s'$
+  has a corresponding server step from a pre-execution state $s$
+  that reflects the pre-validation state $v$:
   \begin{align*}
     \tag{RejComplete2}
     \label{eq:rc2}
-    &\forall(q:Q)(a:A)(v,v':V)(s':S),\\
+    &\forall(q:Q)(a:A)(v,v':\beta)(s':\sigma),\\
     &\vstep(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}\\
-    &\implies\exists(s:S)(c:C),\sstep(q,c,s)=(a,s')\wedge\Reflects{v}{s}
+    &\implies\exists(s:\sigma)(c:C),\sstep(q,c,s)=(a,s')\wedge\Reflects{v}{s}
   \end{align*}
   \begin{center}
     \includegraphics[width=.5\textwidth]{figures/complete}
   \end{center}
 
-\item The initial validator state only reflects the initial server state:
+\item The initial validator state $v_0$ only reflects the initial server state $s_0$:
   \begin{equation}
     \tag{RejComplete3}
     \label{eq:rc3}
@@ -81,21 +87,32 @@ following hypotheses:
 \end{itemize}
 
 Rejection soundness is proven by forward induction, while rejection completeness
-is proven by backward induction.  This is because the choice $c$ is known from
-the server step, while unknown from the validator step: Given a validator step,
-we cannot predict ``what choices the server will make in the future'', but can
+is proven by backward induction.  This is because the choice $C$ is known from
+the server step, but unknown from the validator step: Given a validator step, we
+cannot predict ``what choices the server will make in the future'', but can
 analyze ``what choices the server might have made in the past''.  This proof
-method is further explained with the $\Prog$ example:
+strategy is further explained with the $\Prog$ example.
 
-For specifications written in the $\Prog$ language, the server state is a
-mapping from addresses to data; the validation state is a mapping from addresses
-to symbolic variables, and constraints over the variables.  A validation state
-is accepting if its constraints are satisfiable, {\it i.e.}  there exists an
-{\em assignment} of the symbolic variables that can unify the trace with the
-server model.  The internal choices made by the server are represented as
-symbolic variables.  The assignment maps these variables to the choices' value
-at each step, from which we can reconstruct the server's execution path.
-\begin{definition}[Bisimulation for $\Prog$ specifications]
+\subsection{Case study: Proving $\Prog$-based validators' correctness}
+For specifications written in the $\Prog$ language, the validator is derived by
+dualizing the server model.  It maintains a set of validation states, each state
+corresponds to a possible execution path of the model program.
+
+A validation state is accepting if its constraints are satisfiable, {\it i.e.}
+there exists an assignment of the symbolic variables that can unify the trace
+with the server model.
+
+The validator accepts the trace if any of its validation states is accepting,
+which indicates that some execution path of the server model can produce the
+trace.
+
+Given an accepting validation state, we can construct the server steps that
+produce the trace, using the assignment $(\Var\to\Int)$ that satisfies the
+constraints.  This assignment evaluates internal choices' symbolic variables
+into concrete values, and evaluates the validator's key-variable mapping
+$(\Nat\to\Var)$ to the server's key-value mapping $(\Nat\to\Int)$.
+
+\begin{definition}[Invariant between $\Prog$-based specification and validator]
   Validator state $v$ {\em simulates} server state $s$ if it contains a
   validation state $(vs,cs)$ that {\em reflects} the server state: (1) There
   exists an assignment $asgn$ that can satisfy the constraints $cs$; and (2) The
@@ -103,7 +120,7 @@ at each step, from which we can reconstruct the server's execution path.
   (written as ``$vs^{asgn}$'') into an address-data mapping that is equivalent
   with $s$:
   \begin{align*}
-    \Reflects v s\quad\triangleq\quad& \exists((vs,cs)\in v)(asgn:\Nat\to\Nat),\satisfy{asgn}
+    \Reflects v s\quad\triangleq\quad& \exists((vs,cs)\in v)(asgn:\Var\to\Int),\satisfy{asgn}
     cs\wedge vs^{asgn}=s\\ vs^{asgn}\quad\triangleq\quad&addr\mapsto
     asgn!(vs!addr)
   \end{align*}
