@@ -29,7 +29,7 @@ corresponding validator step:
 \begin{itemize}
 \item The initial server state $s_0$ reflects the initial validator state $v_0$:
   \begin{equation}
-    \tag{RejSound1}
+    \tag{RejSound-Init}
     \label{eq:rs1}
     \Reflects{(v_0:\beta)}{(s_0:\sigma)}
   \end{equation}
@@ -37,7 +37,7 @@ corresponding validator step:
   reflects some pre-validation state $v$ can be consumed by the validator
   into a post-validation state $v'$ that reflects the post-execution state $s'$:
   \begin{align*}
-    \tag{RejSound2}
+    \tag{RejSound-Step}
     \label{eq:rs2}
     &\forall(q:Q)(c:C)(a:A)(s,s':\sigma)(v:\beta),\\
     &\sstep(q,c,s)=(a,s')\wedge\Reflects{v}{s}\\
@@ -58,7 +58,7 @@ step:
 \item Any accepting validator step $\vstep(q,a,v)=\Some v'$ has some server
   state $s'$ that reflects the post-validation state $v'$:
   \begin{align*}
-    \tag{RejComplete1}
+    \tag{RejComplete-End}
     \label{eq:rc1}
     \forall(q:Q)(a:A)(v, v':\beta),\;&\vstep(q,a,v)=\Some{v'}\\
     &\implies\exists s':\sigma,\Reflects{v'}{s'} 
@@ -68,7 +68,7 @@ step:
   has a corresponding server step from a pre-execution state $s$
   that reflects the pre-validation state $v$:
   \begin{align*}
-    \tag{RejComplete2}
+    \tag{RejComplete-Step}
     \label{eq:rc2}
     &\forall(q:Q)(a:A)(v,v':\beta)(s':\sigma),\\
     &\vstep(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}\\
@@ -80,7 +80,7 @@ step:
 
 \item The initial validator state $v_0$ only reflects the initial server state $s_0$:
   \begin{equation}
-    \tag{RejComplete3}
+    \tag{RejComplete-Init}
     \label{eq:rc3}
     \{s\mid\Reflects{v_0}{s}\}=\{s_0\}
   \end{equation}
@@ -147,74 +147,64 @@ that:
 
 By constructing the assignment as: \[asgn=(\_\mapsto0)\]
 
-We have: \[\#0^{asgn}\equiv0\]
+We have: \[\#0^{asgn}=0\]
 
 Thus: \[\satisfy{asgn} cs\]
 
-We also know that: \[\forall addr, asgn!(vs!addr)=0\equiv s!addr)\]
+We also know that: \[\forall k, asgn!(vs!k)=0=(s!k)\]
 
-Thus: \[(vs^{asgn}\equiv s)\]
+Thus: \[vs^{asgn}\equiv s\]
 \end{proof}
 
 \begin{lemma}[\ref{eq:rs2}]
   \begin{align*}
-    &\forall(p:\Prog)(q,c,a:\Int)(s_0,s':\sigma)(v:\beta),\\
-    &\sstep_p(q,c,s_0)=(a,s')\wedge\Reflects{v}{s_0}\\
+    &\forall(p:\Prog)(q,c,a:\Int)(s,s':\sigma)(v:\beta),\\
+    &\sstep_p(q,c,s)=(a,s')\wedge\Reflects{v}{s}\\
     &\implies\exists v':\beta,\vstep_p(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}
   \end{align*}
-\end{lemma}
 \begin{proof}
-The invariant $\Reflects{v}{s_0}$ tells us that $v$ contains a validation state
+The invariant $\Reflects{v}{s}$ tells us that $v$ contains a validation state
 that reflects the server state $s_0$:
-\[\exists((vs_0,cs_0)\in v)(asgn_0:\Var\to\Int),\satisfy{asgn_0} cs_0\wedge {vs_0}^{asgn_0}\equiv s_0\]
+\[\exists((vs,cs)\in v)(asgn:\Var\to\Int),\satisfy{asgn} cs\wedge {vs}^{asgn}\equiv s\]
 
-The corresponding validator step is constructed by analyzing the server step,
-and proving small-step bisimulation for each derivation rule
-in \autoref{sec:dualization}.
-\begin{enumerate}
-\item The server first writes the internal choice $c$ to address $!1$.
-According to \autoref{rule:choice}, the validator creates a fresh variable for
-address $!1$.
+Since the server's internal choice was provided, we can compute the server's
+actual execution path.  For each small step of the server's execution, we can
+construct its corresponding validator small step, based on the derivation rules
+in \autoref{sec:dualization}.  By making the same internal choice and branch
+decisions as the server did, we can construct the assignment that unifies the
+validator with the server.  The proof details are shown in \autoref{sec:rs2-proof}.
+\end{proof}
+\end{lemma}
 
-We need to show that:
-\[\exists asgn_1,\satisfy{asgn_1} cs_0\wedge vs_1^{asgn_1}\equiv s_1\]
-
+\begin{lemma}[\ref{eq:rc1}]
+\begin{align*}
+\forall(p:\Prog)(q,a:\Int)(v,v':\beta),\;&\vstep_p(q,a,v)=\Some{v'}\\
+&\implies\exists s':\sigma,\Reflects{v'}{s'}
+\end{align*}
 \begin{proof}
-We can construct the following assignment:
-\[asgn_1=\update{asgn_0}{x_c}{c}\]
+Since $\vstep_p$ checks the nonemptiness of the result, we know that $v'$ must
+be nonempty.  Consider validation state $(vs',cs')\in v'$.  Since $\vstep_p'$
+checks that $(\solvable cs')$, we know that:
+\[\exists asgn,\quad\satisfy{asgn}cs'\]
 
-Since $x_c$ is fresh in $cs_0$, we have:
-\[\forall (e_1\ccmp e_2)\in cs_0,{e_1}^{asgn_1}={e_1}^{asgn_0}\wedge{e_2}^{asgn_1}={e_2}^{asgn_0}\]
+Let:
+\[s'=vs'^{~asgn}\]
 
-Thus:
+Then we have:
 \begin{align*}
-&\forall (e_1\ccmp e_2)\in cs_0, {e_1}^{asgn_1}\ccmp {e_2}^{asgn_1}\\
-&\textit{i.e. }\satisfy{asgn_1} cs_0
+&(vs',cs')\in v'\wedge \satisfy{asgn}{cs'}\wedge vs'^{~asgn}\equiv s'\\
+&\textit{i.e. }\Reflects{v'}{s'}
 \end{align*}
-
-Since $x_c$ is also fresh in $vs_0$, we have:
-\[\forall addr, asgn_1!(vs_1!addr)=\begin{cases}
-asgn_1!x_c=c\equiv s_1!addr&addr\Is1\\
-asgn_0!(vs_0!addr)=s_0!addr\equiv s_1!addr&\text{otherwise}
-\end{cases}\]
-
-Thus: \[{vs_1}^{asgn_1}\equiv s_1\]
 \end{proof}
+\end{lemma}
 
-\item When the server writes some expression $(e:\Sexp)$ to an address $!dst$,
-the validator creates a fresh variable $x_e$ for address $!dst$, and constraints
-that $\#x_e\equiv e^{vs},$\footnote{If unspecified, $(vs,cs)$ represents the
-validator state at the current point of derivation, and $s$ represents the
-current server state.} according to \autoref{rule:write}.
-
-We need to show that:
+\begin{lemma}[\ref{eq:rc2}]
 \begin{align*}
-\forall vs,cs,s,asgn,&\satisfy{asgn}{cs}\wedge vs^{asgn}\equiv s\\
-&\implies\forall d,e,\letin{}{}
+&\forall(p:\Prog)(q,a:\Int)(v,v':\beta)(s':\sigma),\\
+&\vstep_p(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}\\
+&\implies\exists(s:\sigma)(c:\Int),\sstep_p(q,c,s)=(a,s')\wedge\Reflects{v}{s}
 \end{align*}
-\end{enumerate}
-
-\end{proof}
+\end{lemma}
 
 This bisimulation definition satisfies the hypotheses for proving soundness and
 completeness:
@@ -233,14 +223,6 @@ and that $\vstep_p'$ guards the satisfiability of all constraints in its result:
 Therefore, any element in the resulting validator state can construct a
 simulating server state:
 \[\forall asgn~cs~vs~v,(\satisfy{asgn}cs\wedge(vs,cs)\in v)\implies \Reflects{v}{vs^{asgn}}\]
-
-\autoref{eq:rs2} is based on the fact that the pre-validation state must contain
-an element that reflects the server's pre-execution state, as defined by the
-bisimulation relation.  Given the server's internal choices, we can compute its
-execution path.  By induction on the server's execution path, we can construct
-the corresponding post-validation state by making the same internal choice and
-branch decisions as the server did, and construct the assignment that satisfies
-the validator's constraints.
 
 \autoref{eq:rc3} observes that validator design increases the constraints
 monotonically.  Therefore, ``assignments that can satisfy the post-validation

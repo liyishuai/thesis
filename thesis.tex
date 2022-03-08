@@ -55,6 +55,7 @@
 \def\subsectionautorefname{Subsection}
 \def\subsubsectionautorefname{Subsubsection}
 \def\lstnumberautorefname{Line}
+\def\lemmaautorefname{Lemma}
 \renewcommand{\equationautorefname}{Hypothesis}
 \renewcommand{\itemautorefname}{Rule}
 \usepackage{textcomp,listings,lstparams,lstcoq,graphicx,enumitem}
@@ -353,6 +354,10 @@ sunt in culpa qui officia deserunt mollit anim id est laborum.
   %% file and a `.tex` file with the same name
 
 \appendix
+
+\chapter{Mathematical Proof of Derived Validators' Correctness}
+\label{chap:math-proof}
+\input{math-proof}
 
 \chapter{Unstructured contents}
 \input{issta}

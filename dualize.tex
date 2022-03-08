@@ -253,7 +253,7 @@ When the $\Prog$ model writes to memories or makes conditional branches, the
 operands are represented as specification expressions ($\Sexp$) that refer to
 server addresses.  To construct the constraints over symbolic variables, the
 validator translates the expressions $(e:\Sexp)$ into validator expressions
-$(e^{vs}:\Vexp)$ by interpreting it with the validation state
+$(e^{vs}:\Vexp)$ by {\em symbolizing} it with the validation state
 $(vs:\Nat\to\Var)$, which substitutes all addresses $(!src)$ with their
 corresponding variable $\#(vs!src)$.
 

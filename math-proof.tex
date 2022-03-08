@@ -1,0 +1,160 @@
+\section{Forward preservation lemma for rejection soundness}
+\label{sec:rs2-proof}
+\autoref{eq:rs2}
+
+\begin{align*}
+  &\forall(p:\Prog)(q,c,a:\Int)(s_0,s':\sigma)(v:\beta),\\
+  &\sstep_p(q,c,s_0)=(a,s')\wedge\Reflects{v}{s_0}\\
+  &\implies\exists v':\beta,\vstep_p(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}
+\end{align*}
+
+The invariant $\Reflects{v}{s_0}$ tells us that $v$ contains a validation state
+that reflects the server state $s_0$:
+\[\exists((vs_0,cs_0)\in v)(asgn_0:\Var\to\Int),\satisfy{asgn_0} cs_0\wedge {vs_0}^{asgn_0}\equiv s_0\]
+
+The corresponding validator step is constructed by analyzing the server step,
+and proving small-step bisimulation for each derivation rule
+in \autoref{sec:dualization}.
+
+\paragraph{Write}
+The server writes some expression $(e:\Sexp)$ to an address $!dst$.
+According to \autoref{rule:write}, the validator creates a fresh variable $x_e$
+for address $!dst$, and constraints that $(\#x_e\equiv e^{vs})$.\footnote{If
+unspecified, $(vs,cs)$ represents the pre-small-step validator state, and $s$
+represents the pre-small-step server state.}
+
+We need to show that:
+\begin{align*}
+&\forall vs,cs,s,asgn,\\
+&\satisfy{asgn}{cs}\wedge vs^{asgn}\equiv s\\
+&\implies\forall d,e,\begin{array}[t]{lll}
+\letin{s'&}{\update{s}{d}{e^s}&}\\
+\letin{(vs',cs')&}{\Write(d,e,(vs,cs))&}\\
+\multicolumn{3}{l}{\exists asgn',\quad\satisfy{asgn'}{cs'}\wedge vs'^{~asgn'}\equiv s'}
+\end{array}
+\end{align*}
+\begin{proof}
+Based on the definition of $\Write$, we need to show that:
+\begin{align*}&\letin{x_e}{\Fresh(vs,cs)}\\
+&\letin{vs'}{\update{vs}{d}{x_e}}\\
+&\letin{cs'}{cs\cup\{x_e\equiv e^{vs}\}}\\
+&\exists asgn',\quad\satisfy{asgn'}{cs'}\wedge vs'^{~asgn'}\equiv s'
+\end{align*}
+Let:\[asgn'=\update{asgn}{x_e}{e^{s}}\]
+
+In order to prove $(\satisfy{asgn'}{cs'})$, we introduce some generic lemmas to
+show that $(\satisfy{asgn'}{cs})$ and $({x_e}^{asgn'}\equiv{(e^{vs})^{asgn'}})$:
+\begin{lemma}[Fresh variable preserves satisfaction]
+\label{lem:fresh-sat}
+\begin{align*}
+&\forall (cs:\Set\constraint)(asgn:\Var\to\Int),\\
+&\satisfy{asgn}{cs}\\
+&\implies
+\begin{array}[t]{lll}
+\multicolumn{3}{l}{\forall (z:\Int),vs,}\\
+\letin{x&}{\Fresh(vs,cs)&}\\
+\letin{asgn'&}{\update{asgn}{x}{z}&}\\
+\multicolumn{3}{l}{\satisfy{asgn'}{cs}}
+\end{array}
+\end{align*}
+\begin{proof}
+Since $x$ is fresh in $cs$, we have:
+\[\forall (e_1\ccmp e_2)\in cs,\quad{e_1}^{asgn'}={e_1}^{asgn}\wedge{e_2}^{asgn'}={e_2}^{asgn}\]
+
+Thus:
+\begin{align*}
+&\forall (e_1\ccmp e_2)\in cs,\quad{e_1}^{asgn'}\ccmp {e_2}^{asgn'}\\
+&\textit{i.e. }\satisfy{asgn'} cs
+\end{align*}
+\end{proof}
+\end{lemma}
+
+\begin{lemma}[Fresh variable preserves evaluation]
+\label{lem:fresh-eval}
+\begin{align*}
+&\forall (vs:\Nat\to\Var)(asgn:\Var\to\Int)(z:\Int),cs,\\
+&\begin{array}[t]{lll}
+\letin{x&}{\Fresh(vs,cs)&}\\
+\letin{asgn'&}{\update{asgn}{x}{z}&}\\
+\multicolumn{3}{l}{\forall (e:\Sexp),(e^{vs})^{asgn'}=(e^{vs})^{asgn}}
+\end{array}
+\end{align*}
+\begin{proof}
+Assume to the contrary that: \[(e^{vs})^{asgn'}\neq(e^{vs})^{asgn}\]
+
+Since $asgn'$ is the same as $asgn$ except for variable $\#x$, we know that
+$(e^{vs}:\Vexp)$ must involve $\#x$.  Therefore, $e$ must involve some address
+$!k$ such that $(vs!k=x)$.  This contradicts the fact that $x$ is fresh in $vs$.
+\end{proof}
+\end{lemma}
+
+\begin{lemma}[Symbolization preserves evaluation]
+\label{lem:sym-eval}
+\begin{align*}
+&\forall(vs:\Nat\to\Var)(asgn:\Var\to\Int)(s:\Nat\to\Int),\\
+&vs^{asgn}\equiv s\implies\forall (e:\Sexp),\quad(e^{vs})^{asgn}\equiv e^s
+\end{align*}
+\begin{proof}
+Based on the definition of symbolization and evaluation:
+\begin{itemize}
+\item $e^{vs}$ substitutes all occurences of $!k$ in $e$ with $\#(vs!k)$;
+\item $(e^{vs})^{asgn}$ substitutes all occurences of $\#(vs!k)$ to $asgn!(vs!k)$;
+\item $e^s$ substitutes all occurences of $!k$ in $e$ with $(s!k)$.
+\end{itemize}
+
+From the hypothesis that $(vs^{asgn}\equiv s)$, we have:
+\[\forall (k:\Nat),\quad asgn!(vs!k)\equiv (s!k)\]
+
+Therefore, we know that all occurences of $!k$ were mapped to the same value
+between the two evaluation paths.
+\end{proof}
+\end{lemma}
+
+Based on \autoref{lem:fresh-eval}, we have:
+\[{(e^{vs})}^{asgn'}={(e^{vs})}^{asgn}\]
+
+
+
+Also, since $x_e$ is free in $vs$, and $asgn'$ is the same as $asgn$ except for
+$x_e$, we have:
+\[\forall k,asgn'!(vs'!k)=\begin{cases}
+asgn'!x_e=e^s=(s'!k)&k\Is d\\
+asgn!(vs!k)=(s!k)=(s'!k)&\text{otherwise}
+\end{cases}\]
+Therefore:\[vs'^{~asgn'}\equiv s'\]
+\end{proof}
+
+\paragraph{Havoc}
+When the server writes some internal choice $c$ to address $d$,
+according to \autoref{rule:choice}, the validator creates a fresh variable for
+address $!d$.
+
+We need to show that:
+\begin{align*}&\forall vs,cs,s,asgn,\\
+&\satisfy{asgn}{cs}\wedge vs^{asgn'}\equiv s\\
+&\implies\forall d,c,\begin{array}[t]{lll}
+\letin{s'&}{\update{s}{d}{c}&}\\
+\letin{x_c&}{\Fresh(vs,cs)&}\\
+\multicolumn{3}{l}{\exists asgn',\quad\satisfy{asgn'} cs\wedge vs^{asgn'}\equiv s'}
+\end{array}
+\end{align*}
+\begin{proof}
+Let:\[asgn'=\update{asgn}{x_c}{c}\]
+Since $x_c$ is free in $cs$, we have
+\end{proof}
+
+%% \[\havoc(d,(vs,cs))=\letin{x_c}{\Fresh(vs,cs)}{(\update{vs}{d}{x_c},cs)}\]
+
+%% \begin{proof}
+%% We can construct the following assignment:
+%% \[asgn_1=\update{asgn_0}{x_c}{c}\]
+
+
+%% Since $x_c$ is also fresh in $vs_0$, we have:
+%% \[\forall addr, asgn_1!(vs_1!addr)=\begin{cases}
+%% asgn_1!x_c=c\equiv s_1!addr&addr\Is1\\
+%% asgn_0!(vs_0!addr)=s_0!addr\equiv s_1!addr&\text{otherwise}
+%% \end{cases}\]
+
+%% Thus: \[{vs_1}^{asgn_1}\equiv s_1\]
+%% \end{proof}
