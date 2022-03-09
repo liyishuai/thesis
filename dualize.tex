@@ -192,10 +192,9 @@ The validator's loop body is derived by dualzing the server model:
 \[\begin{array}{l@{\;}r@{\;}l}
 \validatorOf(p)&\triangleq&\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}{\\
   &&(\vstep_p,\{(\_\mapsto\#0,\{\#0\equiv0\})\})}\\
-\vstep_p(q,a,v)&\triangleq&\letin{v'}{\vstep'_p(q,a,v)}\\
+\vstep_p(q,a,v)&\triangleq&\letin{v'}{v_0\gets v;\vstep'_p(q,a,v_0)}\\
 &&\If v'\Is\varnothing\Then\None\Else\Some v'\hfill(\ref{rule:reject})\\
-\vstep'_p(q,a,v)&\triangleq&v_0\gets v;\\
-&&\letin{v_1}{\Havoc(1,v_0)}\\
+\vstep'_p(q,a,v_0)&\triangleq&\letin{v_1}{\Havoc(1,v_0)}\\
 &&\letin{v_2}{\Write(0,q,v_1)}\\
 &&(vs_3,cs_3)\gets\Exec(p,v_2);\\
 &&\letin{cs_4}{cs_3\cup\{\#(vs_3!0)\equiv a\}}\hfill(\ref{rule:return})\\
@@ -225,11 +224,11 @@ e^{vs}&\triangleq&\begin{cases}
 \label{fig:dualize}
 \end{figure}
 
-This mechanism is formalized in \autoref{fig:dualize}.  Here notation ``$x\gets
-v;f(x)$'' is a monadic bind for sets: Let $f$ map each element $(vs,cs)$ in $v$
-to a set of validation states
-$(f(vs,cs):\Set((\Nat\to\Nat)\times\Set\constraint))$.  The return value of
-$\vstep_p'$ is the union of all result sets.
+This mechanism is formalized in \autoref{fig:dualize}.  Here notation
+``$v_0\gets v;\vstep'_p(q,a,v_0)$'' is a monadic bind for sets: Let $\vstep'_p$
+map each element $v_0$ in $v$ to a set of validation states
+$(\vstep'_p(q,a,v_0):\Set((\Nat\to\Var)\times\Set\constraint))$, and return the
+union of all result sets as $v'$.
 
 The validator assumes a constraint solver that can determine whether a set of
 constraints is satisfiable, {\it i.e.} whether there exists an {\em assignment}
@@ -267,7 +266,7 @@ complete in the following section.
   &\begin{array}{rll}
      (&\lam{(q,a,v)}{&\llet v'=\begin{array}[t]{@{}l@{}l@{}ll}
        \multicolumn{3}{@{}l}{(vs_0,cs_0)\gets v;}\\
-       \letin{vs_1&}{\update{vs_0}{1}{\Fresh vs_0}&}&\text{(1)}\\
+       \letin{vs_1&}{\update{vs_0}{1}{\Fresh (vs_0,cs_0)}&}&\text{(1)}\\
        \letin{x_q&}{\Fresh (vs_1,cs_0)&}\\
        \letin{vs_2&}{\update{vs_1}{0}{x_q}&}\\
        \letin{cs_2&}{cs_0\cup\{\#x_q\equiv q\}&}\\

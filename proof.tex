@@ -27,7 +27,7 @@ is consumable by validator $\existT{V}{\beta}{(\vstep,v_0)}$, we need forward
 induction on the server's execution path, and show that every step has a
 corresponding validator step:
 \begin{itemize}
-\item The initial server state $s_0$ reflects the initial validator state $v_0$:
+\item The initial server state $s_0$ simulates the initial validator state $v_0$:
   \begin{equation}
     \tag{RejSound-Init}
     \label{eq:rs1}
@@ -120,14 +120,13 @@ represents the validator state type, and $\sigma=\Nat\to\Int$ represents the
 server state type.
 
 \begin{definition}[Invariant between $\Prog$-based specification and validator]
-  Validator state $v$ {\em simulates} server state $s$ if it contains a
-  validation state $(vs,cs)$ that {\em reflects} the server state, {\it i.e.}
-  (1) There exists an assignment $asgn$ that can satisfy the constraints $cs$;
-  and (2) The key-variable mapping $vs$ can be evaluated with $asgn$ (written as
+  Validator state $v$ simulates server state $s$ if it contains a validation
+  state $(vs,cs)$ that {\em reflects} the server state, {\it i.e.}  (1) There
+  exists an assignment $asgn$ that can satisfy the constraints $cs$; and (2) The
+  key-variable mapping $vs$ can be evaluated with $asgn$ (written as
   $vs^{asgn}$) into a key-value mapping that is equivalent with
-  $s$:
-  \[\begin{array}{lll} \Reflects{(v:\beta)}{(s:\sigma)}&\triangleq&
-  \exists((vs,cs)\in v)(asgn:\Var\to\Int),\satisfy{asgn} cs\wedge vs^{asgn}\equiv s\\
+  $s$: \[\begin{array}{lll} \Reflects{(v:\beta)}{(s:\sigma)}&\triangleq& \exists((vs,cs)\in
+  v)(asgn:\Var\to\Int),\satisfy{asgn} cs\wedge vs^{asgn}\equiv s\\
   vs^{asgn}&\triangleq&addr\mapsto asgn!(vs!addr) \end{array}\]
 \end{definition}
 
@@ -165,7 +164,7 @@ Thus: \[vs^{asgn}\equiv s\]
 \begin{proof}
 The invariant $\Reflects{v}{s}$ tells us that $v$ contains a validation state
 that reflects the server state $s_0$:
-\[\exists((vs,cs)\in v)(asgn:\Var\to\Int),\satisfy{asgn} cs\wedge {vs}^{asgn}\equiv s\]
+\[\exists(vs,cs)\in v,\exists asgn:\Var\to\Int,\quad\satisfy{asgn} cs\wedge {vs}^{asgn}\equiv s\]
 
 Since the server's internal choice was provided, we can compute the server's
 actual execution path.  For each small step of the server's execution, we can
@@ -183,7 +182,7 @@ validator with the server.  The proof details are shown in \autoref{sec:rs2-proo
 \end{align*}
 \begin{proof}
 Since $\vstep_p$ checks the nonemptiness of the result, we know that $v'$ must
-be nonempty.  Consider validation state $(vs',cs')\in v'$.  Since $\vstep_p'$
+be nonempty.  Consider validation state $(vs',cs')\in v'$.  Since $\vstep'_p$
 checks that $(\solvable cs')$, we know that:
 \[\exists asgn,\quad\satisfy{asgn}cs'\]
 
@@ -204,41 +203,71 @@ Then we have:
 &\vstep_p(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}\\
 &\implies\exists(s:\sigma)(c:\Int),\sstep_p(q,c,s)=(a,s')\wedge\Reflects{v}{s}
 \end{align*}
-\end{lemma}
+\begin{proof}
+We first construct the initial server state $(s:\sigma\mid\Reflects{v}{s})$.  We
+then compute the internal choice $c$ and construct the server step that
+corresponds with the validator step.
 
-This bisimulation definition satisfies the hypotheses for proving soundness and
-completeness:
+The definition of $\Reflects{v'}{s'}$ says:
+\[\exists (vs',cs')\in v',\exists asgn,\quad \satisfy{asgn}{cs'}\wedge vs'^{~asgn}\equiv s'\]
 
-Hypotheses~\ref{eq:rs1} and \ref{eq:rc3} are immediate from the initial states'
-definition: The initial server state is all-zero map.  The initial validator
-state is a singleton that maps all addresses to a variable that is constrained
-to have value zero.
+From the definition of $\vstep_p$, we know that:
+\[\exists (vs,cs)\in v,\quad \vstep'_p(q,a,(vs,cs))=(vs',cs')\]
 
-\autoref{eq:rc1} is based on the fact that $\vstep_p$ checks the nonemptiness of
-the result:
-\[\forall q~a~v~v',\vstep_p(q,a,v)=\Some{v'}\implies(\vstep_p'(q,a,v)=v'\wedge\exists (vs,cs)\in v')\]
-and that $\vstep_p'$ guards the satisfiability of all constraints in its result:
-\[\forall q~a~vs~cs,{(vs,cs)}\in\vstep_p'(q,a,v)\implies\exists asgn,\satisfy{asgn}cs\]
+Since $\vstep'_p$ monotonically increases set of constraints, we have
+$cs\subseteq cs'$.  Therefore: \[\satisfy{asgn}{cs}\]
 
-Therefore, any element in the resulting validator state can construct a
-simulating server state:
-\[\forall asgn~cs~vs~v,(\satisfy{asgn}cs\wedge(vs,cs)\in v)\implies \Reflects{v}{vs^{asgn}}\]
+Let: \[s=vs^{asgn}\]
 
-\autoref{eq:rc3} observes that validator design increases the constraints
-monotonically.  Therefore, ``assignments that can satisfy the post-validation
-constraints'' is a subset of ``assignments that can satisfy the pre-validation
-constraints'':
-\[\forall q~a~vs~cs~vs'~cs'~asgn,((vs',cs')\in\vstep_p'(q,a,(vs,cs))\wedge\satisfy{asgn} cs')\implies\satisfy{asgn}cs\]
-
-As a result, the corresponding pre-step server state and the internal choice can
-be constructed, and proven to perform the server-side step:
+Then we have:
 \begin{align*}
-\forall q~a~vs~cs~vs'~cs'~asgn,\;&(vs',cs')\in\vstep_p'(q,a,(vs,cs))\\
-&\implies\sstep_p(q,asgn!(\Fresh{vs}),vs^{asgn})=vs'^{~asgn}
+&(vs,cs)\in v\wedge\satisfy{asgn}{cs}\wedge vs^{asgn}\equiv s\\
+&\textit{i.e. }\Reflects{v}{s}
 \end{align*}
 
-The intuition here is that the assignment includes ``all choices made by the
-server, past and future'', which is narrowed upon more and more observations.
-Therefore, the assignment can instantiate all previous validator states into
-corresponding servers, and reconstruct the server's execution path by inferring
-its internal choices.
+From the definition of $\vstep'_p$, the validator first creates a fresh variable
+to represent the server's internal choice.  Let:
+\[x_c=\Fresh(vs,cs)\qquad c=asgn!x_c\]
+
+We now have a server step $\sstep_p(q,c,s)$, and need to show that it results in
+response $a$ and post-execution state $s'$.  Since the post-validation state
+$v'$ simulates $s'$ and guarantees the response to be $a$, we only need to show
+that the server step is reflected in the validator.  This is done by analyzing
+the server's execution path, proving that each derivation rule preserves such
+small-step reflection.  The proof details are shown in \autoref{sec:rc2-proof}
+\end{proof}
+\end{lemma}
+
+\begin{lemma}[\ref{eq:rc3}]
+\[\begin{array}{ll}
+\text{If:}&
+vs=(\_\mapsto\#0)\qquad
+cs=\{\#0\equiv0\}\qquad
+s_0=(\_\mapsto0)\\
+\text{Then:}&\{s\mid\Reflects{\{(vs,cs)\}}{s}\}=\{s_0\}
+\end{array}\]
+\begin{proof}
+The requirement for $s$ says:
+\[\exists asgn:\Var\to\Int,\quad\satisfy{asgn}{cs}\wedge vs^{asgn}=s\]
+
+The constraint satisfaction tells us that:
+\[asgn!0=0\]
+
+We then have:
+\[\forall k:\Nat,\quad s!k=asgn!(vs!k)=asgn!0=0=s_0!k\]
+
+Therefore, $s_0$ is the only server state that $(vs,cs)$ simulates.
+\end{proof}
+\end{lemma}
+
+So far, we've proven the soundness and completeness of all validators derived
+from the $\Prog$ language.  The main idea is to show the reflection between the
+server and the validator, by constructing the assignments that unifies them.
+
+This also answers why proving rejection completeness requires backward
+induction: The assignment evaluates the symbolic variables during the validation
+process, which includes all choces made by the server, past and future.  An
+assignment might include wrong predictions about the server's future choices, in
+which case the validator will drop it upon contradicting observations.  By the
+end of validation, the surviving assignment can let us reconstruct a server's
+execution path, by infering its internal choices.
