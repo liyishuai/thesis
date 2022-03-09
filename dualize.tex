@@ -12,16 +12,17 @@ specification, and derive validators by interpreting programs written in that
 language.
 
 \begin{definition}[Server and validator of a program]
-  A program $p\in\Prog$ is a representation of computation that can be
+  A program $p\in\Lang$ is a representation of computation that can be
   ``instantiated'' into a server model:
-  \[\serverOf:\Prog\to\Server\]
+  \[\serverOf:\Lang\to\Server\]
   
   A program can also be ``interpreted'' into other computations, including
   validators:
-  \[\validatorOf:\Prog\to\Validator\]
+  \[\validatorOf:\Lang\to\Validator\]
 \end{definition}
-To encode specifications for protocols like CMP-RST, we introduce a simple
-$\Prog$ language, which supports arithmetic operations and memory access:
+To encode specifications for protocols like CMP-RST, I introduce a simple
+language $\Prog$ in the QAC family, which supports arithmetic operations and
+memory access:
 \[\begin{array}{lrll}
 \Prog&\triangleq&\Return&\text{end computation and send response}\\
 &\mid&!dst\coloneqq\Sexp;\Prog&\text{write to address }dst\in\Nat\\\null
@@ -100,6 +101,7 @@ that allows inductive reasoning.  The rest of this section derives validators
 from $\Prog$ models, and prove the correctness of such derived validators.
 
 \subsection{Dualize model program into validator}
+\label{sec:dualize-prog}
 The validator of a model $p\in\Prog$ needs to determine whether the trace is
 producible by $p$.  More specifically, whether the responses in the trace can be
 {\em explained} by $p$'s return value stored at address $!0$.
@@ -126,7 +128,7 @@ observation.
 
 To achieve this goal, the validator needs to store the symbolic expression for
 each address of the server model.  It also needs to remember all the constraints
-added upon observation.  We store these information as ``validation states'':
+added upon observation.  I store these information as ``validation states'':
 \[(\Nat\to\Vexp)\times\Set\constraint\]
 Here the $\constraint$s are relations between validator expressions ($\Vexp$s)
 that may depend on symbolic $\Var$iables:
@@ -137,12 +139,12 @@ that may depend on symbolic $\Var$iables:
 &\mid&\Vexp\oop\Vexp&op\in\{+,-,\times,\div\}\\
 \end{array}\]
 
-In practice, we use an equivalent definition for the validator state:
+In practice, I use an equivalent definition for the validator state:
 \[(\Nat\to\Var)\times\Set\constraint\]
 The key-expression mapping $(k\mapsto e)$ above can be simulated with the
 key-variable $(k\mapsto x)$ mapping here, by adding $(\#x\equiv e)$ to the set
-of constraints.  We alter the type interface for convenience of developing the
-validator, which will be later explained in more details.
+of constraints.  I alter the type interface for convenience of developing the
+validator.
 
 Notice that the internal choices might affect branch conditions, so the
 validator doesn't know which branch in the specification was taken.  Therefore,
@@ -158,37 +160,8 @@ $\#0$, and the value of variable $\#0$ is constrained to be zero''.  This
 reflects the initial server state that maps all addresses to zero value.
 
 The validator's loop body is derived by dualzing the server model:
-\begin{enumerate}
-\item \label{rule:write} When the server performs a write operation
-  $!dst\coloneqq exp$, the validator creates a fresh variable $x$ to represent
-  the new value stored in address $!dst$, and adds a constraint that says $x$'s
-  value is equal to that of $exp$.
-\item \label{rule:branch} When the server makes a nondeterministic branch $\If
-  e_1\le e_2\Then p_1\Else p_2$, consider both cases: (a) If $p_1$ was taken,
-  then the validator should add a constraint $e_1\le e_2$; or (b) If $p_2$ was
-  taken, then the validator should add constraint $e_2<e_1$.
-\item \label{rule:choice} Before executing the program, the server writes the internal
-    choice $c$ to address $!1$.  Accordingly, the validator creates a fresh
-    variable to represent the new value stored in address $!1$, without adding
-    any constraint.
-\item \label{rule:return} After executing the program, the server sends back the
-  value stored in $!0$ as response.  Accordingly, the validator adds a
-  constraint that says the variable representing address $!0$ is equal to the
-  observed response.
-\item \label{rule:unsat} When the constraints of a validation state becomes
-  unsatisfiable, it indicates that the server model cannot explain the
-  observation.  This is because either (i) the observation is invalid {\it i.e.}
-  not producible by the server model, or (ii) the observation is valid, but was
-  produced by a different execution path of the server model.
-\item \label{rule:reject} The validator accepts the trace if it can be produced
-  by any execution path of the server model.  Since each execution path
-  corresponds to a validation state, the validator only needs to remove the
-  unsatisfiable state from the set of states.  If the set of validation states
-  becomes empty, it indicates that the observation cannot be explained by any
-  execution path of the specification, so the validator should reject the trace.
-\end{enumerate}
 
-\begin{figure}
+\begin{figure}[h]
 \[\begin{array}{l@{\;}r@{\;}l}
 \validatorOf(p)&\triangleq&\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}{\\
   &&(\vstep_p,\{(\_\mapsto\#0,\{\#0\equiv0\})\})}\\
@@ -224,6 +197,36 @@ e^{vs}&\triangleq&\begin{cases}
 \label{fig:dualize}
 \end{figure}
 
+\begin{enumerate}
+\item \label{rule:write} When the server performs a write operation
+  $!dst\coloneqq exp$, the validator creates a fresh variable $x$ to represent
+  the new value stored in address $!dst$, and adds a constraint that says $x$'s
+  value is equal to that of $exp$.
+\item \label{rule:branch} When the server makes a nondeterministic branch $\If
+  e_1\le e_2\Then p_1\Else p_2$, consider both cases: (a) If $p_1$ was taken,
+  then the validator should add a constraint $e_1\le e_2$; or (b) If $p_2$ was
+  taken, then the validator should add constraint $e_2<e_1$.
+\item \label{rule:choice} Before executing the program, the server writes the internal
+    choice $c$ to address $!1$.  Accordingly, the validator creates a fresh
+    variable to represent the new value stored in address $!1$, without adding
+    any constraint.
+\item \label{rule:return} After executing the program, the server sends back the
+  value stored in $!0$ as response.  Accordingly, the validator adds a
+  constraint that says the variable representing address $!0$ is equal to the
+  observed response.
+\item \label{rule:unsat} When the constraints of a validation state becomes
+  unsatisfiable, it indicates that the server model cannot explain the
+  observation.  This is because either (i) the observation is invalid {\it i.e.}
+  not producible by the server model, or (ii) the observation is valid, but was
+  produced by a different execution path of the server model.
+\item \label{rule:reject} The validator accepts the trace if it can be produced
+  by any execution path of the server model.  Since each execution path
+  corresponds to a validation state, the validator only needs to remove the
+  unsatisfiable state from the set of states.  If the set of validation states
+  becomes empty, it indicates that the observation cannot be explained by any
+  execution path of the specification, so the validator should reject the trace.
+\end{enumerate}
+
 This mechanism is formalized in \autoref{fig:dualize}.  Here notation
 ``$v_0\gets v;\vstep'_p(q,a,v_0)$'' is a monadic bind for sets: Let $\vstep'_p$
 map each element $v_0$ in $v$ to a set of validation states
@@ -256,11 +259,7 @@ $(e^{vs}:\Vexp)$ by {\em symbolizing} it with the validation state
 $(vs:\Nat\to\Var)$, which substitutes all addresses $(!src)$ with their
 corresponding variable $\#(vs!src)$.
 
-For example, by dualizing the $\Prog$ model for CMP-RST in
-\autoref{sec:proglang}, we get a validator as shown in
-\autoref{fig:derived-validator}.  Such derived validators are proven sound and
-complete in the following section.
-\begin{figure}
+\begin{figure}[h]
 \begin{align*}
 &\validatorOf(\texttt{CMP-RST})\triangleq\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}\\
   &\begin{array}{rll}
@@ -299,3 +298,8 @@ complete in the following section.
   invalid states.}
 \label{fig:derived-validator}
 \end{figure}
+
+For example, by dualizing the $\Prog$ model for CMP-RST in
+\autoref{sec:proglang}, we get a validator as shown in
+\autoref{fig:derived-validator}.  Such derived validators are proven sound and
+complete in the following section.

@@ -1,8 +1,8 @@
-So far we have introduced the QAC language family for representing servers and
+So far I have introduced the QAC language family for representing servers and
 validators, and demonstrated the derivation mechanism with a $\Prog$ language.
 Next I'll show how to prove that QAC validators are sound and complete:
 \[\begin{array}{r@{\;}l}
-\forall p:\Prog,&\letin{s}{\serverOf(p)}\\
+\forall p:\Lang,&\letin{s}{\serverOf(p)}\\
 &\letin{v}{\validatorOf(p)}\\
 &\rejSound v s\wedge\rejComplete v s\\
 &\text{\it i.e. }\forall t:\List(Q\times A),\\
@@ -15,6 +15,7 @@ correctness properties, and then demonstrates its usage by applying it to
 $\Prog$-based validators.
 
 \subsection{Proof strategy}
+\label{sec:strategy}
 Both the specification and the validator are infinite loops, and the correctness
 property is defined as equivalence between production and consumption of traces.
 Therefore, we can prove this bisimulation relation by introducing some loop
@@ -94,9 +95,18 @@ analyze ``what choices the server might have made in the past''.  This proof
 strategy is further explained with the $\Prog$ example.
 
 \subsection{Case study: Proving $\Prog$-based validators' correctness}
-For specifications written in the $\Prog$ language, the validator is derived by
-dualizing the server model.  It maintains a set of validation states, each state
-corresponds to a possible execution path of the model program.
+Specifications written in the $\Prog$ language are dualized into validators as
+shown in \autoref{sec:dualize-prog}.  Here I show that validators dualized in
+this way are sound and complete, using the proof strategy described
+in \autoref{sec:strategy}.
+
+\paragraph{Invariant design}
+The hypotheses in the proof strategy are based some loop invariant, which
+depends on the modelling language.  We need to define the invariant for the
+language, and show that it is preserved between the server and validator steps.
+
+A $\Prog$-based validator maintains a set of validation states, each state
+corresponds to a possible execution path of the server model.
 
 A validation state is accepting if its constraints are satisfiable, {\it i.e.}
 there exists an assignment of the symbolic variables that can unify the trace
@@ -113,22 +123,28 @@ into concrete values, and evaluates the validator's key-variable mapping
 $(\Nat\to\Var)$ to the server's key-value mapping $(\Nat\to\Int)$.
 
 Therefore, we only need to show that each server and validator step preserves
-the existence of such assignment that relates their states.
+the existence of such assignment that relates their states, thus defines the
+invariant:
 
-For the rest of this section, $\beta=\Set((\Nat\to\Var)\times\Set\constraint)$
-represents the validator state type, and $\sigma=\Nat\to\Int$ represents the
-server state type.
-
-\begin{definition}[Invariant between $\Prog$-based specification and validator]
+\begin{definition}[Loop invariant between $\Prog$-based specification and validator]
   Validator state $v$ simulates server state $s$ if it contains a validation
   state $(vs,cs)$ that {\em reflects} the server state, {\it i.e.}  (1) There
   exists an assignment $asgn$ that can satisfy the constraints $cs$; and (2) The
   key-variable mapping $vs$ can be evaluated with $asgn$ (written as
   $vs^{asgn}$) into a key-value mapping that is equivalent with
-  $s$: \[\begin{array}{lll} \Reflects{(v:\beta)}{(s:\sigma)}&\triangleq& \exists((vs,cs)\in
+  $s$:\footnote{For the rest of this section,
+  $\beta=\Set((\Nat\to\Var)\times\Set\constraint)$ represents the validator
+  state type, and $\sigma=\Nat\to\Int$ represents the server state type.}
+\[\begin{array}{lll} \Reflects{(v:\beta)}{(s:\sigma)}&\triangleq& \exists((vs,cs)\in
   v)(asgn:\Var\to\Int),\satisfy{asgn} cs\wedge vs^{asgn}\equiv s\\
   vs^{asgn}&\triangleq&addr\mapsto asgn!(vs!addr) \end{array}\]
 \end{definition}
+
+\paragraph{Applying proof strategy}
+Having defined the loop invariants, we only need to instantiate the QAC-generic
+proof strategy with $\Prog$-based definitions.  If the hypotheses are all
+satisfied, then we have the soundness and completeness guarantee of every
+validator derived from $\Prog$ models.
 
 \begin{lemma}[\ref{eq:rs1}]
 \[\begin{array}{ll}
@@ -260,14 +276,20 @@ Therefore, $s_0$ is the only server state that $(vs,cs)$ simulates.
 \end{proof}
 \end{lemma}
 
-So far, we've proven the soundness and completeness of all validators derived
-from the $\Prog$ language.  The main idea is to show the reflection between the
-server and the validator, by constructing the assignments that unifies them.
+Now we have proven that all $\Prog$-based validators satisfy the hypotheses
+defined in \autoref{sec:strategy}, and conclude that these validatos are sound
+and complete.  The entire proof is formalized in the Coq proof assistant.
 
-This also answers why proving rejection completeness requires backward
-induction: The assignment evaluates the symbolic variables during the validation
-process, which includes all choces made by the server, past and future.  An
-assignment might include wrong predictions about the server's future choices, in
-which case the validator will drop it upon contradicting observations.  By the
-end of validation, the surviving assignment can let us reconstruct a server's
-execution path, by infering its internal choices.
+The main idea of the proof is to show the reflection between the server and the
+validator, by constructing the assignments that unifies them.  This also answers
+why proving rejection completeness requires backward induction: The assignment
+evaluates the symbolic variables during the validation process, which includes
+all choces made by the server, past and future.  An assignment might include
+wrong predictions about the server's future choices, in which case the validator
+will drop it upon contradicting observations.  By the end of validation, the
+surviving assignment can let us reconstruct a server's execution path, by
+infering its internal choices.
+
+So far I have presented the theory of constructing validators with correctness
+guarantee.  Next I'll explain how to apply this theory to test real-world
+programs.

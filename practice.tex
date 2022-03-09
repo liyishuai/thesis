@@ -1,4 +1,20 @@
+In \autoref{chap:theory}, I introduced the theory of validators using the QAC
+language family.  I also shown how to prove validators' correctness with a
+simple $\Prog$ language.
+
+However, in real-world testing practices, there are more problems to consider.
+For example: How to interact with the SUT via multiple channels?  How to handle
+external nondeterminism?
+
+This chapter describes how to build tester programs that can interact with the
+SUT and reveal potential defects.  \autoref{sec:itree} introduces the ITree
+language for specifying protocols.  \autoref{sec:external-nondet} addresses
+external nondeterminism by specifying the environment.
+\autoref{sec:spec-to-test} explains the derivation mechanism from ITree
+specifications to interactive tester programs, with an \http example.
+
 \section{ITree Specification Language}
+\label{sec:itree}
 To write specifications for protocols' rich semantics, I employed ``interaction
 tree'' (ITree), a generic data structure for representing interactive programs,
 introduced by \textcite{itree}.  ITree enables specifying protocols as monadic
@@ -118,6 +134,7 @@ subsections.  Further details about interpreting interaction trees are explained
 by \textcite{itree}.
 
 \section{Handling External Nondeterminism}
+\label{sec:external-nondet}
 \subsection{Modelling the network}
 \label{sec:net-tcp}
 The space of network reorderings can be modelled by a {\em network model}, which
