@@ -16,76 +16,129 @@ specifications to interactive tester programs, with an \http example.
 \section{ITree Specification Language}
 \label{sec:itree}
 To write specifications for protocols' rich semantics, I employed ``interaction
-tree'' (ITree), a generic data structure for representing interactive programs,
-introduced by \textcite{itree}.  ITree enables specifying protocols as monadic
-programs that model valid implementations' possible behavior.  The model program
-can be interpreted into a tester program, to be discussed in
-\autoref{sec:spec-to-test}.
+tree'' (ITree), a generic data structure for representing interactive programs
+in the Coq programming language, introduced by \textcite{itree}.  ITree allows
+specifying protocols as monadic programs that model valid implementations'
+possible behavior.  The model program can be interpreted into a tester program,
+to be discussed in \autoref{sec:spec-to-test}.
 
 \subsection{Language definition}
+Consider an echo program, which keeps receiving some data and sending them back
+verbatim, until reaching EOF:
+\begin{lstlisting}[style=customcoq]
+  CoInductive echo1 := q <- recv;;
+                       if q is EOF then EXIT
+                       else send q;; echo.
+\end{lstlisting}
+
+Here the behavior after \ilc{recv} depends on the value received during.  Such
+monadic computation can be desugarized into:
+\begin{lstlisting}[style=customcoq]
+  CoInductive echo2 :=
+    recv >>=
+    (fun q => if q is EOF then EXIT
+            else send q >>= (fun _ => echo)).
+\end{lstlisting}
 
 \begin{figure}
   \begin{lstlisting}[style=customcoq]
-CoInductive itree (E : Type -> Type) (R : Type) :=
-| Ret (r : R)
-| Vis {X : Type} (e : E X) (k : X -> itree E R)
-| Tau (t : itree E R).
-
-Inductive event (E : Type -> Type) : Type :=
-| Event : forall X, E X -> X -> event E.
-
-Definition trace E := list (event E)
-
-Inductive is_trace E R
-  : itree E R -> trace E -> Prop := ...
-  (* straightforward definition omitted *)
- \end{lstlisting}
+    CoInductive itree (E: Type -> Type) (R: Type) :=
+    | Ret: R -> itree E R
+    | Vis: forall {X : Type}, E X -> (X -> itree E R) -> itree E R
+    | Tau: itree E R -> itree E R.
+  \end{lstlisting}
   \caption{Interaction trees and their traces of events.}
   \label{fig:itrees}
 \end{figure}
 
-Figure~\ref{fig:itrees} defines the type \ilc{itree E R}.  The definition is
-\textit{coinductive}, so that it can represent potentially infinite sequences of
-interactions, as well as divergent behaviors.  The parameter \ilc{E} is a type
-of \textit{external interactions}---it defines the interface by which a
-computation interacts with its environment.  \ilc{R} is the \textit{result} of
-the computation: if the computation halts, it returns a value of type \ilc{R}.
+This continuation-passing style is formalized in the ITree data structure.  As
+shown in \autoref{fig:itrees}, \ilc{(itree E R)} represents a program with
+interaction event type \ilc E and return type \ilc R.
 
-There are three ways to construct an ITree. The \ilc{Ret r} constructor
-corresponds to the trivial computation that halts and yields the value
-\ilc{r}. The \ilc{Tau t} constructor corresponds to a silent step of
-computation, which does something internal that does not produce any visible
-effect and then continues as \ilc{t}.  Representing silent steps explicitly with
-\ilc{Tau} allows us, for example, to represent diverging computation without
-violating Coq's guardedness condition~\cite{coinduction}:
-
+An ITree program can be constructed in three ways: The \ilc{(Ret r)} constructor
+corresponds to the trivial computation that halts and yields the value \ilc{r}.
+The \ilc{(Tau t)} constructor corresponds to a silent step of computation, which
+produces no effect and then continues as \ilc{t}.  Representing silent steps
+explicitly with \ilc{Tau} allows us, for example, to represent diverging
+computation without violating Coq's guardedness condition~\cite{coinduction}:
 \begin{lstlisting}[style=customcoq]
 CoFixpoint spin {E R} : itree E R := Tau spin.
 \end{lstlisting}
 
-The final, and most interesting, way to build an ITree is with the \ilc{Vis X e
-  k} constructor.  Here, \ilc{e : E X} is a ``visible'' external effect
-(including any outputs provided by the computation to its environment) and
-\ilc{X} is the type of data that the environment provides in response to the
-event.  The constructor also specifies a continuation, \ilc{k}, which produces
-the rest of the computation given the response from the environment.  \ilc{Vis}
-creates branches in the interaction tree because \ilc{k} can behave differently
-for distinct values of type \ilc{X}.
+The final and most interesting way to build an ITree is with the \ilc{(Vis X e
+  k)} constructor.  Here \ilc{(e: E X)} is an event whose result is of type \ilc
+X.  \ilc {k} is a function that defines an ITree program parameterized over an
+argument of type \ilc X.  The constructed ITree first performs event \ilc e, and
+uses its return value \ilc{(x: X)} to instantiate the continuation function
+\ilc{(k x)}.
 
-ITree programs can be written in monadic style, where ``\ilc{x <- u;; k(x)}''
-substitutes all occurences of ``\ilc{Ret r}'' in \ilc u with ``\ilc{k(r)}''.
-Events in an ITree might be sending and receiving messages, or other primitives
-actions like making internal choices.  For example, a QAC server can be defined
-as:
+These constructors build programs as tree structures, as the name ITree
+suggests: \ilc{(Ret r)} constructs a leaf of value \ilc r; \ilc{(Tau m)} is a
+node with single child \ilc m; \ilc{(Vis X e k)} has root \ilc e, and children
+\ilc{(k x)} for every \ilc x of type \ilc X.
+
+Now we can write the echo program in the ITree language:
 \begin{lstlisting}[style=customcoq]
-  Definition trigger {E R} (e: E R) : itree E R := Vis _ e Ret.
-  Variant qacE : Type -> Type :=  (* event type *)
-    Recv   : qacE Q               (* receive a query *)
-  | Send   : A -> qacE unit       (* send a response *)
-  | Choice : qacE C.              (* make a choice   *)
-  CoInductive server (sstep: Q -> C -> S -> A * S) (s: S) : itree qacE void :=
-    q <- trigger Recv;; c <- trigger Choice;;
-    let (a, s') := sstep q c s in trigger (Send a);; server sstep s'.
+  Variant qaE: Type -> Type := (* event type *)
+    Recv: qaE char             (* returns a received char *)
+  | Send: char -> qaE unit.    (* sends   a provided char *)
+
+  CoInductive echo3: itree qaE unit :=
+    Vis char Recv
+    (fun q => if q is EOF then Ret tt
+            else Vis unit (Send q)
+                 (fun _ => echo)).
+\end{lstlisting}
+
+The three \ilc{echo} definitions are equivalent modulo syntactic sugars:
+\begin{lstlisting}[style=customcoq]
+  Definition trigger {E R} (e: E R) : itree E R := Vis E e Ret.
+  Definition recv           : itree qaE char := trigger Recv.
+  Definition send (a: char) : itree qaE unit := trigger (Send a).
+  Definition EXIT {E}       : itree   E unit := Ret tt.
+\end{lstlisting}
+
+Here \ilc{(trigger e)} creates an ITree that performs an event \ilc{(e: E R)},
+and halts with the return value of \ilc e.  \ilc{EXIT} halts the program with
+unit value \ilc{tt}.
+
+The \ilc{(m >>= k)} syntax \ilc{bind}s ITree program \ilc m to continuation
+function \ilc k: Whenever ITree \ilc m halts at leaf \ilc{(Ret r)}, use the
+return value \ilc r to instantiate the function \ilc k, and the program
+continues with \ilc{(k r)}.  Another syntax for it is \ilc{(r <- m;; k r)}:
+\begin{lstlisting}[style=customcoq]
+  CoFixpoint bind {E R T} (m: itree E R) (k: R -> itree E T) : itree E T :=
+    match m with
+    | Ret r     => k r
+    | Tau m'    => Tau (bind m' k)
+    | Vis X e c => Vis X e (fun x => bind (c x) k)
+    end.
+  Notation "m >>= k"      := (bind m k).
+  Notation "x <- m1;; m2" := (m1 >>= (fun x => m2)).
+  Notation "m1;; m2"      := (m1 >>= (fun _ => m2)).
+\end{lstlisting}
+
+In the \ilc{echo1} definition, the return value of \ilc{send} is trivial and
+ignored, so the syntax \ilc{(send q;; echo)} does not specify any bound
+variable.
+
+ITree can specify various kinds of programs servers and validators, by defining
+different event types.  For example, the QAC server in \autoref{def:server}
+exhibits internal nondeterminism, which can be represented as \ilc{Choice}
+events:
+\begin{lstlisting}[style=customcoq]
+  Variant qacE: Type -> Type :=
+    Recv   : qacE Q
+  | Send   : A -> qacE unit
+  | Choice : qacE C.              (* make a choice *)
+  
+  CoInductive server (sstep: Q -> C -> S -> A * S) (s: S)
+              : itree qacE void :=
+    c <- trigger Choice;;
+    q <- trigger Recv;;
+    let (a, s') := sstep q c s in
+    trigger (Send a);;
+    server sstep s'.
 \end{lstlisting}
 
 \subsection{Interpreting interaction trees}
