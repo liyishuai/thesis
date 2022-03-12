@@ -23,21 +23,21 @@ possible behavior.  The model program can be interpreted into a tester program,
 to be discussed in \autoref{sec:spec-to-test}.
 
 \subsection{Language definition}
-Consider an echo program, which keeps receiving some data and sending them back
+Consider an echo program, which keeps reading some data and writing it out
 verbatim, until reaching EOF:
 \begin{lstlisting}[style=customcoq]
-  CoInductive echo1 := q <- recv;;
-                       if q is EOF then EXIT
-                       else send q;; echo.
+  CoInductive echo := c <- getchar;;
+                       if c is EOF then EXIT
+                       else putchar c;; echo.
 \end{lstlisting}
 
-Here the behavior after \ilc{recv} depends on the value received during.  Such
+Here the behavior after \ilc{read} depends on the value actually read.  Such
 monadic computation can be desugarized into:
 \begin{lstlisting}[style=customcoq]
   CoInductive echo2 :=
-    recv >>=
-    (fun q => if q is EOF then EXIT
-            else send q >>= (fun _ => echo)).
+    getchar >>=
+    (fun c => if c is EOF then EXIT
+            else putchar c >>= (fun _ => echo)).
 \end{lstlisting}
 
 \begin{figure}
@@ -79,23 +79,23 @@ node with single child \ilc m; \ilc{(Vis X e k)} has root \ilc e, and children
 
 Now we can write the echo program in the ITree language:
 \begin{lstlisting}[style=customcoq]
-  Variant qaE: Type -> Type := (* event type *)
-    Recv: qaE char             (* returns a received char *)
-  | Send: char -> qaE unit.    (* sends   a provided char *)
+  Variant stdioE: Type -> Type := (* event type *)
+    GetChar:         stdioE char
+  | PutChar: char -> stdioE unit.
 
-  CoInductive echo3: itree qaE unit :=
-    Vis char Recv
-    (fun q => if q is EOF then Ret tt
-            else Vis unit (Send q)
+  CoInductive echo3: itree stdioE unit :=
+    Vis char GetChar
+    (fun c => if c is EOF then Ret tt
+            else Vis unit (PutChar c)
                  (fun _ => echo)).
 \end{lstlisting}
 
-The three \ilc{echo} definitions are equivalent modulo syntactic sugars:
+The three definitions of echo are equivalent modulo syntactic sugars:
 \begin{lstlisting}[style=customcoq]
-  Definition trigger {E R} (e: E R) : itree E R := Vis E e Ret.
-  Definition recv           : itree qaE char := trigger Recv.
-  Definition send (a: char) : itree qaE unit := trigger (Send a).
-  Definition EXIT {E}       : itree   E unit := Ret tt.
+  Definition trigger {E R} (e: E R) : itree E R    := Vis E e  Ret.
+  Definition getchar           : itree stdioE char := trigger  GetChar.
+  Definition putchar (a: char) : itree stdioE unit := trigger (PutChar a).
+  Definition EXIT    {E}       : itree      E unit := Ret tt.
 \end{lstlisting}
 
 Here \ilc{(trigger e)} creates an ITree that performs an event \ilc{(e: E R)},
@@ -118,13 +118,13 @@ continues with \ilc{(k r)}.  Another syntax for it is \ilc{(r <- m;; k r)}:
   Notation "m1;; m2"      := (m1 >>= (fun _ => m2)).
 \end{lstlisting}
 
-In the \ilc{echo1} definition, the return value of \ilc{send} is trivial and
-ignored, so the syntax \ilc{(send q;; echo)} does not specify any bound
+In the \ilc{echo} definition, the return value of \ilc{putchar} is trivial and
+ignored, so the syntax \ilc{(putchar c;; echo)} does not specify any bound
 variable.
 
 ITree can specify various kinds of programs servers and validators, by defining
 different event types.  For example, the QAC server in \autoref{def:server}
-exhibits internal nondeterminism, which can be represented as \ilc{Choice}
+exhibits internal nondeterminism.  This can be represented as \ilc{Choice}
 events:
 \begin{lstlisting}[style=customcoq]
   Variant qacE: Type -> Type :=
@@ -141,50 +141,64 @@ events:
     server sstep s'.
 \end{lstlisting}
 
+To construct a tester from the specification, we need to dualize the model's
+behavior into the tester-side behavior, which was explained in
+\autoref{sec:dualization}.  To dualize specifications written in ITrees, we need
+the {\em interpretation} mechanism that transforms ITrees into other programs,
+which will be explained in the next subsection.
+
 \subsection{Interpreting interaction trees}
+To interpret a program \ilc p is to specify a rule that defines ``if \ilc p does
+this, then do that''.  For example, shell syntax \inlinec{(p < input > output)}
+executes \ilc p but redirects its standard I/O.  If \ilc p is the echo program
+in \autoref{sec:itree}, then the redirected program should perform file
+operations:
+\begin{lstlisting}[style=customcoq]
+  Variant fileE: Type -> Type :=      (* file operation events *)
+    Fgetc: file ->         fileE char
+  | Fputc: file -> char -> fileE unit.
 
-\begin{figure}
-  \lys{Todo: translate to Coq}
-  \begin{lstlisting}[style=customcoq,numbers=right,escapechar=\%]
-let acc(sum) =
-  x := recv(); send(x+sum); acc(x+sum) in
-let tee(m) =
-  match m with %\label{line:match}%
-  | x := recv(); m'(x) =>
-    a := recv(); print("IN" ++ a); tee(m'(a))%\label{line:handler1}%
-  | send(a); m' =>
-    print("OUT" ++ a); send(a); tee(m') %\label{line:handler2}%
-  end in
-tee(acc(0))
-(* ... is equivalent to ... *)
-let tee_acc(sum) =
-  a := recv(); print("IN" ++ a);
-  print("OUT" ++ (a+sum)); send(a+sum);
-  tee_acc(a+sum) in
-tee_acc(0)
-  \end{lstlisting}
-  \caption[Interpreting ITree programs.]{Interpretation example.  \ilc{acc} receives a number and returns the
-    sum of numbers received so far.  \ilc{tee} prints all the numbers sent and
-    received.  Interpreting \ilc{acc} with interpretor \ilc{tee} results in a
-    program that's equivalent to \ilc{tee_acc}.}
-  \label{fig:logger}
-\end{figure}
+  CoInductive redirect_echo (input output: file) : itree fileE unit :=
+    Vis char (Fgetc input)
+    (fun c => if c is EOF then EXIT
+            else Vis unit (Fputc output c)
+                 (fun _ => echo)).
+\end{lstlisting}
 
-Interaction tree programs can be destructed into an interaction event followed
-by another interaction tree program.  Such structure allows us to {\em
-  interpret} one program into another.  \autoref{fig:logger} shows an example of
-interpretation: The original \ilc{acc} program sends and receives messages, and
-the \ilc{tee} interpretor transforms the \ilc{acc} into another program that
-also prints the messages sent and received.
+The interpretation rules are ``whenever the program wants to read from or write
+to standard IO, perform the read/write operation on the specified file
+instead'':
+\begin{lstlisting}[style=customcoq]
+  Definition redirect (input output: file) (R: Type) (e: stdioE R)
+             : itree fileE R :=
+    match e with
+    | GetChar   => trigger (Fgetc input)
+    | PutChar c => trigger (Fputc output c)
+    end.
+\end{lstlisting}
 
-Such interpretation is done by pattern matching on the program's structure in
-\autoref{line:match}.  Based on what the original program wants to do next, the
-interpretor defines what the result program should do in \autoref{line:handler1}
-and \autoref{line:handler2}.  These programs defined in accordance to events are
-called {\em handlers}.  By writing different handlers for the events,
-interpretors can construct new programs in various ways, as shown in following
-subsections.  Further details about interpreting interaction trees are explained
-by \textcite{itree}.
+Here the \ilc{redirect} function takes a standard I/O event and turns it into an
+ITree program that performs file events.  The result program has the same return
+type as the original event, so it can replace the original \ilc{stdioE}.  This
+is done by the \ilc{interp} function:
+\begin{lstlisting}[style=customcoq]
+  CoFixpoint interp {E F R} (handler: forall T, E T -> itree F T) (m: itree E R)
+             : itree F R :=
+    match m with
+    | Ret r     => Ret r
+    | Tau m'    => Tau (interp handler m')
+    | Vis X e k => x <- handler X e;; interp handler (k x)
+    end.
+\end{lstlisting}
+
+For each event \ilc{(e: E X)}, the interpretor computes its corresponding
+program with the \ilc{handler} function, and uses the result \ilc{x: X} to
+instantiate the remainder program to interpret.  Therefore, \ilc{(interp
+  (redirect input output) echo)} constructs a program that is equivalent with
+\ilc{(redirect_echo input output)}.
+
+To derive tester programs from ITree specifications, I'll introduce multiple
+interpretation processes, with various event handlers throughout this chapter.
 
 \section{Handling External Nondeterminism}
 \label{sec:external-nondet}
