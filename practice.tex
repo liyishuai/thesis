@@ -23,12 +23,13 @@ possible behavior.  The model program can be interpreted into a tester program,
 to be discussed in \autoref{sec:spec-to-test}.
 
 \subsection{Language definition}
+\label{sec:itree-lang}
 Consider an echo program, which keeps reading some data and writing it out
 verbatim, until reaching EOF:
 \begin{lstlisting}[style=customcoq]
   CoInductive echo := c <- getchar;;
-                       if c is EOF then EXIT
-                       else putchar c;; echo.
+                      if c is EOF then EXIT
+                      else putchar c;; echo.
 \end{lstlisting}
 
 Here the behavior after \ilc{read} depends on the value actually read.  Such
@@ -47,7 +48,8 @@ monadic computation can be desugarized into:
     | Vis: forall {X : Type}, E X -> (X -> itree E R) -> itree E R
     | Tau: itree E R -> itree E R.
   \end{lstlisting}
-  \caption{Interaction trees and their traces of events.}
+  \caption[Formal definition of interaction trees]{Formal definition of
+    interaction trees, simplified for readability.}
   \label{fig:itrees}
 \end{figure}
 
@@ -62,20 +64,30 @@ produces no effect and then continues as \ilc{t}.  Representing silent steps
 explicitly with \ilc{Tau} allows us, for example, to represent diverging
 computation without violating Coq's guardedness condition~\cite{coinduction}:
 \begin{lstlisting}[style=customcoq]
-CoFixpoint spin {E R} : itree E R := Tau spin.
+  CoFixpoint spin {E R} : itree E R := Tau spin.
 \end{lstlisting}
+
+Here \ilc{spin} is an infinite program that never returns or performs any
+events.  The usage of the \ilc{Tau} constructor will be further explained in the
+next section.
 
 The final and most interesting way to build an ITree is with the \ilc{(Vis X e
   k)} constructor.  Here \ilc{(e: E X)} is an event whose result is of type \ilc
-X.  \ilc {k} is a function that defines an ITree program parameterized over an
-argument of type \ilc X.  The constructed ITree first performs event \ilc e, and
-uses its return value \ilc{(x: X)} to instantiate the continuation function
-\ilc{(k x)}.
+X.  Function \ilc {k} defines an ITree program parameterized over an argument of
+type \ilc X.  ITree \ilc{(Vis X e k)} first performs event \ilc e, and uses its
+return value \ilc{(x: X)} to instantiate the continuation function \ilc{(k x)}.
 
 These constructors build programs as tree structures, as the name ITree
 suggests: \ilc{(Ret r)} constructs a leaf of value \ilc r; \ilc{(Tau m)} is a
 node with single child \ilc m; \ilc{(Vis X e k)} has root \ilc e, and children
-\ilc{(k x)} for every \ilc x of type \ilc X.
+\ilc{(k x)} for every \ilc x of type \ilc X.  \autoref{fig:echo-itree} shows the
+tree structure for the \ilc{echo} program.
+
+\begin{figure}
+  \includegraphics[width=.5\linewidth]{figures/echo-itree}
+  \caption{ITree for echo program}
+  \label{fig:echo-itree}
+\end{figure}
 
 Now we can write the echo program in the ITree language:
 \begin{lstlisting}[style=customcoq]
@@ -91,47 +103,72 @@ Now we can write the echo program in the ITree language:
 \end{lstlisting}
 
 The three definitions of echo are equivalent modulo syntactic sugars:
+\begin{itemize}
+\item The \ilc{getchar}, \ilc{putchar}, and \ilc{EXIT} used in \ilc{echo} and
+  \ilc{echo2} are by themselves ITree programs:
 \begin{lstlisting}[style=customcoq]
-  Definition trigger {E R} (e: E R) : itree E R    := Vis E e  Ret.
-  Definition getchar           : itree stdioE char := trigger  GetChar.
-  Definition putchar (a: char) : itree stdioE unit := trigger (PutChar a).
-  Definition EXIT    {E}       : itree      E unit := Ret tt.
+  Definition trigger {E R} (e: E R) : itree E R := Vis E e Ret.
+  Definition getchar : itree stdioE char := trigger GetChar.
+  Definition putchar (a: char) : itree stdioE unit
+                               := trigger (PutChar a).
+  Definition EXIT {E} : itree E unit := Ret tt.
 \end{lstlisting}
+Here \ilc{(trigger e)} creates an ITree that performs a single event \ilc{(e: E
+  R)}, and halts with the return value of \ilc e.  \ilc{EXIT} halts the program
+with unit value \ilc{tt}.
 
-Here \ilc{(trigger e)} creates an ITree that performs an event \ilc{(e: E R)},
-and halts with the return value of \ilc e.  \ilc{EXIT} halts the program with
-unit value \ilc{tt}.
-
-The \ilc{(m >>= k)} syntax \ilc{bind}s ITree program \ilc m to continuation
-function \ilc k: Whenever ITree \ilc m halts at leaf \ilc{(Ret r)}, use the
-return value \ilc r to instantiate the function \ilc k, and the program
-continues with \ilc{(k r)}.  Another syntax for it is \ilc{(r <- m;; k r)}:
+\item The \ilc{(m >>= k)} syntax in \ilc{echo2} binds ITree program \ilc m to
+  continuation function \ilc k: Whenever ITree \ilc m halts at leaf \ilc{(Ret
+    r)}, use the return value \ilc r to instantiate the function \ilc k, and the
+  program continues with \ilc{(k r)}:
 \begin{lstlisting}[style=customcoq]
-  CoFixpoint bind {E R T} (m: itree E R) (k: R -> itree E T) : itree E T :=
+  CoFixpoint bind {E R T} (m: itree E R) (k: R -> itree E T)
+             : itree E T :=
     match m with
     | Ret r     => k r
     | Tau m'    => Tau (bind m' k)
     | Vis X e c => Vis X e (fun x => bind (c x) k)
     end.
   Notation "m >>= k"      := (bind m k).
-  Notation "x <- m1;; m2" := (m1 >>= (fun x => m2)).
-  Notation "m1;; m2"      := (m1 >>= (fun _ => m2)).
 \end{lstlisting}
 
-In the \ilc{echo} definition, the return value of \ilc{putchar} is trivial and
-ignored, so the syntax \ilc{(putchar c;; echo)} does not specify any bound
-variable.
-
-ITree can specify various kinds of programs servers and validators, by defining
-different event types.  For example, the QAC server in \autoref{def:server}
-exhibits internal nondeterminism.  This can be represented as \ilc{Choice}
-events:
+\item The \ilc{echo} definition, syntax \ilc{(c <- getchar;; ...)} binds the
+  return value of \ilc{getchar} as variable \ilc c in the continuation.  The
+  return value of \ilc{putchar} is trivial and ignored, so the syntax
+  \ilc{(putchar c;; echo)} does not specify any bound variable:
 \begin{lstlisting}[style=customcoq]
-  Variant qacE: Type -> Type :=
-    Recv   : qacE Q
-  | Send   : A -> qacE unit
-  | Choice : qacE C.              (* make a choice *)
-  
+  Notation "x <- m1;; m2" := (m1 >>= (fun x => m2)).
+  Notation      "m1;; m2" := (m1 >>= (fun _ => m2)).
+\end{lstlisting}
+\end{itemize}
+
+ITree can specify various kinds of programs like servers and testers, by
+defining different event types.  For example, the QAC server in
+\autoref{def:server} exhibits internal nondeterminism.  The internal choices
+made by the server can be represented as \ilc{Choice} events whose result can be
+any value in the space of choices:
+\begin{lstlisting}[style=customcoq]
+  Variant choiceE: Type -> Type :=
+    Choice: choiceE C.
+\end{lstlisting}
+
+The server also needs to send requests and responses:
+\begin{lstlisting}[style=customcoq]
+  Variant qaE: Type -> Type :=
+    Recv: qaE Q           (* receive a request *)
+  | Send: A -> qaE unit.  (* send a response   *)
+
+  Definition qacE: Type -> Type := qaE +' choiceE.
+\end{lstlisting}
+
+Here \ilc{qacE} is a sum type of \ilc{qaE} and \ilc{choiceE} events, meaning
+that the server may send or receive messages, and may also make internal
+choices.  We split the event types because they'll be handled differently when
+we derive the tester later in this chapter.
+
+Now we can represent the QAC server with step function \ilc{sstep} and initial
+state \ilc S:
+\begin{lstlisting}[style=customcoq]
   CoInductive server (sstep: Q -> C -> S -> A * S) (s: S)
               : itree qacE void :=
     c <- trigger Choice;;
@@ -141,17 +178,18 @@ events:
     server sstep s'.
 \end{lstlisting}
 
+This subsection has provided a brief taste of the ITree specification language.
 To construct a tester from the specification, we need to dualize the model's
-behavior into the tester-side behavior, which was explained in
+behavior into the tester-side behavior, based on the theory explained in
 \autoref{sec:dualization}.  To dualize specifications written in ITrees, we need
-the {\em interpretation} mechanism that transforms ITrees into other programs,
+an {\em interpretation} mechanism that transforms ITrees into other programs,
 which will be explained in the next subsection.
 
 \subsection{Interpreting interaction trees}
 To interpret a program \ilc p is to specify a rule that defines ``if \ilc p does
 this, then do that''.  For example, shell syntax \inlinec{(p < input > output)}
-executes \ilc p but redirects its standard I/O.  If \ilc p is the echo program
-in \autoref{sec:itree}, then the redirected program should perform file
+executes \inlinec p but redirects its standard I/O.  If \inlinec p is the echo
+program in \autoref{sec:itree}, then the redirected program should perform file
 operations:
 \begin{lstlisting}[style=customcoq]
   Variant fileE: Type -> Type :=      (* file operation events *)
@@ -159,19 +197,17 @@ operations:
   | Fputc: file -> char -> fileE unit.
 
   CoInductive redirect_echo (input output: file) : itree fileE unit :=
-    Vis char (Fgetc input)
-    (fun c => if c is EOF then EXIT
-            else Vis unit (Fputc output c)
-                 (fun _ => echo)).
+    c <- trigger (Fgetc input);;
+    if c is EOF then EXIT
+    else trigger (Fputc output c);;
+         redirect_echo input output.
 \end{lstlisting}
 
-The interpretation rules are ``whenever the program wants to read from or write
-to standard IO, perform the read/write operation on the specified file
-instead'':
+The interpretation rule is ``whenever the program wants to read from or write to
+standard IO, perform the read/write operation on the specified file instead'':
 \begin{lstlisting}[style=customcoq]
-  Definition redirect (input output: file) (R: Type) (e: stdioE R)
-             : itree fileE R :=
-    match e with
+  Definition redirect (input output: file) (R: Type) (e: stdioE R) :=
+    match e in stdioE R return itree fileE R with
     | GetChar   => trigger (Fgetc input)
     | PutChar c => trigger (Fputc output c)
     end.
@@ -179,8 +215,8 @@ instead'':
 
 Here the \ilc{redirect} function takes a standard I/O event and turns it into an
 ITree program that performs file events.  The result program has the same return
-type as the original event, so it can replace the original \ilc{stdioE}.  This
-is done by the \ilc{interp} function:
+type as the original event, so it can ``replace'' the original \ilc{stdioE}.
+This is done by the \ilc{interp} function:
 \begin{lstlisting}[style=customcoq]
   CoFixpoint interp {E F R} (handler: forall T, E T -> itree F T) (m: itree E R)
              : itree F R :=
@@ -189,54 +225,112 @@ is done by the \ilc{interp} function:
     | Tau m'    => Tau (interp handler m')
     | Vis X e k => x <- handler X e;; interp handler (k x)
     end.
+
+  Definition redirect_echo2 (input output: file) : itree fileE unit :=
+    interp (redirect input output) echo.
 \end{lstlisting}
 
 For each event \ilc{(e: E X)}, the interpretor computes its corresponding
 program with the \ilc{handler} function, and uses the result \ilc{x: X} to
-instantiate the remainder program to interpret.  Therefore, \ilc{(interp
-  (redirect input output) echo)} constructs a program that is equivalent with
-\ilc{(redirect_echo input output)}.
+instantiate the remainder program to interpret.  Therefore, \ilc{redirect_echo2}
+constructs a redirected echo program that is equivalent with
+\ilc{redirect_echo}.
 
 To derive tester programs from ITree specifications, I'll introduce multiple
 interpretation processes, with various event handlers throughout this chapter.
 
 \section{Handling External Nondeterminism}
 \label{sec:external-nondet}
+As introduced in \autoref{sec:intro-external-nondet}, the environment might
+affect the transmission of messages, so called external nondeterminism.  The
+tester should take the environment into account when validating its
+observations.
+
+This section explains how to address external nondeterminism by specifying the
+environment, with the networked server example.  \autoref{sec:net-tcp} defines a
+model for concurrent TCP connections.  \autoref{sec:net-compose} then composes
+the network model with the server specification, yielding a tester-side
+specification that defines the space of valid observations.
+
 \subsection{Modelling the network}
 \label{sec:net-tcp}
-The space of network reorderings can be modelled by a {\em network model}, which
-is a conceptual program for the ``network wire''.  The wire can be viewed as a
-buffer, which can absorb packets and later emit them.  For example, the network
-model for concurrent TCP connections is defined as:
-\begin{lstlisting}[style=customcoq]
-  Variant netE : Type -> Type := (* network event type *)
-    Send : packet -> netE unit   (* emit   a packet to   endpoint *)
-  | Recv : netE packet           (* absorb a packet from endpoint *)
-  | Or   : netE bool.            (* nondeterministic choice       *)
-  Definition or (x y: itree netE void) : itree netE void :=
-    b <- trigger Or;; if b then x else y.               (* nondeterminstic branch *)
-  Fixpoint pick_one (l: list packet) : itree netE (option packet) :=
-    if l is p::l' then or (Ret (Some p)) (pick_one l')
-    else Ret None.
-  Definition oldest_in_each_conn : list packet -> list packet := ...
-  CoFixpoint tcp (buffer: list packet) : itree netE void :=  (* TCP network model *)
-    let absorb := pkt <- trigger Recv;; tcp (buffer ++ [pkt]) in
-    let emit p := trigger (Send p);; tcp (remove pkt buffer)  in
-    let pkts := oldest_in_each_conn buffer in
-    opkt <- pick_one pkts;;     (* oldest packet in any connection may be emitted *)
-    if opkt is Some pkt then emit pkt else absorb.
-\end{lstlisting}
-The network model introduces an \ilc{Or} event to describe different paths the
-system might take.  \ilc{(or x y)} represents a system that is allowed to behave
-as either \ilc x or \ilc y.
+When testing servers over the network, request and response packets may be
+indefinitely delayed.  As a result, messages from one end might arrive at the
+other end in a different order from that they were sent.
 
-Notice the \ilc{pick_one} function: Given an empty list, it must return
-\ilc{None}, which indicates the network must absorb some packet before emitting
-anything.  Given a non-empty list, it might return some element in the list,
-which means the network might emit that packet; or it can return \ilc{None},
-meaning the network can still absorb packets before emitting any.  This
-constructs a network model that reflects TCP, where messages are never lost but
-might be indefinitely delayed.
+The space of network reorderings can be modelled by a {\em network model}, a
+conceptual program for the ``network wire''.  The wire can be viewed as a
+buffer, which absorbs packets and later emits them:
+\begin{lstlisting}[style=customcoq]
+  Variant netE: Type -> Type := (* network event type *)
+    Emit  : packet -> netE unit
+  | Absorb: netE packet.
+\end{lstlisting}
+
+After absorbing a packet, the wire may emit it immediately or after
+absorbing/emitting other packets.  Such choices are modelled by nondeterministic
+\ilc{Or} branches:
+\begin{lstlisting}[style=customcoq]
+  Variant nondetE: Type -> Type := (* nondeterministic branch *)
+    Or: nondetE bool.
+
+  Definition or {E R} `{nondetE -< E} (x y: itree E R) : itree E R :=
+    b <- trigger Or;;
+    if b then x else y.
+\end{lstlisting}
+
+Here \ilc{(or x y)} creates a nondeterministic program that may behave as either
+\ilc x or \ilc y.  The \ilc{nondetE} here is a special case of \ilc{choiceE} in
+\autoref{sec:itree-lang} with boolean space of choices, but they'll be handled
+differently during test derivation.  The type signature \ilc{\{E R\} `\{nondetE
+  -< E\}} says the \ilc{(or)} combinator can apply to ITrees whose event \ilc E
+is a super-event of \ilc{nondetE}, and with arbitrary return type \ilc R.  For
+example, arguments \ilc x and \ilc y can be of type \ilc{(itree (netE +'
+  nondetE) void)}.
+
+For example, the network model for concurrent TCP connections is defined as:
+\begin{lstlisting}[style=customcoq]
+  Fixpoint pick_one (l: list packet) : itree nondetE (option packet) :=
+    if l is p::l'
+    then or (Ret (Some p)) (pick_one l')
+    else Ret None.
+
+  Definition oldest_in_each_conn : list packet -> list packet.
+  (* filter the oldest packet in each connection *)
+
+  CoFixpoint tcp (buffer: list packet) : itree (netE +' nondetE) void :=
+    let absorb := pkt <- trigger Absorb;;
+                  tcp (buffer ++ [pkt])      in
+    let emit p := trigger (Emit p);;
+                  tcp (remove pkt buffer)    in
+    let pkts   := oldest_in_each_conn buffer in
+    opkt <- pick_one pkts;;
+    if opkt is Some pkt
+    then emit pkt
+    else absorb.
+\end{lstlisting}
+
+The network model captures TCP's feature of maintaining the order within each
+connection, but packets in different connections might be reordered arbitrarily.
+When the wire chooses a packet to send, the candidate must be the oldest in its
+connection.
+
+Notice the \ilc{pick_one} function, which might return (i) \ilc{Some p} or (ii)
+\ilc None.  The network model then (i) emits packet \ilc p or (ii) absorbs a
+packet into \ilc{buffer}.
+
+\begin{itemize}
+\item When the given list \ilc{pkts} is empty, \ilc{pick_one} always returns
+  \ilc{None}, becuase the wire has no packet in the \ilc{buffer}, and must
+  absorb some packet before emitting anything.
+\item Given a non-empty list, \ilc{pick_one} might return \ilc{(Some p)},
+  meaning the wire can emit that packet; or it might return \ilc{None}, meaning
+  the wire can still absorb packets into the buffer.
+\end{itemize}
+
+Such network model reflects the TCP environment, where messages are never lost
+but might be indefinitely delayed.  In the next subsection, I'll demonstrate how
+to compose the server and network models into a client-side observation model.
 
 \subsection{Network composition}
 \label{sec:net-compose}
