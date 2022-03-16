@@ -365,14 +365,14 @@ let compose (net, bi, bo, srv) =
     match net with
     | send(pkt); n' =>
       if pkt.to_server
-      then compose (n', bi++[pkt], bo, srv)%\label{line:app-incoming}%
-      else send(pkt);   (* to client *)%\label{line:net-emit}%
+      then compose (n', bi++[pkt], bo, srv)
+      else send(pkt);   (* to client *)
            compose (n', bi, bo, srv)
       end
-    | pkt := recv(); n'(pkt) => %\label{line:net-recv}%
+    | pkt := recv(); n'(pkt) =>
       match bo with
-      | p0::b' => compose (n'(p0), bi, b', srv) %\label{line:net-absorb}%
-      | []     => p1 := recv(); %\label{line:client-send}%
+      | p0::b' => compose (n'(p0), bi, b', srv)
+      | []     => p1 := recv();
                  compose (n'(p1), bi, bo, srv)
       end
     | r  := _(); n'(r) =>
@@ -380,11 +380,11 @@ let compose (net, bi, bo, srv) =
     end in
   match srv with
   | send(pkt); s' =>
-    compose (net, bi, bo++[pkt], s') %\label{line:app-send}%
+    compose (net, bi, bo++[pkt], s')
   | pkt := recv(); s'(pkt) =>
     match bi with
-    | p0::b' => compose (net, b', bo, s'(p0)) %\label{line:app-consume}%
-    | []     => step_net %\label{line:step-net}%
+    | p0::b' => compose (net, b', bo, s'(p0))
+    | []     => step_net
     end
   | r  := _(); s'(r) =>
     r1 := _(); compose (net, bi, bo, s'(r1))
@@ -409,7 +409,6 @@ compose (tcp, [], [], http)
     %% pkt.destination?  What are the initial values tcp\_L4 and http\_L7?  How
     %% does the result of zip actually get executed?}
   }
-  \label{fig:net-compose}
 \end{figure}
 %% \sz{We should give this intuition about what L7 does way back at the start of
 %% Section 4 where we describe Figure 7 (and give a similar description of L4).

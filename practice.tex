@@ -68,8 +68,8 @@ computation without violating Coq's guardedness condition~\cite{coinduction}:
 \end{lstlisting}
 
 Here \ilc{spin} is an infinite program that never returns or performs any
-events.  The usage of the \ilc{Tau} constructor will be further explained in the
-next section.
+events.  The usage of the \ilc{Tau} constructor will be further explained in
+\autoref{sec:net-compose}.
 
 The final and most interesting way to build an ITree is with the \ilc{(Vis X e
   k)} constructor.  Here \ilc{(e: E X)} is an event whose result is of type \ilc
@@ -288,44 +288,55 @@ is a super-event of \ilc{nondetE}, and with arbitrary return type \ilc R.  For
 example, arguments \ilc x and \ilc y can be of type \ilc{(itree (netE +'
   nondetE) void)}.
 
-For example, the network model for concurrent TCP connections is defined as:
+For example, the network model for concurrent TCP connections is defined in
+\autoref{fig:tcp-model}.  The model captures TCP's feature of maintaining the
+order within each connection, but packets in different connections might be
+reordered arbitrarily.  When the wire chooses a packet to send, the candidate
+must be the oldest in its connection.
+
+\begin{figure}
 \begin{lstlisting}[style=customcoq]
-  Fixpoint pick_one (l: list packet) : itree nondetE (option packet) :=
-    if l is p::l'
-    then or (Ret (Some p)) (pick_one l')
-    else Ret None.
+Fixpoint pick_one (l: list packet) : itree nondetE (option packet) :=
+  if l is p::l'
+  then or (Ret (Some p)) (pick_one l')
+  else Ret None.
 
-  Definition oldest_in_each_conn : list packet -> list packet.
-  (* filter the oldest packet in each connection *)
+Definition oldest_in_each_conn : list packet -> list packet := ...
+(* filter the oldest packet in each connection *)
 
-  CoFixpoint tcp (buffer: list packet) : itree (netE +' nondetE) void :=
-    let absorb := pkt <- trigger Absorb;;
-                  tcp (buffer ++ [pkt])      in
-    let emit p := trigger (Emit p);;
-                  tcp (remove pkt buffer)    in
-    let pkts   := oldest_in_each_conn buffer in
-    opkt <- pick_one pkts;;
-    if opkt is Some pkt
-    then emit pkt
-    else absorb.
+CoFixpoint tcp (buffer: list packet) : itree (netE +' nondetE) void :=
+  let absorb := pkt <- trigger Absorb;;
+                tcp (buffer ++ [pkt])      in
+  let emit p := trigger (Emit p);;
+                tcp (remove pkt buffer)    in
+  let pkts   := oldest_in_each_conn buffer in
+  opkt <- pick_one pkts;;
+  if opkt is Some pkt
+  then emit pkt
+  else absorb.
 \end{lstlisting}
-
-The network model captures TCP's feature of maintaining the order within each
-connection, but packets in different connections might be reordered arbitrarily.
-When the wire chooses a packet to send, the candidate must be the oldest in its
-connection.
+\caption[Network model for concurrent TCP connections]{Network model for
+  concurrent TCP connections.  The model is an infinite program iterating over a
+  \ilc{buffer} of all packets en route.  In each iteration, the model either
+  \ilc{absorb}s or \ilc{emit}s some packet, depending on the current
+  \ilc{buffer} state and the choice made in \ilc{pick_one}.  Any absorbed packet
+  is appended to the end of buffer.  When emitting a packet, the model may
+  choose a connection and send the oldest packet in it.}
+\label{fig:tcp-model}
+\end{figure}
 
 Notice the \ilc{pick_one} function, which might return (i) \ilc{Some p} or (ii)
-\ilc None.  The network model then (i) emits packet \ilc p or (ii) absorbs a
-packet into \ilc{buffer}.
+\ilc{None}.  \lys{Should I explain what is option type?}  The network model then
+(i) emits packet \ilc p or (ii) absorbs a packet into \ilc{buffer}.
 
 \begin{itemize}
 \item When the given list \ilc{pkts} is empty, \ilc{pick_one} always returns
   \ilc{None}, becuase the wire has no packet in the \ilc{buffer}, and must
   absorb some packet before emitting anything.
-\item Given a non-empty list, \ilc{pick_one} might return \ilc{(Some p)},
-  meaning the wire can emit that packet; or it might return \ilc{None}, meaning
-  the wire can still absorb packets into the buffer.
+\item Given a non-empty linked list \ilc{(p::l')}, with \ilc p as head and
+  \ilc{l'} as tail, \ilc{pick_one} might return \ilc{(Some p)}, meaning the wire
+  can emit that packet; or it might return \ilc{None}, meaning the wire can
+  still absorb packets into the buffer.
 \end{itemize}
 
 Such network model reflects the TCP environment, where messages are never lost
@@ -334,50 +345,121 @@ to compose the server and network models into a client-side observation model.
 
 \subsection{Network composition}
 \label{sec:net-compose}
-The network model is {\em composed} with the server model, yielding a model that
-exhibits the ``server delayed by the network'' behavior.  The composition is to
-attach the server model as one end on the network model: Assume two message
-buffers between the server and the network, \ilc{bi} stores the packets emitted
-by the network but not yet consumed by the server, while \ilc{bo} stores the
-packets produced by the server but not yet absorbed by the network.  The network
-absorbs packets in two ways, either from the servers outgoing buffer \ilc{bo} or
-from the clients; Conversely, when the network emits a packet, it either goes to
-the client or is appended to the server's incoming buffer
-\ilc{bi}:~\footnote{Here for simplicity, the server model uses the same
-  \ilc{netE} as the network model.  In practice, the server can be specified
-  with a more flexible type interface like \ilc{qacE} in
-  \autoref{sec:eval-itree}, provided its events are pairable with the network
-  model's \ilc{Send} and \ilc{Recv}.}
-\begin{lstlisting}[style=customcoq]
-Definition toServer: packet -> bool := ... (* check the packet's destination *)
-CoFixpoint compose (srv net: itree netE void) (bi bo: list packet) : itree netE void :=
-  match srv, net with
-  | Vis vs ks, Vis vn kn =>
-    let step_net := (* take a step in the network model *)
-      match vn with
-      | Recv =>     (* absorb from server whenever possible   *)
-        if bo is pkt::bo' then compose srv (kn pkt) bi bo'
-                    (* absorb from client if server is silent *)
-        else pkt <- trigger Recv;; compose srv (kn pkt) bi bo
-      | Send pkt => (* emit packet to its destination *)
-        if toServer pkt then       compose srv (kn tt) (bi++[pkt]) bo)
-        else  trigger (Send pkt);; compose srv (kn tt)  bi bo
-      | Or => b <- trigger Or;; compose srv (kn b) bi bo
-      end in
-    match vs with
-    | Recv =>       (* consume packet from incoming buffer *)
-      if bi is pkt::bi' then compose (ks pkt) net bi' bo
-      else step_net (* server is starving *)
-    | Send pkt =>   (* produce packet to   outgoing buffer *)
-      compose (ks tt) net bi (bo++[pkt])
-    | Or => b <- trigger Or;; compose (ks b) net bi bo
-    end
-  | Ret vd, _ | _, Ret vd => match vd in void with end
+
+The network connects the server on one end to the clients on other ends.  When
+one end sends some message, the network model absorbs it and later emits it to
+the destination.
+
+To {\em compose} a server model with a network model is to pair the server's
+\ilc{Send} and \ilc{Recv} events with the network's \ilc{Absorb} and \ilc{Emit}
+events.  Since the network model is nondeterministic, it might not be ready to
+absorb packets sent by the server.  The network might also emit a packet before
+the server is ready to receive it.
+
+\begin{figure}
+  \includegraphics[width=\textwidth]{figures/net-compose}
+  \caption{Network composition architecture}
+  \label{fig:net-compose}
+\end{figure}
+
+To handle the asynchronicity among the server and network events, I insert
+message buffers between them.  As shown in \autoref{fig:net-compose}, the {\em
+  incoming buffer} stores the packets emitted by the network but not yet
+consumed by the server's \ilc{Recv} events, and the {\em outgoing buffer} stores
+the packets sent by the server but not yet absorbed by the network.
+
+\begin{figure}
+\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+CoFixpoint compose {E} (srv: itree (qaE +' E) void)   (* server  model *)
+           (net  : itree (netE +' nondetE) void)      (* network model *)
+           (bi bo: list packet)       (* incoming and outgoing buffers *)
+           : itree (netE +' nondetE +' E) void :=
+
+  let step_net :=%\label{line:step-net-def}%
+    match net with
+    | p <- absorb;; knet p =>
+      if bo is pkt::bo'
+      then Tau (compose srv (knet pkt) bi bo')%\label{line:net-absorb}%
+      else pkt <- absorb;;%\label{line:client-send}%
+           compose srv (knet pkt) bi bo
+    | emit pkt;; net' =>
+      if toServer pkt
+      then Tau (compose srv net' (bi++[pkt]) bo)%\label{line:srv-incoming}%
+      else send pkt;;%\label{line:net-emit}%
+           compose srv net' bi bo
+    | or net1 net2 =>
+      or (compose srv net1 bi bo) (compose srv net2 bi bo)
+    end in
+
+  match srv with
+  | p <- recv;; ksrv p =>
+    if bi is pkt::bi'
+    then Tau (compose (ksrv pkt) net bi' bo)%\label{line:srv-consume}%
+    else step_net%\label{line:step-net}%
+  | send pkt;; srv' =>
+    Tau (compose srv' net bi (bo++[pkt]))%\label{line:srv-send}%
+  | r <- e;; ksrv r =>         (* other events performed by the server *)
+    r <- e;; compose (ksrv r) net bi bo
   end.
 \end{lstlisting}
-Notice that the composed model schedules the server at a higher priority than
-the network model.  Such design is to avoid divergence of the derived tester
-program, which was explained in more detail by \textcite{issta21}.
+\caption[Network composition algorithm]{Network composition algorithm, with
+  formal type signature in Coq, and function body in semi-pseudo code for
+  readability.  When the server wants to send a packet in
+  \autoref{line:srv-send}, the packet is appended to the outgoing buffer until
+  absorbed by the network in \autoref{line:net-absorb}, and eventually emitted
+  to the client in \autoref{line:net-emit}.  Conversely, packets sent by clients
+  are absorbed by the network in \autoref{line:client-send}, emitted to the
+  server's incoming buffer in \autoref{line:srv-incoming}, until the server
+  consumes it in \autoref{line:srv-consume}.}
+\label{fig:net-compose-code}
+\end{figure}
+
+The server and the clients are the opposite ends of the network.  Each packet
+has routing fields that indicate its source and destination.  When the network
+emits a packet, we need to determine whether the packet is emitted to the
+server's incoming buffer or to the clients, by inspecting its destination:
+\begin{lstlisting}[style=customcoq]
+  Record packet := {
+    source      : connection;
+    destination : connection;
+    payload     : data
+  }.
+
+  Definition toServer (p: packet) : bool :=
+    if p.(destination) is server_conn then true else false.
+\end{lstlisting}
+
+Now we can define the composition algorithm formally, as shown in
+\autoref{fig:net-compose-code}.  In this example, we reuse the \ilc{qaE}
+definition in \autoref{sec:itree-lang}, and let the \ilc Q and \ilc A both be
+the \ilc{packet} type.  The composed ITree takes the server and network models
+as parameters, and makes steps in the two ITrees in certain order.  The composed
+model exhibits to the client three kinds of events: (i) Network operations
+(\ilc{netE}) where packets are emitted to or absorbed from clients, (ii)
+Nondetermistic branches (\ilc{nondetE}) made by the network model, and (iii)
+Other events \ilc{\{E\}} made by the server model {\it e.g.} internal choices
+(\ilc{choiceE}) in \autoref{sec:itree-lang}.
+
+Notice that this algorithm schedules the server at a higher priority than the
+network model.  The composed model only steps into the network model when the
+server is starved in \autoref{line:step-net}, by calling the \ilc{step_net}
+process defined in \autoref{line:step-net-def}.  Such design is to avoid
+divergence of the derived tester program, which I'll further explain in
+\autoref{sec:spec-to-test}.
+
+This algorithm also answers why the definition of ITree in
+\autoref{sec:itree-lang} has a \ilc{Tau} constructor: When the server and the
+network models interact with the packet buffers in Lines~\ref{line:net-absorb},
+\ref{line:srv-incoming}, \ref{line:srv-consume}, \ref{line:srv-send}, they don't
+trigger any event before recursing with updated buffer states.  The \ilc{Tau}
+constructor convinces Coq that the program satisfies the guardedness
+condition~\cite{coinduction}.  \lys{Should I explain \ilc{Tau} at all?}
+
+This section has shown how to specify systems that exhibit external
+nondeterminism.  By specifying the environment and composing it with the
+specification, we can describe the space of valid observations.  The next
+section will show how to derive tester programs from these observer-side
+specifications.
 
 \section{From Specification to Tester}
 \label{sec:spec-to-test}

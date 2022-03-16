@@ -50,7 +50,7 @@ Servers specified in this $\Prog$ language are defined as follows:
 \end{enumerate}
 Let $p\in\Prog$ be the model program, then the server's loop body $\sstep_p$ is
 defined as:
-\[\begin{array}{lrl}
+\[\begin{array}{lr@{\,}l}
 \sstep_p(q,c,s_0)&\triangleq&\letin{s_1}{\update{s_0}{1}{c}}\\
 &&\letin{s_2}{\update{s_1}{0}{q}}\\
 &&\letin{s_3}{\Exec(p,s_2)}\\
