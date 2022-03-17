@@ -32,7 +32,7 @@ verbatim, until reaching EOF:
                       else putchar c;; echo.
 \end{lstlisting}
 
-Here the behavior after \ilc{read} depends on the value actually read.  Such
+Here the behavior after \ilc{read} depends on the value actually read.  This
 monadic computation can be desugarized into:
 \begin{lstlisting}[style=customcoq]
   CoInductive echo2 :=
@@ -42,107 +42,64 @@ monadic computation can be desugarized into:
 \end{lstlisting}
 
 \begin{figure}
-  \begin{lstlisting}[style=customcoq]
-    CoInductive itree (E: Type -> Type) (R: Type) :=
-    | Ret: R -> itree E R
-    | Vis: forall {X : Type}, E X -> (X -> itree E R) -> itree E R
-    | Tau: itree E R -> itree E R.
-  \end{lstlisting}
-  \caption[Formal definition of interaction trees]{Formal definition of
-    interaction trees, simplified for readability.}
-  \label{fig:itrees}
-\end{figure}
-
-This continuation-passing style is formalized in the ITree data structure.  As
-shown in \autoref{fig:itrees}, \ilc{(itree E R)} represents a program with
-interaction event type \ilc E and return type \ilc R.
-
-An ITree program can be constructed in three ways: The \ilc{(Ret r)} constructor
-corresponds to the trivial computation that halts and yields the value \ilc{r}.
-The \ilc{(Tau t)} constructor corresponds to a silent step of computation, which
-produces no effect and then continues as \ilc{t}.  Representing silent steps
-explicitly with \ilc{Tau} allows us, for example, to represent diverging
-computation without violating Coq's guardedness condition~\cite{coinduction}:
 \begin{lstlisting}[style=customcoq]
-  CoFixpoint spin {E R} : itree E R := Tau spin.
+  CoInductive itree (E: Type -> Type) (R: Type) :=
+    Ret     : R   -> itree E R
+  | Trigger : E R -> itree E R
+  | Bind    : forall {X : Type}, itree E X -> (X -> itree E R) -> itree E R.
 \end{lstlisting}
-
-Here \ilc{spin} is an infinite program that never returns or performs any
-events.  The usage of the \ilc{Tau} constructor will be further explained in
-\autoref{sec:net-compose}.
-
-The final and most interesting way to build an ITree is with the \ilc{(Vis X e
-  k)} constructor.  Here \ilc{(e: E X)} is an event whose result is of type \ilc
-X.  Function \ilc {k} defines an ITree program parameterized over an argument of
-type \ilc X.  ITree \ilc{(Vis X e k)} first performs event \ilc e, and uses its
-return value \ilc{(x: X)} to instantiate the continuation function \ilc{(k x)}.
-
-These constructors build programs as tree structures, as the name ITree
-suggests: \ilc{(Ret r)} constructs a leaf of value \ilc r; \ilc{(Tau m)} is a
-node with single child \ilc m; \ilc{(Vis X e k)} has root \ilc e, and children
-\ilc{(k x)} for every \ilc x of type \ilc X.  \autoref{fig:echo-itree} shows the
-tree structure for the \ilc{echo} program.
+\caption[Formal definition of interaction trees]{Formal definition of
+  interaction trees.}
+\label{fig:itrees}
+\end{figure}
 
 \begin{figure}
   \includegraphics[width=.5\linewidth]{figures/echo-itree}
-  \caption{ITree for echo program}
+  \caption{Interaction tree for echo program}
   \label{fig:echo-itree}
 \end{figure}
 
-Now we can write the echo program in the ITree language:
+Such continuation-passing style can be represented as a tree of interactions.
+As shown in \autoref{fig:itrees}, an interaction tree (\ilc{itree}) has two
+kinds of nodes, \ilc{Ret} and \ilc{Trigger}, and has edges constructed by
+\ilc{Bind}:
+\begin{itemize}
+\item \ilc{(Ret r)} represents a pure computation that yields a value \ilc r.
+  In the echo example, \ilc{EXIT} halts the program with return value zero:
+\begin{lstlisting}[style=customcoq]
+  Definition EXIT {E} : itree E Z := Ret 0.
+\end{lstlisting}
+\item \ilc{(Trigger e)} performs an event \ilc e and returns the event's result,
+  where \ilc{(e: E R)} is an event whose result is of type \ilc R.  For example,
+  \ilc{getchar} has result type \ilc{char}, and \ilc{putchar}'s result type is
+  \ilc{unit} (which corresponds to \inlinec{void} in C/C++, or \ilc{()} in
+  Haskell):
 \begin{lstlisting}[style=customcoq]
   Variant stdioE: Type -> Type := (* event type *)
     GetChar:         stdioE char
   | PutChar: char -> stdioE unit.
-
-  CoInductive echo3: itree stdioE unit :=
-    Vis char GetChar
-    (fun c => if c is EOF then Ret tt
-            else Vis unit (PutChar c)
-                 (fun _ => echo)).
+  
+  Definition getchar : itree stdioE char := Trigger GetChar.
+  Definition putchar (c: char) : itree stdioE unit
+                               := Trigger (PutChar c).
 \end{lstlisting}
-
-The three definitions of echo are equivalent modulo syntactic sugars:
-\begin{itemize}
-\item The \ilc{getchar}, \ilc{putchar}, and \ilc{EXIT} used in \ilc{echo} and
-  \ilc{echo2} are by themselves ITree programs:
+\item \ilc{(Bind m k)} binds the return value of \ilc m to the continuation
+  function \ilc k.  It first runs program \ilc m until it returns some value of
+  type \ilc X.  The return value \ilc{(x: X)} then instantiates \ilc k into the
+  following computation \ilc{(k x: itree E R)}.  This corresponds to the \ilc{(_
+    <- _ ;; _)} and \ilc{>>=} syntax in \ilc{echo} and \ilc{echo2}:
 \begin{lstlisting}[style=customcoq]
-  Definition trigger {E R} (e: E R) : itree E R := Vis E e Ret.
-  Definition getchar : itree stdioE char := trigger GetChar.
-  Definition putchar (a: char) : itree stdioE unit
-                               := trigger (PutChar a).
-  Definition EXIT {E} : itree E unit := Ret tt.
-\end{lstlisting}
-Here \ilc{(trigger e)} creates an ITree that performs a single event \ilc{(e: E
-  R)}, and halts with the return value of \ilc e.  \ilc{EXIT} halts the program
-with unit value \ilc{tt}.
-
-\item The \ilc{(m >>= k)} syntax in \ilc{echo2} binds ITree program \ilc m to
-  continuation function \ilc k: Whenever ITree \ilc m halts at leaf \ilc{(Ret
-    r)}, use the return value \ilc r to instantiate the function \ilc k, and the
-  program continues with \ilc{(k r)}:
-\begin{lstlisting}[style=customcoq]
-  CoFixpoint bind {E R T} (m: itree E R) (k: R -> itree E T)
-             : itree E T :=
-    match m with
-    | Ret r     => k r
-    | Tau m'    => Tau (bind m' k)
-    | Vis X e c => Vis X e (fun x => bind (c x) k)
-    end.
-  Notation "m >>= k"      := (bind m k).
+  Notation "m >>= k"      := (Bind m   k).
+  Notation "x <- m1;; m2" := (Bind m1 (fun x => m2)).
+  Notation "m1;; m2"      := (Bind m1 (fun _ => m2)).
 \end{lstlisting}
 
-\item The \ilc{echo} definition, syntax \ilc{(c <- getchar;; ...)} binds the
-  return value of \ilc{getchar} as variable \ilc c in the continuation.  The
-  return value of \ilc{putchar} is trivial and ignored, so the syntax
-  \ilc{(putchar c;; echo)} does not specify any bound variable:
-\begin{lstlisting}[style=customcoq]
-  Notation "x <- m1;; m2" := (m1 >>= (fun x => m2)).
-  Notation      "m1;; m2" := (m1 >>= (fun _ => m2)).
-\end{lstlisting}
+As illustrated in \autoref{fig:echo-itree}, each possible return value \ilc x is
+an edge that leads to the child it instantiates {\it i.e.} \ilc{(k x)}.  In this
+way, the \ilc{Ret} and \ilc{Trigger} nodes are connected into a tree structure.
 \end{itemize}
 
-ITree can specify various kinds of programs like servers and testers, by
+ITrees can specify various kinds of programs like servers and testers, by
 defining different event types.  For example, the QAC server in
 \autoref{def:server} exhibits internal nondeterminism.  The internal choices
 made by the server can be represented as \ilc{Choice} events whose result can be
@@ -437,8 +394,8 @@ as parameters, and makes steps in the two ITrees in certain order.  The composed
 model exhibits to the client three kinds of events: (i) Network operations
 (\ilc{netE}) where packets are emitted to or absorbed from clients, (ii)
 Nondetermistic branches (\ilc{nondetE}) made by the network model, and (iii)
-Other events \ilc{\{E\}} made by the server model {\it e.g.} internal choices
-(\ilc{choiceE}) in \autoref{sec:itree-lang}.
+Other events \ilc{\{E\}} performed by the server model {\it e.g.} internal
+choices (\ilc{choiceE}) in \autoref{sec:itree-lang}.
 
 Notice that this algorithm schedules the server at a higher priority than the
 network model.  The composed model only steps into the network model when the
@@ -455,11 +412,10 @@ trigger any event before recursing with updated buffer states.  The \ilc{Tau}
 constructor convinces Coq that the program satisfies the guardedness
 condition~\cite{coinduction}.  \lys{Should I explain \ilc{Tau} at all?}
 
-This section has shown how to specify systems that exhibit external
-nondeterminism.  By specifying the environment and composing it with the
-specification, we can describe the space of valid observations.  The next
-section will show how to derive tester programs from these observer-side
-specifications.
+So far I've shown how to specify systems that exhibit external nondeterminism.
+By specifying the environment and composing it with the specification, we can
+describe the space of valid observations.  The rest of this chapter will show
+how to derive tester programs from these observer-side specifications.
 
 \section{From Specification to Tester}
 \label{sec:spec-to-test}
