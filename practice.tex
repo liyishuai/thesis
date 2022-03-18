@@ -36,21 +36,19 @@ Here the behavior after \ilc{read} depends on the value actually read.  This
 monadic computation can be desugarized into:
 \begin{lstlisting}[style=customcoq]
   CoInductive echo2 :=
-    getchar >>=
-    (fun c => if c is EOF then EXIT
-            else putchar c >>= (fun _ => echo)).
+    Bind getchar (fun c => if c is EOF then EXIT
+                         else Bind (putchar c) (fun _ => echo)).
 \end{lstlisting}
 
 \begin{figure}
 \begin{lstlisting}[style=customcoq]
-  CoInductive itree (E: Type -> Type) (R: Type) :=
-    Ret     : R   -> itree E R
-  | Trigger : E R -> itree E R
-  | Bind    : forall {X : Type}, itree E X -> (X -> itree E R) -> itree E R.
+  CoInductive itreeM (E: Type -> Type) (R: Type) :=
+    Ret     : R   -> itreeM E R
+  | Trigger : E R -> itreeM E R
+  | Bind    : forall {X : Type}, itreeM E X -> (X -> itreeM E R) -> itreeM E R.
 \end{lstlisting}
-\caption[Formal definition of interaction trees]{Formal definition of
-  interaction trees.}
-\label{fig:itrees}
+\caption{Mock definition of interaction trees.}
+\label{fig:mock-itree}
 \end{figure}
 
 \begin{figure}
@@ -60,44 +58,111 @@ monadic computation can be desugarized into:
 \end{figure}
 
 Such continuation-passing style can be represented as a tree of interactions.
-As shown in \autoref{fig:itrees}, an interaction tree (\ilc{itree}) has two
-kinds of nodes, \ilc{Ret} and \ilc{Trigger}, and has edges constructed by
+To help readers better understand the interaction tree language, I first provide
+a modified version of it that better shows its tree structure.
+
+\paragraph{Mock interaction trees}
+As shown in \autoref{fig:mock-itree}, a mock interaction tree (\ilc{itreeM}) has
+two kinds of nodes, \ilc{Ret} and \ilc{Trigger}, and has edges constructed by
 \ilc{Bind}:
 \begin{itemize}
 \item \ilc{(Ret r)} represents a pure computation that yields a value \ilc r.
   In the echo example, \ilc{EXIT} halts the program with return value zero:
 \begin{lstlisting}[style=customcoq]
-  Definition EXIT {E} : itree E Z := Ret 0.
+  Definition EXIT {E} : itreeM E Z := Ret 0.
 \end{lstlisting}
-\item \ilc{(Trigger e)} performs an event \ilc e and returns the event's result,
-  where \ilc{(e: E R)} is an event whose result is of type \ilc R.  For example,
+\item \ilc{(Trigger e)} performs an impure event \ilc e and returns its result.
+  Here \ilc{(e: E R)} is an event whose result is of type \ilc R.  For example,
   \ilc{getchar} has result type \ilc{char}, and \ilc{putchar}'s result type is
   \ilc{unit} (which corresponds to \inlinec{void} in C/C++, or \ilc{()} in
-  Haskell):
+  Haskell).  These effective programs are constructed by triggering standard I/O
+  events:
 \begin{lstlisting}[style=customcoq]
   Variant stdioE: Type -> Type := (* event type *)
     GetChar:         stdioE char
   | PutChar: char -> stdioE unit.
   
-  Definition getchar : itree stdioE char := Trigger GetChar.
-  Definition putchar (c: char) : itree stdioE unit
+  Definition getchar : itreeM stdioE char := Trigger GetChar.
+  Definition putchar (c: char) : itreeM stdioE unit
                                := Trigger (PutChar c).
 \end{lstlisting}
 \item \ilc{(Bind m k)} binds the return value of \ilc m to the continuation
   function \ilc k.  It first runs program \ilc m until it returns some value of
   type \ilc X.  The return value \ilc{(x: X)} then instantiates \ilc k into the
-  following computation \ilc{(k x: itree E R)}.  This corresponds to the \ilc{(_
-    <- _ ;; _)} and \ilc{>>=} syntax in \ilc{echo} and \ilc{echo2}:
+  following computation \ilc{(k x: itreeM E R)}.  This corresponds to the
+  \ilc{(;;)} syntax in \ilc{echo}:
 \begin{lstlisting}[style=customcoq]
-  Notation "m >>= k"      := (Bind m   k).
   Notation "x <- m1;; m2" := (Bind m1 (fun x => m2)).
   Notation "m1;; m2"      := (Bind m1 (fun _ => m2)).
 \end{lstlisting}
 
 As illustrated in \autoref{fig:echo-itree}, each possible return value \ilc x is
 an edge that leads to the child it instantiates {\it i.e.} \ilc{(k x)}.  In this
-way, the \ilc{Ret} and \ilc{Trigger} nodes are connected into a tree structure.
+way, the \ilc{Ret} and \ilc{Trigger} nodes are connected into a tree
+structure.
 \end{itemize}
+
+The mock interaction tree provides an intuitive continuation-passing structure
+for representing impure programs.  However, this language is not suitable for
+writing specifications and deriving them into tester programs, because the test
+derivation requires analyzing and transforming the specification program.
+
+A mock interaction tree has infinitely many syntactic variants that are
+semantically equivalent, due to monad laws.  For example, consider the following
+programs:
+\begin{lstlisting}[style=customcoq]
+  Example bindret  r k     := Bind (Ret r) k.
+  Example bindbind m k1 k2 := Bind (Bind m k1) k2.
+\end{lstlisting}
+These programs are semantically equivalent to:
+\begin{lstlisting}[style=customcoq]
+  Example bindret2  r k     := k r.
+  Example bindbind2 m k1 k2 := x <- m;; Bind (k1 x) k2.
+\end{lstlisting}
+
+To make program analysis more effective, we need to redefine the tree structure
+in a normal form, where each semantics corresponds to a unique syntax.
+
+\paragraph{Actual interaction trees}
+\begin{figure}
+\begin{lstlisting}[style=customcoq]
+  CoInductive itree (E: Type -> Type) (R: Type) :=
+    Pure   : R -> itree E R
+  | Impure : forall {X : Type}, E X -> (X -> itree E R) -> itree E R.
+\end{lstlisting}
+\caption{Formal definition of interaction trees}
+\label{fig:itrees}
+\end{figure}
+The type defiinition of ITree restricts that only single events can be bound to
+a continuation.  As shown in \autoref{fig:itrees}, we use \ilc{(Impure e k)} to
+replace \ilc{(Bind (Trigger e) k)} representations in \ilc{itreeM}.  A
+\ilc{Pure} computation cannot be bound to a continuation, and must be the leaf
+of an ITree.
+
+The \ilc{Ret}, \ilc{Trigger}, and \ilc{Bind} constructors introduced in
+\ilc{itreeM} have equivalent representations in \ilc{itree}, so we can still
+write programs monadically with \ilc{(;;)} :
+\begin{lstlisting}[style=customcoq]
+  Definition ret {E R} : R -> itree E R := Pure.
+  
+  Definition trigger {E R} (e: E R) : itree E R := Impure e Pure.
+
+  CoFixpoint bind {X E R} (m: itree E X) (f: X -> itree E R) : itree E R :=
+    match m with
+    | Pure   x   => f x
+    | Impure e k => Impure e (fun r => bind (k r) f)
+    end.
+
+  Notation "x <- m1;; m2" := (bind m1 (fun x => m2)).
+  Notation "m1;; m2"      := (bind m1 (fun _ => m2)).
+
+  CoFixpoint translateM {E R} (m: itreeM E R) : itree E R :=
+    match m with
+    | Ret     r => ret r
+    | Trigger e => trigger e
+    | Bind m1 k => x <- translate m1;; translate (k x)
+    end.
+\end{lstlisting}
 
 ITrees can specify various kinds of programs like servers and testers, by
 defining different event types.  For example, the QAC server in
@@ -109,7 +174,7 @@ any value in the space of choices:
     Choice: choiceE C.
 \end{lstlisting}
 
-The server also needs to send requests and responses:
+The server also needs to send requests and receive responses:
 \begin{lstlisting}[style=customcoq]
   Variant qaE: Type -> Type :=
     Recv: qaE Q           (* receive a request *)
@@ -145,9 +210,9 @@ which will be explained in the next subsection.
 \subsection{Interpreting interaction trees}
 To interpret a program \ilc p is to specify a rule that defines ``if \ilc p does
 this, then do that''.  For example, shell syntax \inlinec{(p < input > output)}
-executes \inlinec p but redirects its standard I/O.  If \inlinec p is the echo
-program in \autoref{sec:itree}, then the redirected program should perform file
-operations:
+executes \inlinec p but redirects its standard I/O.  Suppose \inlinec p is the
+\ilc{echo} program in \autoref{sec:itree-lang}, then the redirected program
+should perform file operations:
 \begin{lstlisting}[style=customcoq]
   Variant fileE: Type -> Type :=      (* file operation events *)
     Fgetc: file ->         fileE char
@@ -155,7 +220,7 @@ operations:
 
   CoInductive redirect_echo (input output: file) : itree fileE unit :=
     c <- trigger (Fgetc input);;
-    if c is EOF then EXIT
+    if c is EOF then ret 0
     else trigger (Fputc output c);;
          redirect_echo input output.
 \end{lstlisting}
@@ -163,7 +228,7 @@ operations:
 The interpretation rule is ``whenever the program wants to read from or write to
 standard IO, perform the read/write operation on the specified file instead'':
 \begin{lstlisting}[style=customcoq]
-  Definition redirect (input output: file) (R: Type) (e: stdioE R) :=
+  Definition redirect (input output: file) {R: Type} (e: stdioE R) :=
     match e in stdioE R return itree fileE R with
     | GetChar   => trigger (Fgetc input)
     | PutChar c => trigger (Fputc output c)
@@ -175,23 +240,21 @@ ITree program that performs file events.  The result program has the same return
 type as the original event, so it can ``replace'' the original \ilc{stdioE}.
 This is done by the \ilc{interp} function:
 \begin{lstlisting}[style=customcoq]
-  CoFixpoint interp {E F R} (handler: forall T, E T -> itree F T) (m: itree E R)
+  CoFixpoint interp {E F R} (f: forall {T}, E T -> itree F T) (m: itree E R)
              : itree F R :=
     match m with
-    | Ret r     => Ret r
-    | Tau m'    => Tau (interp handler m')
-    | Vis X e k => x <- handler X e;; interp handler (k x)
+    | Pure   r   => Pure r
+    | Impure e k => x <- f e;;
+                    interp handler (k x)
     end.
 
   Definition redirect_echo2 (input output: file) : itree fileE unit :=
-    interp (redirect input output) echo.
+    interp (redirect input output) (translateM echo).
 \end{lstlisting}
 
-For each event \ilc{(e: E X)}, the interpretor computes its corresponding
-program with the \ilc{handler} function, and uses the result \ilc{x: X} to
-instantiate the remainder program to interpret.  Therefore, \ilc{redirect_echo2}
-constructs a redirected echo program that is equivalent with
-\ilc{redirect_echo}.
+For each impure event, the interpretor replaces it with the program defined by
+the handler function \ilc f.  As a result, \ilc{redirect_echo2} constructs a
+redirected echo program that is equivalent with \ilc{redirect_echo}.
 
 To derive tester programs from ITree specifications, I'll introduce multiple
 interpretation processes, with various event handlers throughout this chapter.
@@ -237,13 +300,13 @@ absorbing/emitting other packets.  Such choices are modelled by nondeterministic
 \end{lstlisting}
 
 Here \ilc{(or x y)} creates a nondeterministic program that may behave as either
-\ilc x or \ilc y.  The \ilc{nondetE} here is a special case of \ilc{choiceE} in
-\autoref{sec:itree-lang} with boolean space of choices, but they'll be handled
-differently during test derivation.  The type signature \ilc{\{E R\} `\{nondetE
-  -< E\}} says the \ilc{(or)} combinator can apply to ITrees whose event \ilc E
-is a super-event of \ilc{nondetE}, and with arbitrary return type \ilc R.  For
-example, arguments \ilc x and \ilc y can be of type \ilc{(itree (netE +'
-  nondetE) void)}.
+\ilc x or \ilc y.  The \ilc{nondetE} here is a special case of \ilc{choiceE}
+defined in \autoref{sec:itree-lang} with boolean space of choices, but they'll
+be handled differently during test derivation.  The type signature \ilc{\{E R\}
+  `\{nondetE -< E\}} says the \ilc{(or)} combinator can apply to ITrees whose
+event \ilc E is a super-event of \ilc{nondetE}, and with arbitrary return type
+\ilc R.  For example, arguments \ilc x and \ilc y can be of type \ilc{(itree
+  (netE +' nondetE) void)}.
 
 For example, the network model for concurrent TCP connections is defined in
 \autoref{fig:tcp-model}.  The model captures TCP's feature of maintaining the
@@ -256,7 +319,7 @@ must be the oldest in its connection.
 Fixpoint pick_one (l: list packet) : itree nondetE (option packet) :=
   if l is p::l'
   then or (Ret (Some p)) (pick_one l')
-  else Ret None.
+  else ret None.
 
 Definition oldest_in_each_conn : list packet -> list packet := ...
 (* filter the oldest packet in each connection *)
@@ -331,43 +394,43 @@ CoFixpoint compose {E} (srv: itree (qaE +' E) void)   (* server  model *)
            (net  : itree (netE +' nondetE) void)      (* network model *)
            (bi bo: list packet)       (* incoming and outgoing buffers *)
            : itree (netE +' nondetE +' E) void :=
-
   let step_net :=%\label{line:step-net-def}%
     match net with
-    | p <- absorb;; knet p =>
+    | Impure Absorb knet =>
       if bo is pkt::bo'
-      then Tau (compose srv (knet pkt) bi bo')%\label{line:net-absorb}%
-      else pkt <- absorb;;%\label{line:client-send}%
+      then compose srv (knet pkt) bi bo'%\label{line:net-absorb}%
+      else pkt <- trigger Absorb;;%\label{line:client-send}%
            compose srv (knet pkt) bi bo
-    | emit pkt;; net' =>
+    | Impure (Emit pkt) knet =>
       if toServer pkt
-      then Tau (compose srv net' (bi++[pkt]) bo)%\label{line:srv-incoming}%
-      else send pkt;;%\label{line:net-emit}%
-           compose srv net' bi bo
-    | or net1 net2 =>
-      or (compose srv net1 bi bo) (compose srv net2 bi bo)
-    end in
-
+      then compose srv (knet tt) (bi++[pkt]) bo%\label{line:srv-incoming}%
+      else trigger (Emit pkt);;%\label{line:net-emit}%
+           compose srv (knet tt) bi bo
+    | Impure Or knet => b <- trigger Or;;
+                        compose srv (knet b) bi bo
+    | Pure vd => match vd in void with end
+    end
+  in
   match srv with
-  | p <- recv;; ksrv p =>
+  | Impure Recv ksrv =>
     if bi is pkt::bi'
-    then Tau (compose (ksrv pkt) net bi' bo)%\label{line:srv-consume}%
+    then compose (ksrv pkt) net bi' bo%\label{line:srv-consume}%
     else step_net%\label{line:step-net}%
-  | send pkt;; srv' =>
-    Tau (compose srv' net bi (bo++[pkt]))%\label{line:srv-send}%
-  | r <- e;; ksrv r =>         (* other events performed by the server *)
-    r <- e;; compose (ksrv r) net bi bo
+  | Impure (Send pkt) ksrv =>%\label{line:srv-send}%
+    compose (ksrv tt) net bi (bo++[pkt])
+  | Impure e ksrv =>           (* other events performed by the server *)
+    r <- trigger e;; compose (ksrv r) net bi bo
+  | Pure vd => match vd in void with end
   end.
 \end{lstlisting}
-\caption[Network composition algorithm]{Network composition algorithm, with
-  formal type signature in Coq, and function body in semi-pseudo code for
-  readability.  When the server wants to send a packet in
-  \autoref{line:srv-send}, the packet is appended to the outgoing buffer until
-  absorbed by the network in \autoref{line:net-absorb}, and eventually emitted
-  to the client in \autoref{line:net-emit}.  Conversely, packets sent by clients
-  are absorbed by the network in \autoref{line:client-send}, emitted to the
-  server's incoming buffer in \autoref{line:srv-incoming}, until the server
-  consumes it in \autoref{line:srv-consume}.}
+\caption[Network composition algorithm]{Network composition algorithm.  When the
+  server wants to send a packet in \autoref{line:srv-send}, the packet is
+  appended to the outgoing buffer until absorbed by the network in
+  \autoref{line:net-absorb}, and eventually emitted to the client in
+  \autoref{line:net-emit}.  Conversely, packets sent by clients are absorbed by
+  the network in \autoref{line:client-send}, emitted to the server's incoming
+  buffer in \autoref{line:srv-incoming}, until the server consumes it in
+  \autoref{line:srv-consume}.}
 \label{fig:net-compose-code}
 \end{figure}
 
@@ -403,14 +466,6 @@ server is starved in \autoref{line:step-net}, by calling the \ilc{step_net}
 process defined in \autoref{line:step-net-def}.  Such design is to avoid
 divergence of the derived tester program, which I'll further explain in
 \autoref{sec:spec-to-test}.
-
-This algorithm also answers why the definition of ITree in
-\autoref{sec:itree-lang} has a \ilc{Tau} constructor: When the server and the
-network models interact with the packet buffers in Lines~\ref{line:net-absorb},
-\ref{line:srv-incoming}, \ref{line:srv-consume}, \ref{line:srv-send}, they don't
-trigger any event before recursing with updated buffer states.  The \ilc{Tau}
-constructor convinces Coq that the program satisfies the guardedness
-condition~\cite{coinduction}.  \lys{Should I explain \ilc{Tau} at all?}
 
 So far I've shown how to specify systems that exhibit external nondeterminism.
 By specifying the environment and composing it with the specification, we can
