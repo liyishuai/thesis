@@ -18,17 +18,17 @@ nondeterminism (\autoref{sec:contribution}).
 \section{Interactive Testing}
 \label{sec:interactive-testing}
 Suppose we want to test a web server that supports GET and PUT methods:
-\begin{lstlisting}[style=customcoq]
+\begin{coq}
   CoFixpoint server (data: key -> value) :=
     request <- recv;;
     match request with
     | GET k   => send (data k);; server  data
     | PUT k v => send  Done   ;; server (data [k |-> v])
     end.
-\end{lstlisting}
+\end{coq}
 We can write a tester client that interacts with the server and determines
 whether it behaves correctly:
-\begin{lstlisting}[style=customcoq]
+\begin{coq}
   CoFixpoint tester (data: key -> value) :=
     request <- random;;
     send request;;
@@ -41,7 +41,7 @@ whether it behaves correctly:
                  then tester (data [k |-> v])
                  else reject
     end.
-\end{lstlisting}
+\end{coq}
 This tester implements a reference server internally that computes the expected
 behavior.  The behavior is then compared against that produced by the SUT.  The
 tester rejects the SUT upon any difference from the computed expectation.
@@ -50,7 +50,7 @@ The above tester can be viewed as two modules: (i) a {\em test harness} that
 interacts with the server and produces transactions of sends and receives, and
 (ii) a {\em validator} that determines whether the transactions are valid or
 not:
-\begin{lstlisting}[style=customcoq]
+\begin{coq}
   (* Compute the expected response and next state of the server. *)
   Definition serverSpec request data :=
     match request with
@@ -70,7 +70,7 @@ not:
     then harness validator next
     else reject.
   Definition tester := harness (validate serverSpec).
-\end{lstlisting}
+\end{coq}
 Such testing method works for deterministic systems, whose behavior can be
 precisely computed from its input.  Whereas, many systems are allowed to behave
 nondeterministically.  How to test systems that involve randomness?  How to
@@ -98,17 +98,17 @@ generate a short string, called an ``entity tag'' (ETag), identifying the
 content of some resource, and send it to the client:
 \begin{center}
   \begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Client: */
 GET /target HTTP/1.1
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}\begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Server: */
 HTTP/1.1 200 OK
 ETag: "tag-foo"
 ... content of /target ...
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}
 \end{center}
 The next time the client requests the same resource, it can include the ETag in
@@ -116,16 +116,16 @@ the GET request, informing the server not to send the content if its ETag still
 matches:
 \begin{center}
 \begin{minipage}[t]{.4\textwidth}
-\begin{lstlisting}[style=customc]
+\begin{cpp}
 /* Client: */
 GET /target HTTP/1.1
 If-None-Match: "tag-foo"
-\end{lstlisting}
+\end{cpp}
 \end{minipage}\begin{minipage}[t]{.4\textwidth}
-\begin{lstlisting}[style=customc]
+\begin{cpp}
 /* Server: */
 HTTP/1.1 304 Not Modified
-\end{lstlisting}
+\end{cpp}
 \end{minipage}
 \end{center}
 If the ETag does not match, the server responds with code 200 and the updated
@@ -137,66 +137,66 @@ compare-and-swap, it can include the ETag in the PUT request as
 content if its current ETag matches:
 \begin{center}
   \begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Client: */
 PUT /target HTTP/1.1
 If-Match: "tag-foo"
 ... content (A) ...
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}
   \begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Server: */
 HTTP/1.1 204 No Content
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}
 
   \begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Client: */
 GET /target HTTP/1.1
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}
   \begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Server: */
 HTTP/1.1 200 OK
 ETag: "tag-bar"
 ... content (A) ...
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}
 \end{center}
 If the ETag does not match, then the server should not perform the requested
 operation, and should reject with code 412:
 \begin{center}
   \begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Client: */
 PUT /target HTTP/1.1
 If-Match: "tag-baz"
 ... content (B) ...
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}
   \begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Server: */
 HTTP/1.1 412 Precondition Failed
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}
 
   \begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Client: */
 GET /target HTTP/1.1
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}
   \begin{minipage}[t]{.4\textwidth}
-    \begin{lstlisting}[style=customc]
+    \begin{cpp}
 /* Server: */
 HTTP/1.1 200 ok
 ETag: "tag-bar"
 ... content (A) ...
-    \end{lstlisting}
+    \end{cpp}
   \end{minipage}
 \end{center}
 Whether a server's response should be judged {\em valid} or not depends on the
@@ -212,7 +212,7 @@ previously rejected an \inlinec{If-Match} request, it must reject the same
 request until its target has been modified.''
 
 \begin{figure}
-\begin{lstlisting}[style=customcoq]
+\begin{coq}
   Definition validate request response
              (data      : key -> value)
              (tag_is    : key -> Maybe etag)
@@ -247,7 +247,7 @@ request until its target has been modified.''
       else Failure
     | _, _ => Failure
     end.
-\end{lstlisting}
+\end{coq}
   \caption[Ad hoc tester for \http conditional requests.]{Ad hoc tester for
     \http conditional requests.  \ilc{PUT k t v} represents a PUT request that
     changes \ilc k's value into \ilc v only if its ETag matches \ilc t; \ilc{GET
@@ -288,23 +288,23 @@ until reaching the client side as observations.
 \begin{figure}
   \centering
   \begin{minipage}[c]{.3\textwidth}
-\begin{lstlisting}[style=customcoq]
+\begin{coq}
   (* Observation: *)
   1> PUT k "new"
   1< Done
   2> GET k
   2< "new"
-\end{lstlisting}
+\end{coq}
   \end{minipage}\begin{minipage}[c]{.4\textwidth}
   \includegraphics[width=\linewidth]{figures/linear-trace}
   \end{minipage}\begin{minipage}[c]{.3\textwidth}
-\begin{lstlisting}[style=customcoq]
+\begin{coq}
   (* Output: *)
   1> PUT k "new"
   1< Done
   2> GET k
   2< "new"
-\end{lstlisting}
+\end{coq}
   \end{minipage}
   \caption[Linear trace upon no concurrency.]{Upon no concurrency, the
     observation is identical to the output.}
@@ -313,23 +313,23 @@ until reaching the client side as observations.
 \begin{figure}
   \centering
   \begin{minipage}[c]{.3\textwidth}
-\begin{lstlisting}[style=customcoq]
+\begin{coq}
   (* Observation: *)
   1> PUT k "new"
   2> GET k
   1< Done
   2< "old"
-\end{lstlisting}
+\end{coq}
   \end{minipage}\begin{minipage}[c]{.4\textwidth}
     \includegraphics[width=\linewidth]{figures/network-trace}
   \end{minipage}\begin{minipage}[c]{.3\textwidth}
-\begin{lstlisting}[style=customcoq]
+\begin{coq}
   (* Output: *)
   2> GET k
   2< "old"
   1> PUT k "new"
   1< Done
-\end{lstlisting}
+\end{coq}
   \end{minipage}
   \caption[Reordered trace upon network delays.]{Acceptable: The observation can
     be explained by a valid output reordered by the network environment.}
@@ -338,13 +338,13 @@ until reaching the client side as observations.
 \begin{figure}
   \centering
   \begin{minipage}[c]{.3\textwidth}
-\begin{lstlisting}[style=customcoq]
+\begin{coq}
   (* Observation: *)
   1> PUT k "new"
   1< Done
   2> GET k
   2< "old"
-\end{lstlisting}
+\end{coq}
   \end{minipage}\begin{minipage}[c]{.4\textwidth}
   \includegraphics[width=\linewidth]{figures/invalid-trace}
   \end{minipage}\begin{minipage}[c]{.3\textwidth}\
@@ -426,7 +426,7 @@ has cached a version with a certain timestamp, then it can send the timestamp as
 \inlinec{If-Modified-Since} precondition.  The server should not transmit the
 request target's content if its \inlinec{Last-Modified} timestamp is not newer
 than the precondition's:
-\begin{lstlisting}[style=customc,escapeinside={(*}{*)}]
+\begin{cpp}[escapeinside={(*}{*)}]
   /* Client: */
   GET /index.html HTTP/1.1
   If-Modified-Since: (*\httpdate\DayAfter[-1]~\currenttime *) GMT
@@ -439,7 +439,7 @@ than the precondition's:
   If-Modified-Since: (*\httpdate\today~\currenttime *) GMT
                              /* Server: */
                              HTTP/1.1 304 Not Modified
-\end{lstlisting}
+\end{cpp}
 In this scenario, an interesting candidate for the \inlinec{If-Modified-Since}
 precondition is the \inlinec{Last-Modified} timestamp of a previous response.
 To emphasize this request pattern, the tester needs to implement heuristics that

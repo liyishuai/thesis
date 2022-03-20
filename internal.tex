@@ -1,0 +1,37 @@
+The dualization theory in \autoref{chap:theory} represents internal choices as
+symbolic variables.  These variables construct symbolic expressions that are
+later unified against the tester's observations.
+
+The key idea of language design is to expose symbolic representations to the
+dualzation algorithm.  The $\Prog$ language encodes data as symbolic expressions
+$\Sexp$, so that the responses and branch conditions may depend on internal
+choices.  We do the same for ITree specifications, by symbolizing the choice
+events and branch conditions:
+\begin{coq}
+  Variant comparison := Strong | Weak.
+
+  Variant exp: Type -> Type :=
+    Const   : string -> exp string
+  | Var     : var    -> exp string
+  | Compare : string -> exp string -> comparison -> exp bool.
+
+  Variant choiceE: Type -> Type :=
+    Choice: symE (exp string).
+\end{coq}
+
+Here we instantiate the \ilc{choiceE} in \autoref{sec:itree-lang} with symbolic
+return type \ilc{(exp string)}, pronounced ``expression of type string''.  In
+this example, we choose strings to represent entity tags (ETags) that HTTP
+servers may generate, which was discussed in
+\autoref{sec:internal-nondeterminism}.
+
+\begin{coq}
+  Variant branchE: Type -> Type :=
+    Decide: exp bool -> branchE bool.
+
+  Definition IFX {E R} (condition: exp bool)
+                       (thenB elseB: itree (E +' branchE) R)
+                       : itree (E +' branchE) R :=
+    b <- trigger (Decide condition);;
+    if b then thenB else elseB.
+\end{coq}
