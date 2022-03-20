@@ -1,12 +1,18 @@
 The dualization theory in \autoref{chap:theory} represents internal choices as
 symbolic variables.  These variables construct symbolic expressions that are
-later unified against the tester's observations.
+unified against the observations during validation.
+
+This section applies the language design of $\Prog$ to the ITree context.
+
 
 The key idea of language design is to expose symbolic representations to the
 dualzation algorithm.  The $\Prog$ language encodes data as symbolic expressions
 $\Sexp$, so that the responses and branch conditions may depend on internal
-choices.  We do the same for ITree specifications, by symbolizing the choice
-events and branch conditions:
+choices.  I do the same for ITree specifications, by symbolizing the choice
+events and branch conditions.
+
+
+
 \begin{coq}
   Variant comparison := Strong | Weak.
 
@@ -19,19 +25,69 @@ events and branch conditions:
     Choice: symE (exp string).
 \end{coq}
 
-Here we instantiate the \ilc{choiceE} in \autoref{sec:itree-lang} with symbolic
+Here I instantiate the \ilc{choiceE} in \autoref{sec:itree-lang} with symbolic
 return type \ilc{(exp string)}, pronounced ``expression of type string''.  In
-this example, we choose strings to represent entity tags (ETags) that HTTP
-servers may generate, which was discussed in
-\autoref{sec:internal-nondeterminism}.
+this example, I use strings to represent entity tags (ETags) that HTTP servers
+may generate, which was discussed in \autoref{sec:internal-nondeterminism}.  The
+type interface can be adjusted to other protocols under test.
 
+Symbolic expressions may be constructed as constant values, as variables, or
+with operators.  The \ilc{Compare} constructor takes an expression of type
+string and compares it against a constant string.  \ilc{(Compare t tx cmp)}
+represents the ETag comparison between \ilc{t} and \ilc{tx}, using ``strong
+comparison'' or ``weak comparison'' mechanism~\cite{rfc7232} specified by
+\ilc{cmp}.  The constant ETag is provided by the request, and the symbolized one
+comes from the server.
+
+\begin{figure}
+\begin{coq}
+  CoFixpoint server (state: path -> resource) :=
+    q <- trigger Recv;;
+    let v : content    := q.(Payload)      in
+    let k : path       := q.(TargetPath)   in
+    let t : string     := q.(IfMatch)      in
+    let tx: exp string := (state k).(ETag) in
+    IFX (Compare t tx Strong)
+    THEN
+      if q.(Method) is Put
+      then
+        tx' <- trigger Choice;;
+        let state' := state [k |-> {Content := v; ETag := tx'}] in
+        trigger (Send OK);;
+        server state'
+      else                 (* handling other kinds of requests *)
+        (a, state') <- process q state;;
+        trigger (Send a);;
+        server state'
+    ELSE
+      trigger (Send PreconditionFailed);;
+      server s.
+\end{coq}
+\caption{Server model for HTTP conditional requests}
+\label{fig:if-match-server}
+\end{figure}
+
+Now we can model HTTP conditional requests in
+\autoref{sec:internal-nondeterminism} as ITrees.  As shown in
+\autoref{fig:if-match-server}, the server model first evaluates the request's
+\inlinec{If-Match} condition by ``strong comparison'' as the HTTP specification
+requires.  If the request's ETag matches its target's, then the server updates
+the target's contents with the request payload.  The target's new ETag \ilc{tx'}
+can be of any value, so the model represents it as \ilc{Choice} event.
+
+Notice that the server model exhibits two kinds of branches: (1) The \ilc{if}
+branches are provided by the ITree's embedding language Coq, which takes a
+boolean value as condition; (2) The \ilc{IFX} branches are constructors of
+ITrees with nondeterministic branches, where the condition is a symbolic
+expression of type bool:
 \begin{coq}
   Variant branchE: Type -> Type :=
     Decide: exp bool -> branchE bool.
 
-  Definition IFX {E R} (condition: exp bool)
-                       (thenB elseB: itree (E +' branchE) R)
-                       : itree (E +' branchE) R :=
-    b <- trigger (Decide condition);;
-    if b then thenB else elseB.
+  Notation "IFX condition THEN x ELSE y" :=
+    (b <- trigger (Decide condition);;
+     if b then x else y).
 \end{coq}
+
+The symbolic branch conditions here plays a similar rule as the $\mathsf{if}$
+branches in $\Prog$

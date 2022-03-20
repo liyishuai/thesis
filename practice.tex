@@ -6,41 +6,44 @@ However, in real-world testing practices, there are more problems to consider.
 For example: How to interact with the SUT via multiple channels?  How to handle
 external nondeterminism?
 
-This chapter describes how to build tester programs that can interact with the
-SUT and reveal potential defects.  \autoref{sec:itree} introduces the ITree
-language for specifying protocols.  \autoref{sec:internal-nondet} and
-\autoref{sec:external-nondet} address internal and external nondeterminism in
-ITrees.  \autoref{sec:spec-to-test} explains the derivation mechanism from ITree
-specifications to interactive tester programs, using \http as an example.
-
-\section{ITree Specification Language}
-\label{sec:itree}
-\input{itree}
-
-\section{Handling Internal Nondeterminism}
-\label{sec:internal-nondet}
-\input{internal}
-
-\section{Handling External Nondeterminism}
-\label{sec:external-nondet}
-\input{external}
-
-\section{From Specification to Tester}
-\label{sec:spec-to-test}
-
-This section shows how to derive the specification into an interactive tester
-program, using networked servers as an example.  I take the dualization theory
-in \autoref{chap:theory} and apply it to the ITree specification language.
-
 \begin{figure}
   \includegraphics[width=\linewidth]{figures/framework}
   \caption{Deriving tester program from specification}
   \label{fig:framework}
 \end{figure}
 
-The derivation framework is shown in outline in \autoref{fig:framework}.  Each
-box is an interaction tree program, and the arrows are interpretors that
-transform one interaction tree into another.  The network composition phase was
+This chapter describes how to derive specifications into tester programs that
+can interact with the SUT and reveal potential defects, using \http as an
+example.  The derivation framework is shown in outline in
+\autoref{fig:framework}.  Each box is a model program, and the arrows are
+``interpretors'' that transform one model into another.
+
+\autoref{sec:itree} introduces the ITree modelling language for specifying
+protocols and deriving them into testers.  \autoref{sec:internal-nondet} and
+\autoref{sec:external-nondet} address external and internal nondeterminism in
+the ITree context.  \autoref{sec:backtrack} explains how to execute the tester
+model as an interactive program.
+
+\section{ITree Specification Language}
+\label{sec:itree}
+\input{itree}
+
+\section{Handling External Nondeterminism}
+\label{sec:external-nondet}
+\input{external}
+
+\section{Handling Internal Nondeterminism}
+\label{sec:internal-nondet}
+\input{internal}
+
+\section{Executing Tester Model}
+\label{sec:backtrack}
+
+This section shows how to derive the specification into an interactive tester
+program, using networked servers as an example.  I take the dualization theory
+in \autoref{chap:theory} and apply it to the ITree specification language.
+
+  The network composition phase was
 explained in \autoref{sec:net-compose}, and this section describes the remainder
 of the framework.
 
