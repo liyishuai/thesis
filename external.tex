@@ -4,8 +4,9 @@ tester should take the environment into account when validating its
 observations.
 
 This section explains how to address external nondeterminism by specifying the
-environment, with the networked server example.  \autoref{sec:net-tcp} defines a
-model for concurrent TCP connections.  \autoref{sec:net-compose} then composes
+environment, with the networked server example.  It corresponds to the
+``Composition'' arrow in \autoref{fig:framework}.  \autoref{sec:net-tcp} defines
+a model for concurrent TCP connections.  \autoref{sec:net-compose} then composes
 the network model with the server specification, yielding a tester-side
 specification that defines the space of valid observations.
 
@@ -83,8 +84,8 @@ CoFixpoint tcp (buffer: list packet) : itree (netE +' nondetE) void :=
 \end{figure}
 
 Notice the \ilc{pick_one} function, which might return (i) \ilc{Some p} or (ii)
-\ilc{None}.  \lys{Should I explain what is option type?}  The network model then
-(i) emits packet \ilc p or (ii) absorbs a packet into \ilc{buffer}.
+\ilc{None}.  The network model then (i) emits packet \ilc p or (ii) absorbs a
+packet into \ilc{buffer}.
 
 \begin{itemize}
 \item When the given list \ilc{pkts} is empty, \ilc{pick_one} always returns
@@ -203,7 +204,7 @@ network model.  The composed model only steps into the network model when the
 server is starved in \autoref{line:step-net}, by calling the \ilc{step_net}
 process defined in \autoref{line:step-net-def}.  Such design is to avoid
 divergence of the derived tester program, which I'll further explain in
-\autoref{sec:spec-to-test}.
+\autoref{sec:backtrack}.
 
 So far I've shown how to specify systems that exhibit external nondeterminism.
 By specifying the environment and composing it with the implementation-side

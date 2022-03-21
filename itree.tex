@@ -3,7 +3,7 @@ tree'' (ITree), a generic data structure for representing interactive programs
 in the Coq programming language, introduced by \textcite{itree}.  ITree allows
 specifying protocols as monadic programs that model valid implementations'
 possible behavior.  The model program can be interpreted into a tester program,
-to be discussed in \autoref{sec:spec-to-test}.
+to be discussed in later sections.
 
 \subsection{Language definition}
 \label{sec:itree-lang}
@@ -18,7 +18,7 @@ verbatim, until reaching EOF:
 Here the behavior after \ilc{read} depends on the value actually read.  This
 monadic computation can be desugarized into:
 \begin{coq}
-  CoInductive echo2 :=
+  CoInductive echo2 := (* equivalent to echo *)
     Bind getchar (fun c => if c is EOF then EXIT
                          else Bind (putchar c) (fun _ => echo)).
 \end{coq}
@@ -42,7 +42,8 @@ monadic computation can be desugarized into:
 
 Such continuation-passing style can be represented as a tree of interactions.
 To help readers better understand the interaction tree language, I first provide
-a modified version of it that better shows its tree structure.
+a modified version of it that better shows its tree structure, and then explain
+the actual type definition used in practice.
 
 \paragraph{Mock interaction trees}
 As shown in \autoref{fig:mock-itree}, a mock interaction tree (\ilc{itreeM}) has
@@ -94,19 +95,22 @@ A mock interaction tree has infinitely many syntactic variants that are
 semantically equivalent, due to monad laws.  For example, consider the following
 programs:
 \begin{coq}
-  Example bindret  r k     := Bind (Ret r) k.
-  Example bindbind m k1 k2 := Bind (Bind m k1) k2.
+  Example bind_ret  r k     := Bind (Ret r) k.
+  Example bind_bind m k1 k2 := Bind (Bind m k1) k2.
 \end{coq}
 These programs are semantically equivalent to:
 \begin{coq}
-  Example bindret2  r k     := k r.
-  Example bindbind2 m k1 k2 := x <- m;; Bind (k1 x) k2.
+  Example bind_ret2  r k     := k r.
+  Example bind_bind2 m k1 k2 := x <- m;; Bind (k1 x) k2.
 \end{coq}
 
 To make program analysis more effective, we need to redefine the tree structure
-in a normal form, where each semantics corresponds to a unique syntax.
+in a normal form, where each semantics corresponds to a unique syntax.  The
+revised language eliminates expressions like \ilc{bind_ret} and \ilc{bind_bind}.
 
-\paragraph{Actual interaction trees}
+\paragraph{Practical interaction trees}
+\footnote{For readability, the ``practical'' ITree definition here is a
+  simplified version from \textcite{itree}.}
 \begin{figure}
 \begin{coq}
   CoInductive itree (E: Type -> Type) (R: Type) :=
@@ -116,15 +120,15 @@ in a normal form, where each semantics corresponds to a unique syntax.
 \caption{Formal definition of interaction trees}
 \label{fig:itrees}
 \end{figure}
-The type defiinition of ITree restricts that only single events can be bound to
-a continuation.  As shown in \autoref{fig:itrees}, we use \ilc{(Impure e k)} to
+The type definition of ITree restricts that only single events can be bound to a
+continuation.  As shown in \autoref{fig:itrees}, we use \ilc{(Impure e k)} to
 replace \ilc{(Bind (Trigger e) k)} representations in \ilc{itreeM}.  A
 \ilc{Pure} computation cannot be bound to a continuation, and must be the leaf
 of an ITree.
 
 The \ilc{Ret}, \ilc{Trigger}, and \ilc{Bind} constructors introduced in
 \ilc{itreeM} have equivalent representations in \ilc{itree}, so we can still
-write programs monadically with \ilc{(;;)} :
+write programs in the monadic syntax:
 \begin{coq}
   Definition ret {E R} : R -> itree E R := Pure.
   
@@ -143,7 +147,7 @@ write programs monadically with \ilc{(;;)} :
     match m with
     | Ret     r => ret r
     | Trigger e => trigger e
-    | Bind m1 k => x <- translate m1;; translate (k x)
+    | Bind m1 k => x <- translateM m1;; translateM (k x)
     end.
 \end{coq}
 
@@ -195,7 +199,7 @@ To interpret a program \ilc p is to specify a rule that defines ``if \ilc p does
 this, then do that''.  For example, shell syntax \inlinec{(p < input > output)}
 executes \inlinec p but redirects its standard I/O.  Suppose \inlinec p is the
 \ilc{echo} program in \autoref{sec:itree-lang}, then the redirected program
-should perform file operations:
+should perform file operations specified in \ilc{redirect_echo}:
 \begin{coq}
   Variant fileE: Type -> Type :=      (* file operation events *)
     Fgetc: file ->         fileE char
@@ -208,8 +212,9 @@ should perform file operations:
          redirect_echo input output.
 \end{coq}
 
-The interpretation rule is ``whenever the program wants to read from or write to
-standard IO, perform the read/write operation on the specified file instead'':
+When redirecting a program's standard I/O to files, the interpretation rule is
+``whenever the program wants to read from or write to standard I/O, perform the
+read/write operation on the specified file instead'':
 \begin{coq}
   Definition redirect (input output: file) {R: Type} (e: stdioE R) :=
     match e in stdioE R return itree fileE R with
