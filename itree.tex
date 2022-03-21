@@ -121,7 +121,7 @@ revised language eliminates expressions like \ilc{bind_ret} and \ilc{bind_bind}.
 \label{fig:itrees}
 \end{figure}
 The type definition of ITree restricts that only single events can be bound to a
-continuation.  As shown in \autoref{fig:itrees}, we use \ilc{(Impure e k)} to
+continuation.  As shown in \autoref{fig:itrees}, I use \ilc{(Impure e k)} to
 replace \ilc{(Bind (Trigger e) k)} representations in \ilc{itreeM}.  A
 \ilc{Pure} computation cannot be bound to a continuation, and must be the leaf
 of an ITree.
@@ -172,8 +172,8 @@ The server also needs to send requests and receive responses:
 
 Here \ilc{qacE} is a sum type of \ilc{qaE} and \ilc{choiceE} events, meaning
 that the server may send or receive messages, and may also make internal
-choices.  We split the event types because they'll be handled differently when
-we derive the tester later in this chapter.
+choices.  I split the event types because they'll be handled differently when I
+derive the tester later in this chapter.
 
 Now we can represent the QAC server with step function \ilc{sstep} and initial
 state \ilc S:

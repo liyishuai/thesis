@@ -426,7 +426,7 @@ has cached a version with a certain timestamp, then it can send the timestamp as
 \inlinec{If-Modified-Since} precondition.  The server should not transmit the
 request target's content if its \inlinec{Last-Modified} timestamp is not newer
 than the precondition's:
-\begin{cpp}[escapeinside={(*}{*)}]
+\begin{lstlisting}[style=customc,escapeinside={(*}{*)}]
   /* Client: */
   GET /index.html HTTP/1.1
   If-Modified-Since: (*\httpdate\DayAfter[-1]~\currenttime *) GMT
@@ -439,7 +439,7 @@ than the precondition's:
   If-Modified-Since: (*\httpdate\today~\currenttime *) GMT
                              /* Server: */
                              HTTP/1.1 304 Not Modified
-\end{cpp}
+\end{lstlisting}
 In this scenario, an interesting candidate for the \inlinec{If-Modified-Since}
 precondition is the \inlinec{Last-Modified} timestamp of a previous response.
 To emphasize this request pattern, the tester needs to implement heuristics that
