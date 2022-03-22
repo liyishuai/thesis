@@ -147,9 +147,9 @@ of this section will explain the interpretations from this symbolic model.
 \label{sec:dualize-interaction}
 This subsection takes the symbolic model composed in
 \autoref{sec:symbolic-model} and dualizes its interactions, which corresponds to
-the ``Dualization'' arrow in \autoref{fig:framework}.  It applies the
-dualization technique for $\Prog$ in \autoref{sec:dualize-prog} to models
-written as ITrees.
+the ``Dualization'' arrow in \autoref{fig:framework}.  It applies the derivation
+rules (\ref{rule:write})--(\ref{rule:return}) for $\Prog$ in
+\autoref{sec:dualize-prog} to models written as ITrees.
 
 This interpretation phase produces a symbolic observer that models the tester's
 observation and validation behavior.  The observer sends a request when the
@@ -258,11 +258,11 @@ satisfiable.
 
 \begin{figure}
 \begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
-Notation tE := (observeE +' nondetE +' exceptE).
+Notation ntE := (observeE +' nondetE +' exceptE).
 
 Definition V: Type := list var * list (constraintE unit).
   
-Definition unify {R} (e: oE R) (v: V) : itree tE (V * R) :=
+Definition unify {R} (e: oE R) (v: V) : itree ntE (V * R) :=
   let (xs, cs) := v in
   match e with
   | (||Choice|)     => let x: var := fresh v in%\label{line:unify-choice}%
@@ -323,7 +323,7 @@ stateful interpretation process is handled by \ilc{interp_state}:
     end.
 \end{coq}
 
-So far I have interpreted the specification into a ITree model that observes
+So far I have interpreted the specification into a tester model that observes
 incoming and outgoing packets, nondeterministically branches, and in some cases
 throws exceptions.  The rest of this chapter will show how to execute this ITree
-model on a deterministic machine and interact with the SUT.
+program on a deterministic machine and interact with the SUT.

@@ -1,0 +1,123 @@
+This section takes the nondetermistic tester model derived in
+\autoref{sec:symbolic-eval} and transforms it into an interactive program.
+\autoref{sec:backtracking} handles the nondeterministic branches via backtrack
+execution, and produces a deterministic tester model.  \autoref{sec:itree-io}
+then interprets the deterministic tester into IO program that interacts with the
+SUT.
+
+\subsection{Backtrack execution}
+\label{sec:backtracking}
+This subsection explains how to run the nondeterministic tester on a
+deterministic machine.  It reflects the derivation rules (\ref{rule:unsat}) and
+(\ref{rule:reject}) for $\Prog$ in \autoref{sec:dualize-prog}, and constructs
+the ``Backtracking'' arrow in \autoref{fig:framework}.
+
+\begin{figure}
+\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+Notation tE := (clientE +' genE +' exceptE).
+
+CoFixpoint backtrack (m: itree ntE (V * void))
+                     (others: list (itree ntE (V * void)))
+           : itree tE void :=
+  match m with
+  | Impure e k =>
+    match e with
+    | (|Or|)          => b <- trigger GenBool;;
+                         backtrack (k b) (k (negb b)::others)
+    | (||Throw msg)   => match others with
+                         | other::ot' => backtrack other ot'
+                         | []         => trigger (Throw msg)
+                         end
+    | (FromObserver|) => q <- GenPacket;;
+                         trigger (ClientSend q);;
+                         let others' := expect FromObserver q others in
+                         backtrack (k q) others'
+    | (ToObserver|)   =>
+      oa <- trigger ClientRecv;;
+      match oa with
+      | Some oa => let others' := expect ToObserver a others in
+                   backtrack (k a) others'
+      | None    =>
+        match others with
+        | other::ot' => backtrack other (ot'++[m])       (* postpone *)
+        | []         => backtrack m     []               (* retry    *)
+        end
+      end
+    end
+  | Pure (_, vd) => match vd in void with end
+  end.
+\end{lstlisting}
+\caption{Backtrack execution of nondeterministic tester.}
+\label{fig:backtrack}
+\end{figure}
+
+\subsection{From ITree to IO program}
+\label{sec:itree-io}
+
+\begin{figure}
+  \begin{coq}[escapechar=\%]
+(* filter : event T * T * list M -> list M *)
+(* [filter(e, r, l)] returns a subset in [l],
+ * where the model programs' next event is [e]
+ * that returns [r]. *)
+let backtrack (current, others) =
+  match current with
+  | determine(t1, t2) =>
+    backtrack (t1, t2::others)
+  | failwith error => (* current branch failed *) %\label{line:begin-failure}%
+    match others with
+    | [] => failwith error
+    | another::ot' => backtrack (another, ot')
+    end %\label{line:end-failure}%
+  | send(pkt); t' =>
+    let ot' = filter(SEND, pkt, others) in %\label{line:filter-send}%
+    send(pkt); backtrack (t', ot')
+  | pkt := recv(); t'(pkt) =>
+    opkt := maybe_recv();
+    match opkt with
+    | Some p1 =>
+      let ot' = filter(RECV, pkt, others) in %\label{line:filter-recv}%
+      backtrack (t'(p1), ot')
+    | None =>             (* no packet arrived *)
+      match others with
+      | [] => backtrack (current, []) (* retry *)
+      | another::ot' =>            (* postpone *)
+        backtrack (another, ot'++[current])
+      end
+    end
+  end in
+backtrack (tester_nondet, [])
+  \end{coq}
+  \caption{From nondeterministic model to deterministic tester program.  If the
+    model makes nondeterministic branches, the tester picks a branch to start
+    with, and puts the other branch into a set of other possibilities.  If the
+    current branch has failed, the tester looks for other possible branches to
+    continue checking.  When the current branch sends a packet, the tester
+    filters the set of other possibilities, and only keeps the branches that
+    match the current send event.  If the model wants to receive a packet, the
+    tester handles both cases whether some packet has arrived or not.}
+  \label{fig:backtrack}
+\end{figure}
+
+Symbolic evaluation determines whether the observations matches the tester's
+conjectures on each branch.  So far, the derived tester
+is a nondeterministic program that rejects the server if and only if all
+possible branches have raised some error.  To simulate this tester on a
+deterministic machine, we execute one branch until it fails.  Upon failure in
+the current branch, the simulator switches to another possible branch, until it
+exhausts all possibilities and rejects the server, as shown in
+\autoref{line:begin-failure}--\ref{line:end-failure} of
+\autoref{fig:backtrack}.
+
+When switching from one branch to another, the tester cannot revert its previous
+interactions with the server.  Therefore, it must match the server model against
+all interactions it has performed, and filter out the mismatching branches, as
+shown in \autoref{line:filter-send} and \autoref{line:filter-recv} of
+\autoref{fig:backtrack}.
+%% , utilizing the lazy evaluation nature of our
+%% specification language.\sz{Mention this earlier when introducing Galina?}
+
+We've now derived a tester from the server model.  The specified server runs
+forever, and so does the tester (upon no violations observed).  We accept the
+server if the tester hasn't rejected it after some large, pre-determined number
+of steps of execution.

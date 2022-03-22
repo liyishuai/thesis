@@ -135,10 +135,11 @@ CoFixpoint compose {E} (srv: itree (qaE +' E) void)   (* server  model *)
   let step_net :=%\label{line:step-net-def}%
     match net with
     | Impure (Absorb|) knet =>
-      if bo is pkt::bo'
-      then compose srv (knet pkt) bi bo'%\label{line:net-absorb}%
-      else pkt <- trigger Absorb;;%\label{line:client-send}%
-           compose srv (knet pkt) bi bo
+      match bo with
+      | pkt::bo' => compose srv (knet pkt) bi bo'%\label{line:net-absorb}%
+      | []       => pkt <- trigger Absorb;;%\label{line:client-send}%
+                    compose srv (knet pkt) bi bo
+      end
     | Impure (Emit pkt|) knet =>
       if toServer pkt
       then compose srv (knet tt) (bi++[pkt]) bo%\label{line:srv-incoming}%
@@ -151,9 +152,10 @@ CoFixpoint compose {E} (srv: itree (qaE +' E) void)   (* server  model *)
   in
   match srv with
   | Impure (Recv|) ksrv =>
-    if bi is pkt::bi'
-    then compose (ksrv pkt) net bi' bo%\label{line:srv-consume}%
-    else step_net%\label{line:step-net}%
+    match bi with
+    | pkt::bi' => compose (ksrv pkt) net bi' bo%\label{line:srv-consume}%
+    | [] => step_net%\label{line:step-net}%
+    end
   | Impure (Send pkt|) ksrv =>%\label{line:srv-send}%
     compose (ksrv tt) net bi (bo++[pkt])
   | Impure (|e) ksrv =>        (* other events performed by the server *)
