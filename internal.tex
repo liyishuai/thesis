@@ -253,5 +253,77 @@ an interactive tester.
 This subsection takes the symbolic observer produced in
 \autoref{sec:dualize-interaction} and solves the constraints it has created.
 The constraints unify symbolic packets and branch conditions against the
-concrete observations.  The unification algorithm reflects the $\Prog$-based
-validator in \autoref{sec:dualize-prog}.
+concrete observations.  The tester should accept the SUT if the constraints are
+satisfiable.
+
+\begin{figure}
+\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+Notation tE := (observeE +' nondetE +' exceptE).
+
+Definition V: Type := list var * list (constraintE unit).
+  
+Definition unify {R} (e: oE R) (v: V) : itree tE (V * R) :=
+  let (xs, cs) := v in
+  match e with
+  | (||Choice|)     => let x: var := fresh v in%\label{line:unify-choice}%
+                       ret (x::xs, cs, Var x)
+  | (|||constraint) => let cs' := constraint::cs in%\label{line:unify-constraint}%
+                       if solvable cs'
+                       then ret (xs, cs', tt)
+                       else Trigger (Throw ("Conflict: " ++ print cs'))
+  | (|Or|) => b <- trigger Or;; ret (v, b)%\label{line:unify-or}%
+  | (oe|)  => r <- trigger oe;; ret (v, r)%\label{line:unify-observe}%
+  end.
+
+Definition tester_http: itree tE (V * void) :=
+  interp_state unify observer_http initV.
+\end{lstlisting}
+\caption{Resolving symbolic constraints.}
+\label{fig:nondet-tester}
+\end{figure}
+
+As shown in \autoref{fig:nondet-tester}, the unification algorithm evaluates the
+primitive symbolic events into a stateful checker program, which reflects the
+$\Prog$-based validator in \autoref{sec:dualize-prog}.  The interpretor
+maintains a validation state \ilc V which stores the symbolic variables and the
+constraints over them.  The derivation rules are as follows:
+\begin{enumerate}
+  \item When the server makes an internal choice in \autoref{line:unify-choice},
+    the tester creates a fresh variable and adds it to the validation state.
+  \item When the observer creates a constraint in
+    \autoref{line:unify-constraint}, the tester adds the constraint to the
+    validation state, and solves the new set of constraints.  If the constraints
+    become unsatisfiable, then the tester \ilc{Throw}s an exception that
+    indicates the current execution branch cannot accept the observations:
+\begin{coq}
+  Variable exceptE: Type -> Type :=
+    Throw: forall {X}, string -> exceptE X.
+\end{coq}      
+  \item The observer is a nondeterministic program with multiple execution
+    paths, constructed by \ilc{Or} events in \autoref{line:unify-or}.  The
+    tester accepts the observation if any of the branches does not throw an
+    exception.  These branches will be handled in the next section, along with
+    the observer's send/receive interactions in \autoref{line:unify-observe}.
+\end{enumerate}
+
+Notice that the \ilc{unify} function interprets a symbolic observer's event
+\ilc{(oE R)} into a state monad transformer \ilc{(V -> itree tE (V * R))}.  It
+makes a step from pre-validation state \ilc{(v: V)} to post-validation state
+\ilc{(v': V)}, and yields the event's corresponding result \ilc{(r: R)}.  Such
+stateful interpretation process is handled by \ilc{interp_state}:
+\begin{coq}
+  CoFixpoint interp_state {E F V R}
+                          (handler: forall {X}, E X -> V -> itree F (V * X))
+                          (m: itree E R) (v: V)
+             : itree F (V * R) :=
+    match m with
+    | Pure   r   => ret (v, r)
+    | Impure e k => '(v', r) <- handler e v;;
+                    interp_state handler (k r) v'
+    end.
+\end{coq}
+
+So far I have interpreted the specification into a ITree model that observes
+incoming and outgoing packets, nondeterministically branches, and in some cases
+throws exceptions.  The rest of this chapter will show how to execute this ITree
+model on a deterministic machine and interact with the SUT.
