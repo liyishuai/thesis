@@ -12,112 +12,235 @@ deterministic machine.  It reflects the derivation rules (\ref{rule:unsat}) and
 (\ref{rule:reject}) for $\Prog$ in \autoref{sec:dualize-prog}, and constructs
 the ``Backtracking'' arrow in \autoref{fig:framework}.
 
+The deterministic tester implements a client that sends and receives concrete
+packets:
+\begin{coq}
+  Variant clientE: Type -> Type :=
+    ClientSend: concrete_packet -> clientE unit
+  | ClientRecv: clientE (option concrete_packet).
+\end{coq}
+
+Notice that the \ilc{ClientRecv} event might return \ilc{(Some pkt)}, indicating
+that the SUT has sent a packet \ilc{pkt} to the tester; or it might
+return \ilc{None}, when the SUT is silent or its sent packet hasn't arrived at
+the tester side.  This allows the tester to perform non-blocking interactions,
+instead of waiting for the SUT which might cause starvation.
+
 \begin{figure}
 \begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
 Notation tE := (clientE +' genE +' exceptE).
 
-CoFixpoint backtrack (m: itree ntE (V * void))
-                     (others: list (itree ntE (V * void)))
+CoFixpoint backtrack (current:      itree ntE void)
+                     (others: list (itree ntE void))
            : itree tE void :=
-  match m with
+  match current with
   | Impure e k =>
     match e with
-    | (|Or|)          => b <- trigger GenBool;;
+    | (|Or|)          => b <- trigger GenBool;;%\label{line:backtrack-or}%
                          backtrack (k b) (k (negb b)::others)
-    | (||Throw msg)   => match others with
+    | (||Throw msg)   => match others with%\label{line:backtrack-throw}%
                          | other::ot' => backtrack other ot'
                          | []         => trigger (Throw msg)
                          end
     | (FromObserver|) => q <- GenPacket;;
-                         trigger (ClientSend q);;
+                         trigger (ClientSend q);;%\label{line:backtrack-send}%
                          let others' := expect FromObserver q others in
                          backtrack (k q) others'
     | (ToObserver|)   =>
-      oa <- trigger ClientRecv;;
+      oa <- trigger ClientRecv;;%\label{line:backtrack-recv}%
       match oa with
       | Some oa => let others' := expect ToObserver a others in
                    backtrack (k a) others'
-      | None    =>
+      | None    =>%\label{line:backtrack-silent}%
         match others with
-        | other::ot' => backtrack other (ot'++[m])       (* postpone *)
+        | other::ot' => backtrack other (ot'++[current]) (* postpone *)%\label{line:backtrack-postpone}%
         | []         => backtrack m     []               (* retry    *)
         end
       end
     end
-  | Pure (_, vd) => match vd in void with end
+  | Pure vd => match vd in void with end
   end.
+
+Definition tester_http: itree tE void :=
+  backtrack nondet_tester_http [].
 \end{lstlisting}
 \caption{Backtrack execution of nondeterministic tester.}
 \label{fig:backtrack}
 \end{figure}
 
-\subsection{From ITree to IO program}
-\label{sec:itree-io}
+\autoref{fig:backtrack} shows the backtracking algorithm.  It interacts with the
+SUT and checks whether the observations can be explained by the nondeterministic
+tester model.  That is, checking whether the tester has an execution path that
+matches its interactions.  This is done by maintaining a list of all possible
+branches in the tester, and checking if any of them accepts the observation.
+
+The tester exhibits two kinds of randomness: (1) When sending a request packet
+to the SUT, it generates the packet randomly with \ilc{GenPacket}; (2) When the
+nondeterministic tester model branches, the deterministic tester randomly picks
+one branch to evaluate, using \ilc{GenBool}:
+\begin{coq}
+  Variant genE: Type -> Type :=
+    GenPacket: genE concrete_packet
+  | GenBool  : genE bool.
+\end{coq}
 
 \begin{figure}
-  \begin{coq}[escapechar=\%]
-(* filter : event T * T * list M -> list M *)
-(* [filter(e, r, l)] returns a subset in [l],
- * where the model programs' next event is [e]
- * that returns [r]. *)
-let backtrack (current, others) =
-  match current with
-  | determine(t1, t2) =>
-    backtrack (t1, t2::others)
-  | failwith error => (* current branch failed *) %\label{line:begin-failure}%
-    match others with
-    | [] => failwith error
-    | another::ot' => backtrack (another, ot')
-    end %\label{line:end-failure}%
-  | send(pkt); t' =>
-    let ot' = filter(SEND, pkt, others) in %\label{line:filter-send}%
-    send(pkt); backtrack (t', ot')
-  | pkt := recv(); t'(pkt) =>
-    opkt := maybe_recv();
-    match opkt with
-    | Some p1 =>
-      let ot' = filter(RECV, pkt, others) in %\label{line:filter-recv}%
-      backtrack (t'(p1), ot')
-    | None =>             (* no packet arrived *)
-      match others with
-      | [] => backtrack (current, []) (* retry *)
-      | another::ot' =>            (* postpone *)
-        backtrack (another, ot'++[current])
-      end
+\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+CoFixpoint match_observe {R} (e: observeE R) (r: R)
+                             (m: itree ntE (V * void))
+           : itree ntE (V * void) :=
+  match m with
+  | Impure (oe|) k =>
+    match oe, e with
+    | FromObserver, FromObserver%\label{line:match-from}%
+    | ToObserver  , ToObserver => k r%\label{line:match-to}%
+    | _, _ => trigger (Throw ("Expect " ++ print oe%\label{line:match-throw}%
+                           ++ " but observed " ++ print e))
     end
-  end in
-backtrack (tester_nondet, [])
-  \end{coq}
-  \caption{From nondeterministic model to deterministic tester program.  If the
-    model makes nondeterministic branches, the tester picks a branch to start
-    with, and puts the other branch into a set of other possibilities.  If the
-    current branch has failed, the tester looks for other possible branches to
-    continue checking.  When the current branch sends a packet, the tester
-    filters the set of other possibilities, and only keeps the branches that
-    match the current send event.  If the model wants to receive a packet, the
-    tester handles both cases whether some packet has arrived or not.}
-  \label{fig:backtrack}
+  | Impure (|e0|) k | Impure (||e0) k =>
+    r0 <- trigger e0;;
+    match_observe e r (k r0)
+  | Pure (_, vd) => match vd in void with end
+  end.
+
+Definition expect {R} (e: observeE R) (r: R)
+  : list (itree ntE (V * void)) -> list (itree ntE (V * void))
+  := map (match_observe e r).
+\end{lstlisting}
+\caption{Matching tester model against existing observation.}
+\label{fig:match-observe}
 \end{figure}
 
-Symbolic evaluation determines whether the observations matches the tester's
-conjectures on each branch.  So far, the derived tester
-is a nondeterministic program that rejects the server if and only if all
-possible branches have raised some error.  To simulate this tester on a
-deterministic machine, we execute one branch until it fails.  Upon failure in
-the current branch, the simulator switches to another possible branch, until it
-exhausts all possibilities and rejects the server, as shown in
-\autoref{line:begin-failure}--\ref{line:end-failure} of
-\autoref{fig:backtrack}.
+The execution rule is defined as follows:
+\begin{enumerate}
+\item When the tester nondeterministically branches
+  in \autoref{line:backtrack-or}, randomly pick a branch \ilc{(k b)} to
+  evaluate, and push the other branch \ilc{(k (negb b))} to the list of other
+  possible cases.
 
-When switching from one branch to another, the tester cannot revert its previous
-interactions with the server.  Therefore, it must match the server model against
-all interactions it has performed, and filter out the mismatching branches, as
-shown in \autoref{line:filter-send} and \autoref{line:filter-recv} of
-\autoref{fig:backtrack}.
-%% , utilizing the lazy evaluation nature of our
-%% specification language.\sz{Mention this earlier when introducing Galina?}
+\item When the \ilc{current} tester throws an exception in
+  \autoref{line:backtrack-throw}, it indicates that the current execution path
+  rejects the observations.  The tester should try to explain its observations
+  with other branches of the tester model.  If the \ilc{others} list is empty,
+  it indicates that the observation is beyond the specification's producible
+  behavior, so the tester should reject the SUT.
 
-We've now derived a tester from the server model.  The specified server runs
-forever, and so does the tester (upon no violations observed).  We accept the
-server if the tester hasn't rejected it after some large, pre-determined number
-of steps of execution.
+\item When the tester wants to observe a packet {\em from} itself, it generates
+  a packet and sends it to the SUT in \autoref{line:backtrack-send}.
+
+  Notice that if the current branch is rejected and the tester backtracks to
+  other branches, the sent packet cannot be recalled from the environment.
+  Therefore, all other branches should be matched against this send event as
+  well.  This is done by the \ilc{expect} function.
+  
+  As shown in \autoref{fig:match-observe}, \ilc{(expect e r l)} matches every
+  tester in list \ilc l against the observation \ilc e that has return
+  value \ilc r.  For each element $\texttt m\in\texttt l$, if \ilc m's first
+  observer event \ilc{oe} matches the observation \ilc e
+  (\autoref{line:match-from} and \autoref{line:match-to}),
+  then \ilc{match_observe} instantiates the tester's continuation function \ilc
+  k with the observed result \ilc r.  Otherwise, the tester throws an exception
+  in \autoref{line:match-throw}, indicating that this branch cannot explain the
+  observation because they performed different events.
+  \label{rule:backtrack-send}
+
+\item When the current tester wants to observe a packet {\em to} itself, it
+  triggers the \ilc{ClientRecv} event in \autoref{line:backtrack-recv}.  If a
+  packet has indeed arrived, then it instantiates the current branch as well as
+  other possible branches, in the same way as discussed
+  in Rule~(\ref{rule:backtrack-send}).
+
+  If the tester hasn't received a packet from the SUT
+  (\autoref{line:backtrack-silent}), it doesn't reject the SUT, because the
+  expected packet might be delayed in the environment.  If there are \ilc{other}
+  branches to evaluate (\autoref{line:backtrack-postpone}), then the tester
+  postpones the \ilc{current} branch by appending it to the back of the queue.
+  Otherwise, if the current branch is the only one that hasn't rejected, then
+  the tester retries the receive interaction.
+
+  Notice that if the SUT keeps silent, then the tester will starve but won't
+  reject, because (i) such silence is indistinguishable from the SUT sending a
+  packet but delayed by the environment, and (ii) the SUT hasn't {\em exhibited}
+  any violations against the specification.  The starvation issue is addressed
+  in \autoref{sec:itree-io}.
+\end{enumerate}
+
+The backtracking algorithm also explains the network composition design
+in \autoref{fig:net-compose-code}, where the server model is scheduled at a
+higher priority than the network model: Suppose the SUT has produced some
+invalid output, then every branch of the tester should reject its observation by
+throwing an exception.  However, the network model is always ready to absorb
+packets.  Evaluating the network model lazily prevents the composed symbolic
+model from having infinitely many absorbing branches.  This allows the derived
+tester to converge to rejection upon violation.
+
+Now we have derived the specification into a deterministic tester model in
+ITree.  The tester's events reflect actual computations of a client program.  In
+the next subsection, I'll translate the ITree model into a binary executable
+that runs on silicon and metal.
+
+\subsection{From ITree model to IO program}
+\label{sec:itree-io}
+The deterministic tester model derived in \autoref{fig:backtrack} is an ITree
+program that never returns (its result type \ilc{void} has no elements).  It
+represents a client program that keeps interacting with the SUT until it reveals
+a violation and throws an exception.
+
+In practice, if the tester hasn't found any violation after performing a certain
+amount of interactions, then it accepts the SUT.  This is done by executing the
+ITree until reaching a certain depth.
+
+\begin{figure}
+\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+Fixpoint execute (fuel: nat) (m: itree tE void) : IO bool :=
+  match fuel with
+  | O       => ret true               (* accept if out of fuel *)%\label{line:execute-accept}%
+  | S fuel' =>
+    match m with
+    | Impure e k =>
+      match e with
+      | (||Throw _)     => ret false  (* reject upon exception *)%\label{line:execute-reject}%
+      | (ClientSend q|) => client_send q;;
+                           execute fuel' (k tt)
+      | (ClientRecv|)   => oa <- client_recv;;
+                           execute fuel' (k oa)
+      | (|GenPacket|)   => pkt <- gen_packet;;%\label{line:execute-gen}%
+                           execute fuel' (k pkt)
+      | (|GenBool|)     => b <- ORandom.bool;;
+                           execute fuel' (k b)
+      end
+    | Pure vd => match vd in void with end
+    end
+  end.
+
+Definition test_http: IO bool :=
+  execute bigNumber tester_http.
+\end{lstlisting}
+\caption{Interpreting ITree tester to IO monad.}
+\label{fig:execute}
+\end{figure}
+
+As shown in \autoref{fig:execute}, the \ilc{execute} function takes an
+argument \ilc{fuel} that indicates the remaining depth to explore in the ITree.
+If the execution ran out of fuel (\autoref{line:execute-accept}), then the test
+accepts; If the tester model throws an exception
+(\autoref{line:execute-reject}), then the test rejects.  Otherwise, it
+translates the ITree's primitive events into IO computations in Coq \lys{Cite
+Li-yao's SimpleIO library}, which are eventually extracted into OCaml programs
+that can be compiled into executables that can communicate with the SUT over the
+operating system's network stack.
+
+This concludes my validation methodology.  In this chapter, I have shown how to
+test real-world systems that exhibit internal and external nondeterminism.  I
+applied the dualization theory in \autoref{chap:theory} to address internal
+nondetermism, and handled external nondeterminism by specifying the
+environment's space of uncertainty.  The specification is derived into an
+executable tester program, by multiple phases of interpretations.  The
+derivation framework is built on the ITree specification language, but the
+method is applicable to other languages that allow destructing and analyzing the
+model programs.
+
+So far I have answered ``how to tell compliant implementations from violating
+ones''.  The next chapter will answer ``how to generate and shrink test input
+that reveal violations effectively'', and unveil the techniques behind
+\ilc{gen_packet} in \autoref{line:execute-gen} of \autoref{fig:execute}.
