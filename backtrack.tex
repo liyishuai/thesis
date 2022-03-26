@@ -42,7 +42,7 @@ CoFixpoint backtrack (current:      itree ntE void)
                          | other::ot' => backtrack other ot'
                          | []         => trigger (Throw msg)
                          end
-    | (FromObserver|) => q <- GenPacket;;
+    | (FromObserver|) => q <- trigger GenPacket;;
                          trigger (ClientSend q);;%\label{line:backtrack-send}%
                          let others' := expect FromObserver q others in
                          backtrack (k q) others'
@@ -80,8 +80,8 @@ nondeterministic tester model branches, the deterministic tester randomly picks
 one branch to evaluate, using \ilc{GenBool}:
 \begin{coq}
   Variant genE: Type -> Type :=
-    GenPacket: genE concrete_packet
-  | GenBool  : genE bool.
+    GenPacket : genE concrete_packet
+  | GenBool   : genE bool.
 \end{coq}
 
 \begin{figure}

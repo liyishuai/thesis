@@ -48,11 +48,16 @@ comes from the server state.
 
 \begin{figure}
 \begin{coq}
-  CoFixpoint server (state: path -> resource) :=
-    q <- trigger Recv;;
+  CoFixpoint server_http (state: path -> resource) :=
+    pq <- trigger Recv;;
+    let respond_with a :=
+      trigger (Send { Source      := server_conn;
+                      Destination := pq.(Source);
+                      Data        := a } ) in
+    let q : request    := request_of pq    in
     let v : content    := q.(Payload)      in
     let k : path       := q.(TargetPath)   in
-    let t : string     := q.(IfMatch)      in
+    let t : string     := if_match q       in
     let tx: exp string := (state k).(ETag) in
     IFX (Compare t tx Strong)
     THEN
@@ -60,15 +65,15 @@ comes from the server state.
       then
         tx' <- trigger Choice;;
         let state' := state [k |-> {Content := v; ETag := tx'}] in
-        trigger (Send OK);;
-        server state'
+        respond_with OK;;
+        server_http state'
       else                 (* handling other kinds of requests *)
         (a, state') <- process q state;;
-        trigger (Send a);;
-        server state'
+        respond_with a;;
+        server_http state'
     ELSE
-      trigger (Send PreconditionFailed);;
-      server s.
+      respond_with PreconditionFailed;;
+      server_http s.
 \end{coq}
 \caption{Server model for HTTP conditional requests}
 \label{fig:if-match-server}
@@ -114,9 +119,9 @@ server model receives concrete requests and sends symbolic responses, so its
 event type is defined as:
 \begin{coq}
   Record packet := {
-    source      : connection;
-    destination : connection;
-    payload     : request + symbolic_response
+    Source      : connection;
+    Destination : connection;
+    Data        : request + symbolic_response
   }.
 
   Variant qaE: Type -> Type :=

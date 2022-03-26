@@ -180,13 +180,13 @@ emits a packet, we need to determine whether the packet is emitted to the
 server's incoming buffer or to the clients, by inspecting its destination:
 \begin{coq}
   Record packet := {
-    source      : connection;
-    destination : connection;
-    payload     : data
+    Source      : connection;
+    Destination : connection;
+    Data        : data
   }.
 
   Definition toServer (p: packet) : bool :=
-    if p.(destination) is server_conn then true else false.
+    if p.(Destination) is server_conn then true else false.
 \end{coq}
 
 Now we can define the composition algorithm formally, as shown in

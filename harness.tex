@@ -4,22 +4,25 @@ This chapter presents a language-based design for test harnesses.  I'll show how
 to generate and shrink test inputs effectively, addressing inter-execution
 nondeterminism.
 
-\lys{Under construction.}
-
-\autoref{sec:harness-overview} provides an overview of how test harnesses work.
-
-
+\autoref{sec:harness-overview} provides a brief overview of how test harnesses
+work.  \autoref{sec:heuristics} explains how to write heuristics to generate
+interesting test inputs.  \autoref{sec:shrinking} then shows how to keep the
+test inputs interesting among different executions in the shrinking process.
 
 \section{Overview}
 \label{sec:harness-overview}
 \input{overview}
 
+\section{Heuristics for Test Generation}
+\label{sec:heuristics}
 
+\section{Shrinking Interactive Test Inputs}
+\label{sec:shrinking}
 
 As shown in \autoref{fig:overview}, the test framework consists of a {\em
   validator} that determines whether the SUT's behavior satisfies the
-specification, and a {\em test harness} that provides test inputs for the
-validator.
+  specification, and a {\em test harness} that provides test inputs for the
+  validator.
 
 A {\em validator} is a client-side model program that observes messages sent and
 received and decides whether these interactions are conformant to the
