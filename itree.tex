@@ -176,9 +176,9 @@ choices.  I split the event types because they'll be handled differently when I
 derive the tester later in this chapter.
 
 Now we can represent the QAC server with step function \ilc{sstep} and initial
-state \ilc S:
+state \ilc{sigma}:
 \begin{coq}
-  CoInductive server (sstep: Q -> C -> S -> A * S) (s: S)
+  CoInductive server (sstep: Q -> C -> sigma -> A * sigma) (s: sigma)
               : itree qacE void :=
     c <- trigger Choice;;
     q <- trigger Recv;;

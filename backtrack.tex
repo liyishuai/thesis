@@ -27,7 +27,7 @@ the tester side.  This allows the tester to perform non-blocking interactions,
 instead of waiting for the SUT which might cause starvation.
 
 \begin{figure}
-\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+\begin{lstlisting}[numbers=left]
 Notation tE := (clientE +' genE +' exceptE).
 
 CoFixpoint backtrack (current:      itree ntE void)
@@ -85,7 +85,7 @@ one branch to evaluate, using \ilc{GenBool}:
 \end{coq}
 
 \begin{figure}
-\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+\begin{lstlisting}[numbers=left]
 CoFixpoint match_observe {R} (e: observeE R) (r: R)
                              (m: itree ntE (V * void))
            : itree ntE (V * void) :=
@@ -191,7 +191,7 @@ amount of interactions, then it accepts the SUT.  This is done by executing the
 ITree until reaching a certain depth.
 
 \begin{figure}
-\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+\begin{lstlisting}[numbers=left]
 Fixpoint execute (fuel: nat) (m: itree tE void) : IO bool :=
   match fuel with
   | O       => ret true               (* accept if out of fuel *)%\label{line:execute-accept}%

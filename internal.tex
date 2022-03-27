@@ -48,7 +48,9 @@ comes from the server state.
 
 \begin{figure}
 \begin{coq}
-  CoFixpoint server_http (state: path -> resource) :=
+  Notation sigma := (path -> resource).
+
+  CoFixpoint server_http (state: sigma) :=
     pq <- trigger Recv;;
     let respond_with a :=
       trigger (Send { Source      := server_conn;
@@ -167,7 +169,7 @@ the symbolic model's events with the \ilc{observe} handler, whose types are
 explained as follows:
 
 \begin{figure}
-\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+\begin{lstlisting}[numbers=left]
 Notation oE := (observeE +' nondetE +' choiceE +' constraintE).
 
 Definition observe {R} (e: smE R) : itree oE R :=
@@ -262,7 +264,7 @@ concrete observations.  The tester should accept the SUT if the constraints are
 satisfiable.
 
 \begin{figure}
-\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+\begin{lstlisting}[numbers=left]
 Notation ntE := (observeE +' nondetE +' exceptE).
 
 Definition V: Type := list var * list (constraintE unit).

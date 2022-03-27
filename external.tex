@@ -127,7 +127,7 @@ consumed by the server's \ilc{Recv} events, and the {\em outgoing buffer} stores
 the packets sent by the server but not yet absorbed by the network.
 
 \begin{figure}
-\begin{lstlisting}[style=customcoq,numbers=left,escapechar=\%]
+\begin{lstlisting}[numbers=left]
 CoFixpoint compose {E} (srv: itree (qaE +' E) void)   (* server  model *)
            (net  : itree (netE +' nondetE) void)      (* network model *)
            (bi bo: list packet)       (* incoming and outgoing buffers *)

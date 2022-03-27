@@ -15,64 +15,13 @@ test inputs interesting among different executions in the shrinking process.
 
 \section{Heuristics for Test Generation}
 \label{sec:heuristics}
+\input{heuristics}
+
+\lys{Under construction:}
 
 \section{Shrinking Interactive Test Inputs}
 \label{sec:shrinking}
 
-As shown in \autoref{fig:overview}, the test framework consists of a {\em
-  validator} that determines whether the SUT's behavior satisfies the
-  specification, and a {\em test harness} that provides test inputs for the
-  validator.
-
-A {\em validator} is a client-side model program that observes messages sent and
-received and decides whether these interactions are conformant to the
-specification.  For example, a simple validator for echo server is written as:
-\begin{lstlisting}[style=customcoq]
-  let validateEcho =
-    request := sendRequest();
-    response := recvResponse();
-    if response <> request
-    then reject
-    else validate
-\end{lstlisting}
-Notice that the \ilc{sendRequest} event does not take the request to be sent as
-argument, but in stead returns the request actually sent.  The validator only
-describes the logic that checks messages sent and received, while the test
-harness computes what requests to send.
-
-The {\em test harness} takes a validator and turns it into an executable program
-that performs network interactions.  It handles the validator's send and receive
-events, and generates the requests to be sent.  A simple test harness for the
-validator above is written as:
-\begin{lstlisting}[style=customcoq]
-  let execute(v) =
-    match v with
-    | x := sendRequest(); v'(x) =>
-      request := arbitraryRequest();
-      sendBytes(print(request));
-      execute(v'(request))
-    | x := recvRequest(); v'(x) =>
-      responseBytes := recvBytes();
-      execute(v'(parse(responseBytes)))
-    | reject => reject
-    end in
-  execute(validateEcho)
-  (* ... is equivalent to ... *)
-  let executeValidateEcho =
-    request := arbitraryRequest();
-    sendBytes(print(request));
-    responseBytes := recvBytes();
-    if parse(responseBytes) <> request
-    then reject
-    else executeValidateEcho
-\end{lstlisting}
-
-The \ilc{arbitraryRequest} generator here produces requests randomly.  To
-generate requests that depend on previously observed messages, my framework will
-extend the test harness in \autoref{fig:overview} that records a trace of
-messages.
-
-\section{Architecture}
 \autoref{fig:shrink} shows the test harness architecture for networked
 servers.  This framework involves four languages: (1) An {\em
   application representation} (AR) which provides flexible abstraction

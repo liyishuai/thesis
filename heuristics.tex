@@ -1,0 +1,81 @@
+This section implements heuristics for generating test inputs.  I'll use the
+HTTP tester as an example to show how to make requests more interesting, by
+parameterizing them over the model state (\autoref{sec:heuristic-state}) and the
+trace (\autoref{sec:heuristic-trace}).
+
+\subsection{State-based heuristics}
+\label{sec:heuristic-state}
+The model state may instruct the test generator to produce more interesting test
+inputs.  For example, consider the \ilc{random_path} generator in
+\autoref{line:random-path} of \autoref{fig:naive-generator}.  One way to improve
+it is to generate more paths that have corresponding resources on the server:
+\begin{coq}
+  Definition gen_path (state: list (path * resource)) : IO path :=
+    let paths: list path := map fst state in
+    freq [(90, oneof paths);
+          (10, random_path)].
+\end{coq}
+
+Here I modify the server model's state type \ilc{sigma} from \ilc{(path ->
+  resource)} in \autoref{fig:if-match-server} into \ilc{(list (path *
+  resource))}, which has the same expressiveness but allows the generator to
+access the list of all \ilc{paths} in the server state.  The generator chooses
+from these existent paths in 90\% of the cases, as assigned by the \ilc{freq}
+combinator.  The remaining 10\% are still generated randomly, to discover how
+the SUT handles nonexistent paths.
+
+For the \ilc{gen_packet} generator in \autoref{fig:naive-generator}, replacing
+its \ilc{random_path} with the improved \ilc{gen_path} would generate more
+interesting request targets.  This requires the \ilc{gen_packet} to carry the
+server state to instantiate \ilc{gen_path}.
+
+As shown in \autoref{fig:backtrack}, the \ilc{GenPacket} generator is triggered
+when the tester wants to observe a packet from itself to the SUT.
+\ilc{fig:symbolic-observer} then shows that such \ilc{FromObserver} expectation
+happens when the symbolic model \ilc{Emit}s a packet.  Such \ilc{Emit} event
+only happens when the server wants to receive a packet in
+\autoref{fig:net-compose}.  The \ilc{Recv} events are triggered by the server
+model in \autoref{fig:if-match-server}, which iterates over the server state
+\ilc{sigma}.
+
+Therefore, I extend the server's \ilc{Recv} event type to include the server
+state:
+\begin{coq}
+  Variant qaE: Type -> Type :=
+    Recv : sigma      -> qaE packet
+  | Send : packet -> qaE unit.
+\end{coq}
+
+Now when the server wants to receive a request, it triggers \ilc{(Recv state)},
+where \ilc{(state: sigma)} contains the server's paths and resources at that
+point.  The \ilc{state} argument is then carried to the generator, by adding
+parameters to the event types along the interpretation:
+\begin{coq}
+  Variant netE: Type -> Type :=
+    Emit  : packet -> netE unit
+  | Absorb: sigma      -> netE packet.
+
+  Variant observeE : Type -> Type :=
+    FromObserver   : sigma -> observeE concrete_packet
+  | ToObserver     : observeE concrete_packet.
+
+  Variant genE: Type -> Type :=
+    GenPacket : sigma -> genE concrete_packet
+  | GenBool   : genE bool.
+
+  Definition gen_packet: sigma -> IO concrete_packet.
+\end{coq}
+
+As a result, when instantiating the \ilc{(GenPacket state)} event in
+\autoref{fig:execute}, we can feed the \ilc{gen_packet} function with argument
+\ilc{state}, so that \ilc{gen_path} can generate interesting paths based on the
+server state.
+
+\subsection{Trace-based heuristics}
+\label{sec:heuristic-trace}
+
+When the SUT makes internal choices {\it e.g.} generating ETags, the
+specification represents them as symbolic variables.  These variables' concrete
+value are not stored in the specification state, but may be observed during
+execution.  For example, when an HTTP server responds to a GET request, it might
+include the resource's ETag as shown in \autoref{sec:internal-nondeterminism}.
