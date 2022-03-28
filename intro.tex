@@ -421,6 +421,7 @@ patterns.  Such heuristics is challenged by another form of nondeterminism
 discussed as follows.
 
 \subsection{Inter-execution nondeterminism}
+\label{sec:inter-execution}
 Consider \http, where requests may be conditioned over timestamps.  If a client
 has cached a version with a certain timestamp, then it can send the timestamp as
 \inlinec{If-Modified-Since} precondition.  The server should not transmit the

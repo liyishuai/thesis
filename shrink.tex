@@ -1,0 +1,23 @@
+Suppose we have generated a test input that has caused invalid observations of
+the SUT.  The generated counterexample consists of (1) {\em signals} that are
+essential to triggering violations, and (2) {\em noises} that do not contribute
+to revealing such violations.  We need to shrink the counterexample by removing
+its noises and keeping its signals.
+
+For interactive testing, the test input is a sequence of request messages.  An
+intuitive way of shrinking is to remove some requests from the original sequence
+and rerun the test.  However, even if an interesting request was not removed, it
+might become trivial in another execution, as discussed in
+\autoref{sec:inter-execution}.
+
+To prevent turning signals into noises when rerunning the test, I shrink the
+heurestics instead of shrinking the generated test input.
+\autoref{sec:shrink-architecture} introduces the architecture for interactive
+shrinking, then \autoref{sec:shrink-ir} explains the language design beneath
+that addresses inter-execution nondeterminism.
+
+\subsection{Architecture}
+\label{sec:shrink-architecture}
+
+\subsection{Intermediate representation language}
+\label{sec:shrink-ir}
