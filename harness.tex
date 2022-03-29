@@ -17,56 +17,16 @@ test inputs interesting among different executions in the shrinking process.
 \label{sec:heuristics}
 \input{heuristics}
 
-\lys{Under construction:}
-
 \section{Shrinking Interactive Tests}
 \label{sec:shrinking}
 \input{shrink}
 
-\autoref{fig:shrink} shows the test harness architecture for networked
-servers.  This framework involves four languages: (1) An {\em
-  application representation} (AR) which provides flexible abstraction
-for encoding the validation logic per protocol under test; (2) {\em
-  Bytes} that the tester interacts with the SUT over network; between
-them, (3) The {\em intermediate representation} (IR) for encoding the
-trace in an application-independent way; and (4) The {\em symbolic
-  representation} called ``J-expressions'' (Jexp) which encodes the
-input generated and shrunk by the test harness.
-
-\begin{figure}
-  \includegraphics[width=.8\textwidth]{figures/shrink}
-  \caption{Test harness architecture.  The test harness first generates
-    J-expressions based on the model state provided by the validator.  The
-    J-expression is a symbolic expressions that are instantiated by the trace
-    into requests' IR.  When a violation is detected, the failing Jexp is shrunk
-    into sub-expressions, and instantiated by the trace in new runs.  The dotted
-    arrows are application-specific algorithms, while the solid arrows are
-    generic over all protocols.}
-  \label{fig:shrink}
-\end{figure}
-
-\section{Intermediate representation language}
-The purpose of introducing an IR in this framework is to enable a generic method
-for generating requests that refer to specific fields in the trace.  For
-example, when testing conditional HTTP requests, the generator wants to include
-``a precondition that uses the ETag field of a previous response''; when testing
-an online store, the generator wants to provide ``an order ID that the server
-has mentioned before''.
+\lys{Under construction:}
 
 The IR in this framework is JSON, which allows syntax trees to be arbitrarily
 wide and deep, and provides sufficient flexibility for network protocols in
 general.  The J-expression is an extension of JSON that can refer to specific
 fields in the trace:
-\[\begin{array}{r@{\;}l}
-\mathsf{JSON^T}\triangleq&\mathsf T\mid\{\mathsf{object^T}\}\mid[\mathsf{array^T}]\mid\mathsf{string}\mid\Nat\mid\Bool\mid\mathsf{null}\\
-\mathsf{object^T}\triangleq&\nil\mid\mathsf{"string": JSON^T,object^T}\\
-\mathsf{array^T}\triangleq&\nil\mid\mathsf{JSON^T,array^T}\\
-\mathsf{IR}\triangleq&\mathsf{JSON^{IR}}\\
-\mathsf{Jexp}\triangleq&\mathsf{JSON^{\Jref{\mathit{label}}{\mathsf{Jpath}}{\mathit{function}}}}\\
-&\text{where }\mathit{label}\in\Nat,\mathit{function}\in\mathsf{IR}\to\mathsf{IR}\\
-\Jpath\triangleq&\This\mid\Jpath\Number\mathit{index}\mid\Jpath\At\mathit{field}\\
-&\text{where }\mathit{index}\in\Nat,\mathit{field}\in\mathsf{string}
-\end{array}\]
 
 The extended syntax
 ``$\Jref{\mathit{label}}{\mathsf{Jpath}}{\mathit{function}}$'' is a symbolic
