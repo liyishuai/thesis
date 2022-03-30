@@ -95,11 +95,222 @@ message data types in general.
 \label{fig:ir-jexp}
 \end{figure}
 
+\begin{figure}
+\begin{minipage}{.6\textwidth}
+\begin{coq}
+Notation   labelT := nat.
+Definition traceT := list (labelT * IR).
+
+Context q1 q2 a1 a2 : IR.
+Example labelled_trace: traceT :=
+  [(1, q1); (3, q2); (4, a2); (2, a1)].
+\end{coq}
+\end{minipage}\begin{minipage}{.3\textwidth}
+  \includegraphics[width=\linewidth]{figures/ir-trace}
+\end{minipage}
+\caption{Labelled trace example.}
+\label{fig:ir-trace}
+\end{figure}
+
+\begin{figure}
+  \begin{minipage}{.4\textwidth}
+\begin{json}
+  (* a2 = *)
+  {
+    "files": [
+      {
+        "name": "foo",
+        "mode": 755
+      },
+      {
+        "name": "bar",
+        "mode": 500
+      }
+    ],
+    "exitCode": 0
+  }
+\end{json}
+  \end{minipage}\begin{minipage}{.5\textwidth}
+\begin{coq}
+Example second_file_mode: jpath :=
+  this @ "files" # 2 @ "mode".
+
+Example mode_add_write (j: IR) : IR :=
+  match j with
+  | JSON_Number n =>
+    JSON_Number (mode_bits_or 200 n)
+  | _ => j
+  end.
+
+Example id (j: IR) : IR := j.  
+\end{coq}
+  \end{minipage}
+  \caption{IR, Jpath, and heuristics function example.}
+  \label{fig:ir-jpath}
+\end{figure}
+
 The J-expression is an extension of JSON that can encode trace-based heuristics.
 As shown in \autoref{fig:ir-jexp}, a Jexp may include syntax
 $(label.\Jpath.function)$ that represents trace-based heuristics, specified as:
 \begin{enumerate}
-\item $label$
-\item $\Jpath$
-\item $function$
+\item The $label$ refers to an IR in the trace that the heuristics computes
+  with.  The test harness records the trace as a list of labelled messages,
+  where requests are labelled odd, and their responses are labelled as the next
+  even number.  Labelling messages allows locating them in the trace despite
+  shrinking and inter-execution nondeterminism.
+
+  For example, consider the trace in \autoref{fig:ir-trace}: If a trace-based
+  heuristics is interested in \ilc{q2}'s response \ilc{a2}, then it can be
+  encoded as ``compute the test input based on message labelled 4'':
+\begin{coq}
+  Context get_label: labelT -> traceT -> IR.
+
+  Compute get_label 4 labelled_trace.
+  (* = a2 : IR *)
+\end{coq}
+  
+  Suppose the test input is shrunk by removing \ilc{q1}, the label for \ilc{q2}
+  remains unchanged as 3, so label 4 corresponds to the new response to
+  \ilc{q2}:
+\begin{coq}
+  Example new_trace: traceT :=
+    [(3, q2); (4, a2')].
+
+  Compute get_label 4 new_trace.
+  (* = a2' : IR *)
+\end{coq}
+
+As a result, the trace-based heuristics are preserved and adapted to new
+executions during the shrinking process.
+\item The $\Jpath$ is a path in the IR's syntax tree, and refers to a
+  substructure of the IR that the heuristics uses.
+
+  For example, suppose request \ilc{q2} lists files in a directory using the
+  POSIX \inlinec{ls} command, and its response \ilc{a2} is encoded as the IR
+  shown in \autoref{fig:ir-jpath}.  The response IR is a JSON object whose
+  \inlinec{"files"} field is an array of objects, each has a \inlinec{"name"}
+  and a \inlinec{"mode"} field.  A heuristics can refer to the second file's
+  mode bits by Jpath \ilj{(this@"files"#2@"mode")}, which will guide the test
+  harness to locate its corresponding value:
+\begin{coq}
+  Context get_jpath: jpath -> IR -> IR.
+
+  Compute get_jpath second_file_mode a2.
+  (* = JSON_Number 500 : IR *)
+\end{coq}
+\item The $function$ has type $(\mathsf{IR}\to\mathsf{IR})$, and defines the
+  computation based on the sub-IR located by the Jpath.
+
+  Consider the mode bits located in the previous example: If the heuristics
+  wants to add write permission to the mode bits, it can do so with the
+  \ilc{mode_add_write} function in \autoref{fig:ir-jpath}, which produces mode
+  700.  Some heuristics might use the sub-IR 500 as-is, using the identity
+  function \ilc{id}.
 \end{enumerate}
+
+J-expression provides a generic interface for test developers to implement
+trace-based heuristics.  For the aforementioned file system example, the tester
+can generate a request that changes the mode bits of an observed file, with the
+following Jexp:
+\begin{json}
+  (* e5 = *)
+  {
+    "command": "chmod",
+    "args": [
+      4.(this@"files"#2@"mode").mode_add_write,
+      4.(this@"files"#2@"name").id
+    ]
+  }
+\end{json}
+
+To instantiate Jexps into request IR, the test harness substitutes all
+occurences of $(\Jref{l}{p}{f})$ in the Jexp with its corresponding IR computed
+from the runtime trace:
+\begin{coq}
+  Definition eval (l: labelT) (p: jpath) (f: IR -> IR) (t: traceT) : IR :=
+    let a: IR := get_label l t in
+    let j: IR := get_jpath p a in
+    f j.
+\end{coq}
+
+For example, given the runtime trace in \autoref{fig:ir-trace}, with \ilc{a2} is
+defined in \autoref{fig:ir-jexp}, the the above Jexp is instantiated into the
+following request:
+
+\begin{json}
+  (* instantiate e5 labelled_trace = *)
+  { 
+    "command": "chmod",
+    "args": [ 700, "bar" ]
+  }
+\end{json}
+
+However, when rerunning the test, the \ilc{new_trace} has a different response
+associated with label 4.  The new response \ilc{a2'} might have fewer than 2
+files in its payload.  Moreover, the response \ilc{a2'} might have not appeared
+in the trace, due to delays in the environment.
+
+To instantiate the original Jexp in such situations, I loosen the
+\ilc{get_jpath} and \ilc{get_label} functions when evaluating the heuristics:
+\begin{enumerate}
+\item When evaluating a Jpath starting with \ilj{p#n}, if \ilj p corresponds to
+  an array with fewer than \ilj n elements, or the array's \ilj n-th element
+  cannot properly evaluate the remaining path, then try continuing the
+  evaluation with any other element in the array.
+
+  For example, consider evaluating \ilj{(this@3#"bar")} on the following IR's:
+  \begin{center}
+\begin{minipage}[t]{.5\linewidth}
+\begin{json}
+  (* j2 = *)
+  [
+    { "foo": 21 },
+    { "bar": 22 }
+  ]
+\end{json}
+\end{minipage}\begin{minipage}[t]{.5\linewidth}
+\begin{json}
+  (* j3 = *)
+  [
+    { "bar": 31 },
+    { "baz": 32 },
+    { "foo": 33 }
+  ]
+\end{json}
+\end{minipage}
+  \end{center}
+
+  Here \ilj{j2} doesn't have a third element, and \ilj{j3}'s third element
+  doesn't have field \ilj{"bar"}.  In these cases, \ilj{get_jpath} chooses other
+  elements in the two arrays, resulting in value \ilj{22} for \ilj{j2}, and
+  \ilj{31} for \ilj{j3}.
+  
+\item When evaluating label \ilj l and Jpath \ilj p on a trace, if the message
+  labelled \ilj l does not exist in the trace, or cannot evaluate Jpath \ilj p
+  properly, then try continuing the evaluation with any other IR in the trace.
+
+  For example, consider evaluating J-expression \ilj{6.(this#2@"foo").id} on the
+  following traces:
+\begin{coq}
+  Definition t1: traceT :=
+    [(1,q1); (2,j2); (5,q2)].
+
+  Definition t2: traceT :=
+    [(3,q1); (4,j3); (5,q2); (6,a2)].
+\end{coq}
+
+Here \ilj{t1} doesn't have a message labelled 6, probably caused by environment
+delays; \ilj{t2} has label 6 but its corresponding message is an object rather
+than an array expected by the Jexp.  In these cases, \ilc{eval} chooses other
+messages in the trace to evaluate, resulting in value \ilc{21} for \ilc{t1}, and
+\ilc{33} for \ilc{t2}.
+\end{enumerate}
+
+By introducing loose evaluation of J-expressions, my test harness allows partial
+instantiation of heuristics when the runtime trace is less than satisfying.
+
+So far I have shown how to generate and shrink interactive test inputs and
+address inter-execution nondeterminism.  In the next chapter, I'll combine this
+test harness design with the validator practice in \autoref{chap:practices}, and
+evaluate these techniques by testing real-world systems like HTTP servers and
+file synchronizers.
