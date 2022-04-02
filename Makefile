@@ -6,3 +6,4 @@ all: thesis.pdf
 
 clean:
 	latexmk -C -outdir=docs
+	$(RM) *~

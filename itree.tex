@@ -1,6 +1,6 @@
 To write specifications for protocols' rich semantics, I employed ``interaction
 tree'' (ITree), a generic data structure for representing interactive programs
-in the Coq programming language, introduced by \textcite{itree}.  ITree allows
+in the Coq programming language, introduced by \citet{itree}.  ITree allows
 specifying protocols as monadic programs that model valid implementations'
 possible behavior.  The model program can be interpreted into a tester program,
 to be discussed in later sections.
@@ -110,7 +110,7 @@ revised language eliminates expressions like \ilc{bind_ret} and \ilc{bind_bind}.
 
 \paragraph{Practical interaction trees}
 \footnote{For readability, the ``practical'' ITree definition here is a
-  simplified version from \textcite{itree}.}
+  simplified version from \citet{itree}.}
 \begin{figure}
 \begin{coq}
   CoInductive itree (E: Type -> Type) (R: Type) :=

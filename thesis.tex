@@ -1,44 +1,87 @@
-%% Antal Spector-Zabusky's UPenn thesis formatting skeleton, 2021
-%%
-%% Feel free to use any of this as necessary; you can contact me about it at
-%% <antal.b.sz@gmail.com>.  This isn't all the styling in my thesis; it's mostly
-%% limited to things that help you satisfy the formatting guidelines instead of
-%% style choices.  It does not contain styling for things I didn't include, such
-%% as a dedication or an index.  I wrote this for a CS thesis, so some details
-%% may be specific to that.
-%%
-%% This should follow the formatting guidelines from
-%% <https://guides.library.upenn.edu/dissertation_manual/formatting> as of
-%% Spring 2021.
-%%
-%% Explanatory comments are annotated with ASZ; you can delete them if you
-%% want.
-%%
-%% Good luck!
+% 2022 University of Pennsylvania Ph.D. Dissertation LaTeX Template
+% The template project is in beta and aims to fulfill University formatting requirements when one follows the instructions, resolves errors and warnings, and does not edit the style file or font size. Consult https://provost.upenn.edu/formatting-faqs for the most up-to-date requirements and policies.
+%-------------------------------------------
+% We welcome your feedback on the template https://upenn.libwizard.com/f/latexbetadissertationfeedback
+%-------------------------------------------
+% The template project is optimized for the LaTeX editor Overleaf and pdfLaTeX. Other LaTeX editing programs may require you to compile the document more than once. It is adapted from the Penn Biostat LaTeX Template modified from Dissertation Template for Wharton PhD Candidates in LaTeX. Portions of the text are reprinted or adapted with permission from Ratcliffe SJ. (2017) Penn Biostat LaTeX Template: PhD dissertation. https://dbe.med.upenn.edu/biostat-research/Dissertation_template
 
-%% ASZ: 12 point font, single-sided (don't alternate left/right margins), and
-%% sensible defaults.
-\documentclass[12pt,oneside,reqno]{amsbook}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[11pt]{report}
+\usepackage{upennstyle} % You may add additional packages below this line. Overleaf will warn you if your packages conflict with the template packages. See Chapter 1 for more information.
+
+%-------------------------------------------
+% Citation and bibliography commands. Edit as needed.
+\usepackage[nonamebreak,round]{natbib}
+\bibliographystyle{plainnat}
+%-------------------------------------------
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PLEASE FOLLOW THE INSTRUCTIONS IN THE CODE COMMENTS
+% To uncomment a line of code, remove the % at the beginning of the line
+% To comment out a line of code, add a % at the beginning of the line
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%% PRELIMINARY PAGES %%%%%
+%-------------------------------------------
+%%%% TITLE PAGE
+% Edit the text between curly braces {} relevant to your dissertation.
+\title{Testing by Dualization}
+\author{Yishuai Li}
+%\specialization{Field of Specialization} % If your are in the Romance Languages or the Managerial Science and Applied Economics graduate group, uncomment this line and edit the text between the {}. If you do, you will also need to edit lines 71 and 72.
+\gradgroup{Computer and Information Science} % See https://provost.upenn.edu/phd-graduate-groups for names
+\date{2022} % Enter four-digit year of deposit
+\supervisor{Benjamin C. Pierce}
+\supervisortitle{Professor of Computer and Information Science}
+%\cosupervisor{Co-supervisor's Typed Name} % If applicable, uncomment this line and edit the text between the {}. If you do, you will also need to edit line 39. 
+%\cosupervisortitle{Full Faculty Title and Affiliation} % If applicable, uncomment this line and edit the text between the {}. If you do, you will also need to edit line 38.
+\gradchair{Mayur Naik, Professor of Computer and Information Science}
+\committee{Steve Zdancewic, Professor of Computer and Information Science}
+\committee{Mayur Naik, Professor of Computer and Information Science}
+\committee{Boon Thau Loo, Professor of Computer and Information Science}
+\committee{John Hughes, Professor of Computing Science, Chalmers University of Technology} % If applicable, comment out or duplicate this line to remove or add a committee member
+%-------------------------------------------
+
+%%%% OPTIONAL COPYRIGHT NOTICE
+\authorlegal{Yishuai Li} % To opt out of copyrighting your dissertation, uncomment this line. If you do, you will also need to edit line 76.
+%-------------------------------------------
+\cclicense{Attribution-Share\-Alike 4.0 International (CC BY-SA 4.0)} % If applicable, uncomment this line and edit the text between the {}. If you do, you will also need to edit lines 51, 76, and 78.
+%-------------------------------------------
+\cclicenseurl{https://creativecommons.org/licenses/by-sa/4.0/} % If applicable, uncomment this line and edit the text between the {}. If you do, you will also need to edit lines 49, 76, and 78.
+%-------------------------------------------
+
+%%%% OPTIONAL DEDICATION
+%\dedication{Write your dedication text in italics here.} % If not applicable, comment out this line to hide the optional dedication page. If you do, you will also need to edit line 82.
+%-------------------------------------------
+
+%%%% OPTIONAL ACKNOWLEDGEMENT
+\acknowledgement{Write your acknowledgement text here.} % If not applicable, comment out this line to hide the optional acknowledgement page. If you do, you will also need to edit line 86.
+%-------------------------------------------
+
+%%%% ABSTRACT
+\abstract{Write your abstract text here.} % Write your abstract between the {}
+%-------------------------------------------
+
+%%%% OPTIONAL PREFACE
+%\preface{Write your preface text here.} % If applicable, uncomment this line and write your preface between the {}. If you do, you will also need to edit line 101.
+%-------------------------------------------
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% ASZ: My usual "make things look nice and behave well" block
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{lmodern}
-\usepackage{microtype}
-\usepackage{accsupp}
-\usepackage{etoolbox}
-\usepackage{newunicodechar}
+%% \usepackage[utf8]{inputenc}
+%% \usepackage{lmodern}
+%% \usepackage{microtype}
+%% \usepackage{accsupp}
+%% \usepackage{etoolbox}
+%% \usepackage{newunicodechar}
 \usepackage[dvipsnames,svgnames,x11names]{xcolor}
-\usepackage{hyperref}
 \usepackage{xspace}
 \usepackage{advdate}
 \usepackage[iso]{datetime}
 \newdateformat{httpdate}{\shortdayofweekname{\THEDAY}{\THEMONTH}{\THEYEAR},~\THEDAY~\shortmonthname[\THEMONTH]~\THEYEAR}
-\usepackage[
-  backend=biber]{biblatex}
-\addbibresource{bibliography.bib}
 
 \usepackage{draft} % local
 \newif\ifdraft\drafttrue
@@ -51,16 +94,18 @@
 \newtheorem{definition}{Definition}
 \newtheorem{lemma}{Lemma}[chapter]
 
-\def\chapterautorefname{Chapter}
-\def\sectionautorefname{Section}
-\def\subsectionautorefname{Subsection}
-\def\subsubsectionautorefname{Subsubsection}
+\addto\extrasamerican{%
+  \renewcommand{\chapterautorefname}{Chapter}%
+\renewcommand\sectionautorefname{Section}
+\renewcommand\subsectionautorefname{Subsection}
+%% \def\subsubsectionautorefname{Subsubsection}
 \def\lstnumberautorefname{Line}
 \def\lemmaautorefname{Lemma}
 \def\definitionautorefname{Definition}
-\renewcommand{\equationautorefname}{Hypothesis}
-\renewcommand{\itemautorefname}{Rule}
-\usepackage{textcomp,listings,lstparams,lstcoq,graphicx,enumitem}
+\renewcommand\equationautorefname{Hypothesis}
+\renewcommand\itemautorefname{Rule}
+}
+\usepackage{textcomp,listings,lstparams,lstcoq,enumitem}
 \lstdefinestyle{customcoq}{
   language=Coq,
   literate={<>}{$\ne$}1
@@ -79,10 +124,7 @@
   {sigma}{$\sigma$}1
 }
 \lstdefinestyle{json}{
-  language=Coq,
-  literate={@}{$\At$}1
-  {\#}{$\Number$}1
-  {this}{$\mathsf{this}$}4
+  language=Coq
 }
 \lstdefinestyle{customc}{
   language=C,
@@ -101,19 +143,18 @@
 
 \usepackage{mathtools}
 %% https://tex.stackexchange.com/a/127018
-\usepackage{etoolbox}
-\expandafter\patchcmd\csname \string\lstinline\endcsname{%
-  \leavevmode
-  \bgroup
-}{%
-  \leavevmode
-  \ifmmode\hbox\fi
-  \bgroup
-}{}{%
-  \typeout{Patching of \string\lstinline\space failed!}%
-}
+%% \usepackage{etoolbox}
+%% \expandafter\patchcmd\csname \string\lstinline\endcsname{%
+%%   \leavevmode
+%%   \bgroup
+%% }{%
+%%   \leavevmode
+%%   \ifmmode\hbox\fi
+%%   \bgroup
+%% }{}{%
+%%   \typeout{Patching of \string\lstinline\space failed!}%
+%% }
 
-\usepackage{amssymb}
 \newcommand{\complies}[2]{\mathsf{comply}_{#1}~{#2}}
 \newcommand{\ncomplies}[2]{\neg(\complies{#1}{#2})}
 \newcommand{\valid}[2]{\mathsf{valid}_{#1}~{#2}}
@@ -183,194 +224,137 @@
 \newcommand{\Havoc}{\mathsf{havoc}}
 
 %% ASZ: `amsbook` didn't style `\paragraph`s appropriately
-\patchcmd{\paragraph}{\normalfont}{\itshape}
-  {} % Success
-  {\GenericError
-     {} % Continuation for \MessageBreak (unused)
-     {Could not redefine \string\paragraph\space to be italic}
-     {(This is a hack in the preamble.)} % Where to look for more info?
-     {I tried to replace \string\normalfont\space with \string\itshape, but I
-      couldn't.}}
+%% \patchcmd{\paragraph}{\normalfont}{\itshape}
+%%   {} % Success
+%%   {\GenericError
+%%      {} % Continuation for \MessageBreak (unused)
+%%      {Could not redefine \string\paragraph\space to be italic}
+%%      {(This is a hack in the preamble.)} % Where to look for more info?
+%%      {I tried to replace \string\normalfont\space with \string\itshape, but I
+%%       couldn't.}}
 
 %% ASZ: Change the spacing in the list of figures – I don't know if you need
 %% this or not
-\makeatletter
-\patchcmd{\l@figure}{1.5pc}{2.25pc}
-  {} % Success
-  {\GenericError
-     {} % Continuation for \MessageBreak (unused)
-     {Could not fix the spacing in the list of figures}
-     {(This is a hack in the preamble.)} % Where to look for more info?
-     {I tried to replace the 1.5pc figure number--figure description separation
-      with a 2.25pc separation in \string\l@figure\space, but I couldn't.}}
+%% \makeatletter
+%% \patchcmd{\l@figure}{1.5pc}{2.25pc}
+%%   {} % Success
+%%   {\GenericError
+%%      {} % Continuation for \MessageBreak (unused)
+%%      {Could not fix the spacing in the list of figures}
+%%      {(This is a hack in the preamble.)} % Where to look for more info?
+%%      {I tried to replace the 1.5pc figure number--figure description separation
+%%       with a 2.25pc separation in \string\l@figure\space, but I couldn't.}}
 
 %% ASZ: I like it when tables of contents know where they are
-\patchcmd{\@starttoc}{\ifx\contentsname}{\iffalse}
-  {} % Success
-  {\GenericError
-     {} % Continuation for \MessageBreak (unused)
-     {Could not add a line to the table of contents for itself}
-     {(This is a hack in the preamble.)} % Where to look for more info?
-     {I tried to replace the check in \string\@starttoc\space that suppresses a
-      table of contents entry for the table of contents, but I couldn't.}}
+%% \patchcmd{\@starttoc}{\ifx\contentsname}{\iffalse}
+%%   {} % Success
+%%   {\GenericError
+%%      {} % Continuation for \MessageBreak (unused)
+%%      {Could not add a line to the table of contents for itself}
+%%      {(This is a hack in the preamble.)} % Where to look for more info?
+%%      {I tried to replace the check in \string\@starttoc\space that suppresses a
+%%       table of contents entry for the table of contents, but I couldn't.}}
 
 %% ASZ: The other half of the above
-\patchcmd{\@starttoc}{\@tocwrite}{\phantomsection\@tocwrite}
-  {} % Success
-  {\GenericError
-     {} % Continuation for \MessageBreak (unused)
-     {Could not add link targets to the table of contents/front matter lists}
-     {(This is a hack in the preamble.)} % Where to look for more info?
-     {I tried to add \string\phantomsection\space to \string\@starttoc\space so
-      that it would generate hyperlink targets, but I couldn't.}}
-\makeatother
+%% \patchcmd{\@starttoc}{\@tocwrite}{\phantomsection\@tocwrite}
+%%   {} % Success
+%%   {\GenericError
+%%      {} % Continuation for \MessageBreak (unused)
+%%      {Could not add link targets to the table of contents/front matter lists}
+%%      {(This is a hack in the preamble.)} % Where to look for more info?
+%%      {I tried to add \string\phantomsection\space to \string\@starttoc\space so
+%%       that it would generate hyperlink targets, but I couldn't.}}
+%% \makeatother
 
 %% ASZ: Set the page layout correctly: 1.5" margins on the left, 1" margins
 %% everywhere else, page numbers count
-\usepackage{fullpage}
-\usepackage[margin=1in,left=1.5in,includeheadfoot]{geometry}
+%% \usepackage{fullpage}
+%% \usepackage[margin=1in,left=1.5in,includeheadfoot]{geometry}
 
 %% ASZ: Make footnote numbers run continuously, rather than restart at the start
 %% of every chapter; this is required by the formatting guidelines
-\counterwithout*{footnote}{chapter}
+%% \counterwithout*{footnote}{chapter}
 
 %% ASZ: I found these to be much clearer
-\numberwithin{section}{chapter}
-\numberwithin{figure}{chapter}
-\numberwithin{equation}{chapter}
-\numberwithin{definition}{chapter}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%% ASZ: This is a package for generating and styling the various "preliminary
-%% pages": title page, copyright page, and abstract
-\usepackage{upenn-dissertation-preliminary-pages} % local
-\NoSignatureLines %% ASZ: For COVID – turns off adding lines on the title page
-                  %% for people to sign.  The default is \YesSignatureLines.
-\SingleSpaceAbstract %% ASZ: I think it looks better than a double-spaced
-                     %% abstract, although in deference to the guidelines,
-                     %% \DoubleSpaceAbstract is the default.
-
-%% ASZ: Fill out your own information here :-)  Some notes:
-%%
-%% * You need to specify your advisor, the graduate chair, and your committee
-%%   members, even if there's overlap between these groups.
-%%
-%%   * Your external committee member(s) need both their title and their
-%%   affiliation; below, just imagine that everyone but Gödel works at Penn.
-%%
-%% * Note that some of the faculty involved for you may be assistant or
-%%   associate professors (but I couldn't bring myself to apply that title to
-%%   any of these luminaries).  I don't believe extra titles (e.g., "ENIAC
-%%   President's Distinguished Professor") are necessary.
-%%
-%% * Only one committee chair is supported; you'll need to modify
-%%   `upenn-dissertation-preliminary-pages.sty` (or email me about it) to change
-%%   that.
-%%
-%% * When rendering the title page, your chair (if present) comes first,
-%%   followed by the rest of the committee in the same order as in the TeX.
-%%
-%% * Using a Creative Commons license is optional, and thus so is specifying
-%%   `\creativecommons`.  If you want to use one, choose from the licenses
-%%   available at <https://creativecommons.org/licenses/>, perhaps by using the
-%%   license chooser at <https://creativecommons.org/choose/>.  You'll have to
-%%   copy the name of the  license (including the short string) and the URL
-%%   separately, as you can see with the text below (the license I used); I
-%%   didn't build a LaTeX Creative Commons license parser (yet? :-)).
-\title{Testing by Dualization}
-\author{Yishuai Li}
-\graduategroup{Computer and Information Science}
-\graduationyear{2022}
-\advisor{Benjamin C. Pierce}{Professor of Computer and Information Science}
-\graduatechair{Mayur Naik}{Professor of Computer and Information Science}
-\committeechair{Steve Zdancewic}{Professor of Computer and Information Science}
-\committeemember{Mayur Naik}{Professor of Computer and Information Science}
-\committeemember{Boon Thau Loo}{Professor of Computer and Information Science}
-\committeemember{John Hughes}{Professor of Computing Science, Chalmers University of Technology}
-\creativecommons
-  {Attribution-Share\-Alike 4.0 International (CC BY-SA 4.0)}
-  {https://creativecommons.org/licenses/by-sa/4.0/}
+%% \numberwithin{section}{chapter}
+%% \numberwithin{figure}{chapter}
+%% \numberwithin{equation}{chapter}
+%% \numberwithin{definition}{chapter}
 
 \begin{document}
+\maketitle % If you are in the Romance Languages or the Managerial Science and Applied Economics graduate group, comment out this line. If you do, you will also need to edit lines 33 and 72.
+%\makespecializationtitle % If in the Romance Languages or the Managerial Science and Applied Economics graduate group, uncomment this line. If you do, you will also need to edit lines 33 and 71.
+\setcounter{page}{2}
 
-%% ASZ: Roman page numbers
-\frontmatter
+%%%% OPTIONAL COPYRIGHT NOTICE
+%\makecopyright % If not applicable, comment out this line to hide the optional traditional copyright notice page. If you do, you will also need to edit line 47.
+%-------------------------------------------
+\makecreativecommons % If applicable, uncomment this line to insert the optional Creative Commons License copyright notice page. If you do, you will also need to edit lines 49, 51, and 76.
+%-------------------------------------------
 
-\maketitle
+%%%% OPTIONAL DEDICATION PAGE
+%\makededication % If not applicable, comment out this line to hide the optional dedication page. If you do, you will also need to edit line 55.
+%-------------------------------------------
 
-\copyrightpage
+%%%% OPTIONAL ACKNOWLEDGEMENT PAGE
+\makeacknowledgement % If not applicable, comment out this line to hide the optional acknowledgment page. If you do, you will also need to edit line 59.
+%-------------------------------------------
 
-\chapter*{Acknowledgments}
-\label{chap:acknowledgments}
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum
-dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident,
-sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-%% ASZ: ... the rest of your acknowledgments go here ...
-
-%% ASZ: The `upenn-dissertation-preliminary-pages` package will correctly style
-%% this, including your thesis name, your name, and your advisor's name.
-\begin{abstract}{chap:abstract}
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-  incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-  nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-  consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-  cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-  proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-\end{abstract}
-
+\makeabstract
 \tableofcontents
-\listoffigures
 
-%% ASZ: Arabic page numbers
-\mainmatter
+%%%% OPTIONAL LIST OF TABLES
+%\clearpage \phantomsection \addcontentsline{toc}{chapter}{LIST OF TABLES} \listoftables % If not applicable, comment out this line to hide the optional List of Tables
+%-------------------------------------------
 
-\chapter{Introduction}
+%%%% OPTIONAL LIST OF ILLUSTRATIONS
+%\clearpage \phantomsection \addcontentsline{toc}{chapter}{LIST OF ILLUSTRATIONS} \listoffigures % If not applicable, comment out this line to hide the optional List of Illustrations
+%-------------------------------------------
+
+%%%% OPTIONAL PREFACE
+%\makepreface % If applicable, uncomment this line to insert the optional preface. If you do, you will also need to edit line 67.
+%-------------------------------------------
+
+%%%%% MAIN TEXT %%%%%
+\begin{mainf} % The main body of your dissertation starts below this line 
+
+\chpt{Introduction}
 \label{chap:introduction}
 \input{intro}
 
-\chapter{Dualization Theory}
+\chpt{Dualization Theory}
 \label{chap:theory}
 \input{theory}
 
-\chapter{Testing in Practice}
+\chpt{Testing in Practice}
 \label{chap:practices}
 \input{practice}
 
-\chapter{Test Harness Design}
+\chpt{Test Harness Design}
 \label{chap:harness}
 \input{harness}
 
-\chapter{Evaluation}
+\chpt{Evaluation}
 \label{chap:eval}
 \input{eval}
 
-\chapter{Related Work}
+\chpt{Related Work}
 \label{chap:related-work}
 \input{related}
 
-\chapter{Discussions}
+\chpt{Discussions}
 \label{chap:discussion}
 
-\chapter{Conclusion}
+\chpt{Conclusion}
 \label{chap:conclusion}
 
-\printbibliography
-  %% ASZ: AucTeX (the Emacs package for LaTeX I used) doesn't support a `.bib`
-  %% file and a `.tex` file with the same name
+\end{mainf}
 
-\appendix
-
-\chapter{Mathematical Proof of Derived Validators' Correctness}
-\label{chap:math-proof}
-\input{math-proof}
-
-\chapter{Unstructured contents}
-\input{issta}
-
+%%%%% BIBLIOGRAPHY %%%%%
+%-------------------------------------------
+\begin{bibliof}
+%\nocite{*} % If applicable, uncomment this line to display all entries in the .bib file
+\bibliography{bibliography}
+\end{bibliof}
+%-------------------------------------------
 \end{document}
