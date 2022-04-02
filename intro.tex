@@ -512,17 +512,18 @@ capture protocol violations effectively.
 This claim is supported by the following publications:
 \begin{enumerate}
 \item {\it From C to Interaction Trees: Specifying, Verifying, and Testing a
-  Networked Server}~\cite{cpp19}, with Nicolas Koh, Yao Li, Li-yao Xia, Lennart
-  Beringer, Wolf Honor\'e, and William Mansky, where I developed a tester
-  program based on a swap server's specification written as ITrees~\cite{itree},
-  and evaluated the tester's effectiveness by mutation testing.
+  Networked Server}~\citep{cpp19}, with Nicolas Koh, Yao Li, Li-yao Xia, Lennart
+  Beringer, Wolf Honor\'e, William Mansky, Benjamin C. Pierce, and Steve
+  Zdancewic, where I developed a tester program based on a swap server's
+  specification written as ITrees~\citep{itree}, and evaluated the tester's
+  effectiveness by mutation testing.
 \item {\it Verifying an HTTP Key-Value Server with Interaction Trees and
-  VST}~\cite{itp21}, with Hengchu Zhang, Wolf Honor\'e, Nicolas Koh, Yao Li,
-  Li-yao Xia, Lennart Beringer, and William Mansky, where I developed the
-  top-level specification for \http, and derived a tester client that revealed
-  liveness and interrupt-handling bugs in our HTTP server, despite it was
-  formally verified.
-\item {\it Model-Based Testing of Networked Applications}~\cite{issta21}, which
+  VST}~\citep{itp21}, with Hengchu Zhang, Wolf Honor\'e, Nicolas Koh, Yao Li,
+  Li-yao Xia, Lennart Beringer, William Mansky, Benjamin C. Pierce, and Steve
+  Zdancewic, where I developed the top-level specification for \http, and
+  derived a tester client that revealed liveness and interrupt-handling bugs in
+  our HTTP server, despite it was formally verified.
+\item {\it Model-Based Testing of Networked Applications}~\citep{issta21}, which
   describes my technique of specifying \http with symbolic reference
   implementations, and from the specification, automatically deriving a tester
   program that can find bugs in Apache and Nginx.

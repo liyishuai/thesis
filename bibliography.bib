@@ -119,13 +119,17 @@ and Sannella, Don},
 	howpublished =	{RFC 793},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC0793},
-	url =		{https://rfc-editor.org/rfc/rfc793.txt},
-        author=         {Postel, Jon and others},
+	url =		{https://www.rfc-editor.org/info/rfc793},
+        author =	{Postel, Jon},
 	title =		{{Transmission Control Protocol}},
 	pagetotal =	91,
 	year =		1981,
 	month =		sep,
 }
+
+% Datatracker information for RFCs on the Legacy Stream is unfortunately often
+% incorrect. Please correct the bibtex below based on the information in the
+% actual RFC at https://rfc-editor.org/rfc/rfc1122.txt
 
 @misc{rfc1122,
 	series =	{Request for Comments},
@@ -133,7 +137,7 @@ and Sannella, Don},
 	howpublished =	{RFC 1122},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC1122},
-	url =		{https://rfc-editor.org/rfc/rfc1122.txt},
+	url =		{https://www.rfc-editor.org/info/rfc1122},
         author =	{Robert T. Braden},
 	title =		{{Requirements for Internet Hosts - Communication Layers}},
 	pagetotal =	116,
@@ -148,12 +152,28 @@ and Sannella, Don},
 	howpublished =	{RFC 2616},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC2616},
-	url =		{https://rfc-editor.org/rfc/rfc2616.txt},
-        author =	{Roy T. Fielding and Jim Gettys and Jeffrey C. Mogul and Frystyk Nielsen, Henrik and Larry Masinter and Paul Leach and Tim Berners-Lee},
+	url =		{https://www.rfc-editor.org/info/rfc2616},
+        author =	{Fielding, Roy T. and Gettys, Jim and Mogul, Jeffrey C. and Frystyk, Henrik and Masinter, Larry and Leach,  Paul and Berners-Lee, Tim},
 	title =		{{Hypertext Transfer Protocol -- HTTP/1.1}},
+	pagetotal =	176,
 	year =		1999,
 	month =		jun,
 	abstract =	{HTTP has been in use by the World-Wide Web global information initiative since 1990. This specification defines the protocol referred to as "HTTP/1.1", and is an update to RFC 2068. {[}STANDARDS-TRACK{]}},
+}
+
+@misc{rfc4918,
+	series =	{Request for Comments},
+	number =	4918,
+	howpublished =	{RFC 4918},
+	publisher =	{RFC Editor},
+	doi =		{10.17487/RFC4918},
+	url =		{https://www.rfc-editor.org/info/rfc4918},
+        author =	{Lisa M. Dusseault},
+	title =		{{HTTP Extensions for Web Distributed Authoring and Versioning (WebDAV)}},
+	pagetotal =	127,
+	year =		2007,
+	month =		jun,
+	abstract =	{Web Distributed Authoring and Versioning (WebDAV) consists of a set of methods, headers, and content-types ancillary to HTTP/1.1 for the management of resource properties, creation and management of resource collections, URL namespace manipulation, and resource locking (collision avoidance). RFC 2518 was published in February 1999, and this specification obsoletes RFC 2518 with minor revisions mostly due to interoperability experience. {[}STANDARDS-TRACK{]}},
 }
 
 @misc{rfc7230,
@@ -162,7 +182,7 @@ and Sannella, Don},
 	howpublished =	{RFC 7230},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC7230},
-	url =		{https://rfc-editor.org/rfc/rfc7230.txt},
+	url =		{https://www.rfc-editor.org/info/rfc7230},
         author =	{Roy T. Fielding and Julian Reschke},
 	title =		{{Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing}},
 	pagetotal =	89,
@@ -177,7 +197,7 @@ and Sannella, Don},
 	howpublished =	{RFC 7231},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC7231},
-	url =		{https://rfc-editor.org/rfc/rfc7231.txt},
+	url =		{https://www.rfc-editor.org/info/rfc7231},
         author =	{Roy T. Fielding and Julian Reschke},
 	title =		{{Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content}},
 	pagetotal =	101,
@@ -192,7 +212,7 @@ and Sannella, Don},
 	howpublished =	{RFC 7232},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC7232},
-	url =		{https://rfc-editor.org/rfc/rfc7232.txt},
+	url =		{https://www.rfc-editor.org/info/rfc7232},
         author =	{Roy T. Fielding and Julian Reschke},
 	title =		{{Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests}},
 	pagetotal =	28,
@@ -200,6 +220,7 @@ and Sannella, Don},
 	month =		jun,
 	abstract =	{The Hypertext Transfer Protocol (HTTP) is a stateless application- level protocol for distributed, collaborative, hypertext information systems. This document defines HTTP/1.1 conditional requests, including metadata header fields for indicating state changes, request header fields for making preconditions on such state, and rules for constructing the responses to a conditional request when one or more preconditions evaluate to false.},
 }
+
 
 @article{anand2013orchestrated,
 title = "An orchestrated survey of methodologies for automated software test case generation",
@@ -614,6 +635,12 @@ series = {ISSTA 2017}
   ISSN={1941-0131},
   month={July},}
 
+@url{nginx,
+title={Nginx},
+url={http://nginx.org/},
+author={Sysoev, Igor}
+}
+
 @url{nginx242,
    title={DAV module does not respect if-unmodified-since},
    url={https://trac.nginx.org/nginx/ticket/242},
@@ -767,4 +794,19 @@ keywords = {Coq, Narrowing, Property-based Testing, QuickCheck, QuickChick, Rand
   keys = {books},
   homepage = {http://www.cis.upenn.edu/~bcpierce/tapl},
   errata = {http://www.cis.upenn.edu/~bcpierce/tapl/errata.txt}
+}
+
+@url{http-stats,
+  author={W3Techs},
+  title={Historical trends in the usage statistics of web servers},
+  url={https://w3techs.com/technologies/history_overview/web_server}
+}
+
+@url{http-netcraft,
+  title={Web server survey},
+  url={https://news.netcraft.com/archives/category/web-server-survey/},
+  author={Netcraft},
+  year={2022},
+  month={Mar},
+  date={29}
 }

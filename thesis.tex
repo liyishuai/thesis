@@ -12,7 +12,7 @@
 
 %-------------------------------------------
 % Citation and bibliography commands. Edit as needed.
-\usepackage[nonamebreak,round]{natbib}
+\usepackage[square,numbers]{natbib}
 \bibliographystyle{plainnat}
 %-------------------------------------------
 
@@ -136,9 +136,9 @@
 \newcommand{\inlinec}[1]{\lstinline[style=customc]{#1}}
 \newcommand{\ilc}[1]{\lstinline[style=customcoq]{#1}}
 \newcommand{\ilj}[1]{\lstinline[style=json]{#1}}
-\lstnewenvironment{coq}{\lstset{style=customcoq}}{}
-\lstnewenvironment{cpp}{\lstset{style=customc}}{}
-\lstnewenvironment{json}{\lstset{style=json}}{}
+\lstnewenvironment{coq}{\lstset{style=customcoq}\linespread{1}}{}
+\lstnewenvironment{cpp}{\lstset{style=customc}\linespread{1}}{}
+\lstnewenvironment{json}{\lstset{style=json}\linespread{1}}{}
 \lstset{escapechar=\%,style=customcoq}
 
 \usepackage{mathtools}
@@ -280,6 +280,11 @@
 %% \numberwithin{figure}{chapter}
 %% \numberwithin{equation}{chapter}
 %% \numberwithin{definition}{chapter}
+
+%% https://tex.stackexchange.com/a/2652
+\makeatletter
+\g@addto@macro\@floatboxreset\centering
+\makeatother
 
 \begin{document}
 \maketitle % If you are in the Romance Languages or the Managerial Science and Applied Economics graduate group, comment out this line. If you do, you will also need to edit lines 33 and 72.

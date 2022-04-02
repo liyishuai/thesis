@@ -1,41 +1,68 @@
-To evaluate whether our derived tester is effective at finding bugs, we ran the
-tester against mainstream HTTP servers, as well as server implementations with
-bugs inserted by us.
-%% \bcp{Need to explain what we mean by mutatation.  (``mutation testing'' is a
-%% different thing...)}
+This chapter evaluates the testing methodology presented in this thesis, by
+deriving testers from specifications and running them against systems under
+test.  
 
-\section{Experiment Setup}
-\subsection{Systems Under Test (SUTs)}
-We ran the tests against Apache HTTP Server~\cite{Apache}, which is among the
-most popular servers on the World Wide Web.  We used the latest release 2.4.46,
-and edited the configuration file to enable WebDAV and proxy modules.  Our
-tester found a violation against RFC~7232 in the Apache server, so we modified
-its source code before creating mutants.
+I conduct the experiments on two kinds of systems, \http server
+(\autoref{sec:http}) and file synchronizer (\autoref{sec:sync}).  The research
+questions are: (1) Qualitative: Can the tester find invalid behavior from the
+SUT? and (2) Quantitative: How long does it take the tester to reveal invalid
+behavior?
 
-We've also tried testing Nginx and found another violation against RFC~7232.
-However, the module structure of Nginx made it difficult to fix the bug
-instantly.  (The issue was first reported 8 years ago and still not fixed!)
-Therefore, no mutation testing was performed on Nginx.
+\section{Testing Web Servers}
+\label{sec:http}
 
-\subsection{Infrastructure}
+This thesis is motivated by the Deep Specification project~\cite{deepspec},
+whose goal is to build systems with rigorous guarantee of functional
+correctness, studying HTTP as an example.  I formalized a subset of \http
+specification, featuring WebDAV requests GET, PUT, and POST~\cite{rfc4918}, ETag
+preconditions~\cite{rfc7232}, and forward proxying~\cite{rfc7231}.
+
+From the protocol specification written as ITrees, I derived a tester client
+that sends and receives network packets.  \autoref{sec:http-sut} explains the
+system under test and the experiment setup.  \autoref{sec:http-qual} and
+\autoref{sec:http-quant} then describe the evaluation results qualitatively and
+quantitatively.
+
+\subsection{Systems Under Test}
+\label{sec:http-sut}
+I ran the derived tester against three server implementations:
+
+\begin{itemize}
+\item Apache HTTP Server~\cite{Apache}, which is among the most popular servers
+  on the World Wide Web~\cite{http-netcraft,http-stats}.  I used the latest
+  release 2.4.46, and edited its configuration file to enable WebDAV and proxy
+  modules.
+\item Nginx~\cite{nginx}, the other most popular server.  The experiment was
+  conducted on the latest release 1.19.10, with WebDAV and proxy modules enabled
+  separately, because they cannot work together as Apache does.
+\item A simple web server developed in C by \citet{itp21}, supporting GET and
+  POST requests.  The server's functional correctness was formally verified.  We
+  aimed at developing formal specifications that are testable and verifiable.
+\end{itemize}
+
 The tests were performed on a laptop computer (with Intel Core i7 CPU at 3.1
-GHz, 16GB LPDDR3 memory at 2133MHz, and macOS 10.15.7).  The SUT was deployed
-as a Docker instance, using the same host machine as the tester runs on.  They
-communicate with POSIX system calls, in the same way as over Internet except
-using address \inlinec{localhost}.  The round-trip time (RTT) of local loopback
-is $0.08\pm0.04$ microsecond (at 90\% confidence).
+GHz, 16GB LPDDR3 memory at 2133MHz, and macOS 10.15.7).  The Apache and Nginx
+servers were deployed as Docker instances, using the same host machine as the
+tester runs on.  Our simple server was compiled into an executable binary, and
+also ran on localhost.
 
-\section{Results}
-\label{sec:eval-performance}
-\subsection{Finding Bugs in Real-World Servers and Mutants}
-Our tester rejected the unmodified Apache HTTP Server, which uses strong
-comparison for PUT requests conditioned over \inlinec{If-None-Match}, while RFC~7232
-specified that \inlinec{If-None-Match} preconditions must be evaluated with weak
-comparison\bcp{What are strong and weak comparison?  \lys{ETag jargons.}}.  We reported
-this bug to the developers, and figured out that Apache was conforming with an
+The tester communicates with the server via POSIX system calls, in the same way
+as over Internet except using address \inlinec{127.0.0.1}.  The round-trip time
+(RTT) of local loopback is $0.08\pm0.04$ microsecond (at 90\% confidence).
+
+\subsection{Qualitative Result}
+\label{sec:http-qual}
+\paragraph{Apache}
+My tester rejected the Apache HTTP Server, which uses strong comparison for PUT
+requests conditioned over \inlinec{If-None-Match}, while RFC~7232 specified that
+\inlinec{If-None-Match} preconditions must be evaluated with weak comparison.
+\bcp{What are strong and weak comparison?  \lys{ETag jargons.}}  I reported this
+bug to the developers, and figured out that Apache was conforming with an
 obsoleted \http standard~\cite{rfc2616}.  The latest standard has changed the
 semantics of \inlinec{If-None-Match} preconditions, but Apache didn't update the
 logic correspondingly.
+
+\lys{Under construction:}
 
 We created 20 mutants by manually modifying the Apache source code.  The tester
 rejected all the 20 mutants, located in various modules of the Apache server:
@@ -53,16 +80,17 @@ opened by \citet{nginx242}.  These results show that our tester is capable of
 finding bugs in server implementations, including those we're unaware of.
 %% \bcp{But you just described a known bug!}
 
-\subsection{Performance}
+\subsection{Quantitative Result}
+\label{sec:http-quant}
 
 \begin{figure*}
   \includegraphics[width=\textwidth]{figures/http-time}
-  \caption{Cost of detecting bug in each server/mutant.  The left box with
-    median line is the tester's execution time before rejecting the server,
-    which includes interacting with the server and checking its responses.  The
-    right bar with median circle is the number of \http messages sent and
-    received by the tester before finding the bug.  Results beyond
-    25\%--75\% are covered by whiskers.
+  \caption[Cost of detecting bug in each server/mutant]{Cost of detecting bug in
+    each server/mutant.  The left box with median line is the tester's execution
+    time before rejecting the server, which includes interacting with the server
+    and checking its responses.  The right bar with median circle is the number
+    of \http messages sent and received by the tester before finding the bug.
+    Results beyond 25\%--75\% are covered by whiskers.
     %% \bcp{The red horizontal
     %%   lines are very confusing: make them blue!  Also, we need to explain
     %%   what all the parts of the figure mean (or, better, remove most of
@@ -136,3 +164,6 @@ state, but for Mutants 18--20, the requests should be sent at
 specific time periods so that the resulting trace is unacceptable per
 specification.  How to produce a specific order of messages is to be explored in
 future work.
+
+\section{File synchronizer}
+\label{sec:sync}
