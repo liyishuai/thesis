@@ -4,9 +4,9 @@ test.
 
 I conduct the experiments on two kinds of systems, \http server
 (\autoref{sec:http}) and file synchronizer (\autoref{sec:sync}).  The research
-questions are: (1) Qualitative: Can the tester find invalid behavior from the
-SUT? and (2) Quantitative: How long does it take the tester to reveal invalid
-behavior?
+questions are: (1) Qualitative: Is the tester useful to finding invalid behavior
+in the SUT? and (2) Quantitative: Can the tester reveal those invalid behavior
+quickly?
 
 \section{Testing Web Servers}
 \label{sec:http}
@@ -33,11 +33,12 @@ I ran the derived tester against three server implementations:
   release 2.4.46, and edited its configuration file to enable WebDAV and proxy
   modules.
 \item Nginx~\cite{nginx}, the other most popular server.  The experiment was
-  conducted on the latest release 1.19.10, with WebDAV and proxy modules enabled
-  separately, because they cannot work together as Apache does.
-\item A simple web server developed in C by \citet{itp21}, supporting GET and
-  POST requests.  The server's functional correctness was formally verified.  We
-  aimed at developing formal specifications that are testable and verifiable.
+  conducted on the latest release 1.19.10, with only WebDAV module enabled,
+  because Nginx doesn't fully support forward proxying like Apache does.
+\item DeepWeb server developed in collaboration with \citet{itp21}, supporting
+  GET and POST requests.  The server's functional correctness was formally
+  verified, showing our methodology of specifying systems in testable and
+  verifiable ways.
 \end{itemize}
 
 The tests were performed on a laptop computer (with Intel Core i7 CPU at 3.1
@@ -62,35 +63,74 @@ obsoleted \http standard~\cite{rfc2616}.  The latest standard has changed the
 semantics of \inlinec{If-None-Match} preconditions, but Apache didn't update the
 logic correspondingly.
 
+To further evaluate the tester's performance in finding other violations, I
+fixed the precondition bug by deleting 13 lines of source code and recompiling
+the container.
+
+The tester accepted the fixed implementation, which can be explained in two
+ways: (1) The server now complies with the specification, or (2) The server has
+a bug that the tester cannot detect.  To provide more confidence that (1) is the
+case, I ran the tester against servers with known bugs, created by mutating the
+Apache source code manually.\footnote{I didn't use automatic mutant generators
+  because (i) Existing tools could not mutate all modules I'm interested in; and
+  (ii) The automatically generated mutants could not cause semantic violations
+  against my protocol specification.}
+
+The tester rejected all 20 bugs, located in various modules of the Apache
+server: \inlinec{core}, \inlinec{http}, \inlinec{dav}, and \inlinec{proxy}.
+They appear both in control flow ({\it e.g.}, early return of handler function,
+skipped precondition check) and in data values ({\it e.g.}, calling functions
+with wrong parameters, flipping bits in computations, accessing buffer off by
+one byte).  Some mutants took the tester longer time to reveal than others,
+which will be discussed in \autoref{sec:http-quant}.
+
+\paragraph{Nginx}
+When testing Nginx, I found that its WebDAV module did not check the
+\inlinec{If-Match} and \inlinec{If-None-Match} preconditions of PUT requests.  I
+then browsed the Nginx bug tracker and found a ticket opened by
+\citet{nginx242}, reporting the same issue with \inlinec{If-Unmodified-Since}
+preconditions.
+
+This issue has been recognized by the developers in 2016 but never resolved.
+One possible reason is that the current architecture of Nginx makes it difficult
+for the WebDAV module to utilize the precondition checker in the HTTP core
+module.
+
+A fix to this bug would involve either restructuring the modules or copying
+source code from one module to another, unlike simply removing bad code in
+Apache, so I only tested mutants for the latter.
+
+\paragraph{DeepWeb}
+My test derivation framework was developed in parallel with the DeepWeb server.
+After my collaborators finished the formal proof of the server's functional
+correctness, I tested the server with my derived tester.  The tester has
+revealed a liveness issue---when a client pipelines more than one requests in a
+single connection, the server may hang without processing the latter requests.
+
+This liveness bug was out of scope for the server's functional correctness,
+which only requires the server not to send invalid messages.  Such partial
+correctness may be trivially satisfied by a silent implementation that never
+responds.  My experiments has shown this limitation in formal verification, and
+guided the debugging of the server implementation.
+
+These results show that my tester is capable of finding different kinds of bugs
+in server implementations, within and beyond functional correctness.  Next I'll
+evaluate how long the tester takes to reveal bugs.
+
 \lys{Under construction:}
-
-We created 20 mutants by manually modifying the Apache source code.  The tester
-rejected all the 20 mutants, located in various modules of the Apache server:
-\inlinec{core}, \inlinec{http}, \inlinec{dav}, and \inlinec{proxy}.  They appear
-both in control flow ({\it e.g.}, early return, skipped condition) and in data
-values ({\it e.g.}, wrong arguments, flip bit, buffer off by one byte).
-
-We didn't use automatic mutant generators because (i) Existing tools could not
-mutate all modules we're interested in; and (ii) The automatically generated
-mutants could not cause semantic violations against our protocol specification.
-
-When testing Nginx, we found that the server did not check the preconditions of
-PUT requests.  We then browsed the Nginx bug tracker and found a similar ticket
-opened by \citet{nginx242}.  These results show that our tester is capable of
-finding bugs in server implementations, including those we're unaware of.
-%% \bcp{But you just described a known bug!}
 
 \subsection{Quantitative Result}
 \label{sec:http-quant}
 
 \begin{figure*}
   \includegraphics[width=\textwidth]{figures/http-time}
-  \caption[Cost of detecting bug in each server/mutant]{Cost of detecting bug in
-    each server/mutant.  The left box with median line is the tester's execution
-    time before rejecting the server, which includes interacting with the server
-    and checking its responses.  The right bar with median circle is the number
-    of \http messages sent and received by the tester before finding the bug.
-    Results beyond 25\%--75\% are covered by whiskers.
+  \caption[Cost of detecting bug in each server/mutant.]{Cost of detecting bug
+    in each server implementation.  The left box with median line is the
+    tester's execution time before rejecting the server, which includes
+    interacting with the server and checking its responses.  The right bar with
+    median circle is the number of \http messages sent and received by the
+    tester before finding the bug.  Results beyond 25\%--75\% are covered by
+    whiskers.
     %% \bcp{The red horizontal
     %%   lines are very confusing: make them blue!  Also, we need to explain
     %%   what all the parts of the figure mean (or, better, remove most of
@@ -100,70 +140,87 @@ finding bugs in server implementations, including those we're unaware of.
   \label{fig:checker-performance}
 \end{figure*}
 
-As shown in \autoref{fig:checker-performance}, the tester rejected all buggy
-implementations within 1 minute.  In most cases, the tester could find the bug
-within 1 second.
+To answer Research Question (2) at the beginning of this chapter, I measure the
+execution time and network interactions taken to reject vanilla Apache and its
+mutants, as shown in \autoref{fig:checker-performance}.  The 20 mutants are
+named after the module where I inserted the bug.  The tester rejected all the
+buggy implementations within 1 minute, and in most cases, within 1 second.  This
+does not include the time for shrinking the counterexample.
 
 Some bugs took longer time to find, and they usually required more interactions
 to reveal.  This may be caused by (1) The counter-example has a certain pattern
-that our generator didn't optimize for, or (2) The tester did produce a
-counter-example, but failed to reject the wrong behavior.  We determine the real
-cause by analysing the bugs and their counterexamples:
+that my generator didn't optimize for, or (2) The tester did produce a
+counter-example, but failed to reject the wrong behavior.  I determine the real
+cause by analyzing the bugs and their counterexamples:
 
+\begin{figure}
+  \includegraphics[width=\linewidth]{figures/http-put-bug}
+  \caption[GET-after-PUT bug pattern in Apache mutants.]{GET-after-PUT bug
+    pattern in Apache mutants.  The trace on the left does not convince the
+    tester that the server is buggy, because there exists a certain network
+    delay that explains why the PUT request was not reflected in the 200
+    response.  When the trace is ordered as shown on the right, the tester
+    cannot imagine any network reordering that causes such observation, thus
+    must reject the server.}
+  \label{fig:put-bug}
+\end{figure}
+  
 \begin{itemize}
-  \begin{figure}
-    \lys{Duplicates with \autoref{fig:reordered-trace} and
-      \autoref{fig:invalid-trace}.}
-    \includegraphics[width=\linewidth]{figures/http-put-bug}
-    \caption{The trace on the left does not convince the tester that the server
-      is buggy, because there exists a certain network delay that explains why
-      the PUT request was not reflected in the 200 response.  When the trace is
-      ordered as shown on the right, the tester cannot imagine any network
-      reordering that causes such observation, thus must reject the server.}
-    \label{fig:put-bug}
-  \end{figure}
   \item Mutants 19 and 20 are related to the WebDAV module, which handles PUT
     requests that modify the target's contents.  The buggy servers wrote to a
     different target from that requested, but responds a successful status to
-    the client.  The tester cannot tell that the server is faulty until it
-    queries the target's latest contents and observes an unexpected value.  To
-    reject the server with full confidence, these observations must be made in a
-    certain order, as shown in \autoref{fig:put-bug}.
+    the client.
 
-  \item Mutant 18 is similar to the bug in vanilla Apache: the server should have
-    responded with 304 Not Modified, but sent back 200 OK instead.  To reveal
-    such violation, a minimal counterexample consists of 4 messages: (1) GET
-    request, (2) 200 OK response with some ETag \inlinec{x}, (3) GET request
-    conditioned over \inlinec{If-None-Match: x}, and (4) 200 OK response,
-    indicating that the ETag \inlinec{x} did not match itself.  Notice that (2) must be
-    observed before (3), otherwise the tester will not reject the server, with a
-    similar reason as \autoref{fig:put-bug}.
+    The tester cannot tell that the server is faulty until it queries the
+    target's latest contents and observes an unexpected value.  To reject the
+    server with full confidence, these observations must be made in a certain
+    order, as shown in \autoref{fig:put-bug}.
+
+  \item Mutant 18 is similar to the bug in vanilla Apache: the server should
+    have responded with 304 Not Modified, but sent back 200 OK instead.  To
+    reveal such violation, a minimal counterexample consists of 4 messages:
+    \begin{enumerate}
+    \item GET request,
+    \item 200 OK response with some ETag \inlinec{"x"},
+    \item GET request conditioned over \inlinec{If-None-Match: "x"}, and
+    \item 200 OK response, indicating that the ETag \inlinec{"x"} did not match
+      itself.
+    \end{enumerate}
+    Notice that (2) must be observed before (3), otherwise the tester will not
+    reject the server, with a similar reason as \autoref{fig:put-bug}.
 
   \item Mutant 5 causes the server to skip some code in the core module, and
     send nonscence messages when it should respond with 404 Not Found.  The
     counterexample can be as small as one GET request on a non-existential
-    target, followed by a non-404, non-200 response.  However, our tester
+    target, followed by a non-404, non-200 response.  However, my tester
     generates request targets within a small range, so the requests' targets are
-    likely to be created by the tester's previous PUT requests.  Narrowing the
-    range of test case generation might improve the performance in
-    aforementioned Mutants 18--20, but Mutant 5 shows that it could
-    also degrade the performance of finding some bugs.
+    likely to be created by the tester's previous PUT requests.
+
+    Narrowing the range of test case generation might improve the performance in
+    aforementioned Mutants 18--20, but Mutant 5 shows that it could also degrade
+    the performance of finding some bugs.
 
   \item The mutants in proxy module caused the server to forward wrong requests
-    or responses.  When the origin server part of the tester accepts a
-    connection from the proxy, it does not know for which client the proxy is
-    forwarding requests.  Therefore, the tester needs to check the requests sent
-    by all clients, and make sure none of them matches the incoming proxy
-    request, before rejecting the proxy.
+    or responses.
+
+    To test servers' forward proxying functionality, the tester consists of
+    clients and origin servers, both derived by dualization.  When the origin
+    server part of the tester accepts a connection from the proxy, it does not
+    know for which client the proxy is forwarding requests.  Therefore, the
+    tester needs to check the requests sent by all clients, and make sure none
+    of them matches the forwarded proxy request.
+
+    The more client connections the tester has created, the longer it takes the
+    tester to check all connections before rejecting a buggy proxy.
 \end{itemize}
 
 These examples show that the time-consuming issue of some mutants are likely
-caused by limitations in the test case generators.  Cases like Mutant 5 can be
-optimized by tuning the request generator based on the tester model's runtime
-state, but for Mutants 18--20, the requests should be sent at
-specific time periods so that the resulting trace is unacceptable per
-specification.  How to produce a specific order of messages is to be explored in
-future work.
+caused by the generators' heuristics.  Cases like Mutant 5 can be optimized by
+state-based heuristics in \autoref{sec:heuristic-state}; Proxy-related bugs can
+be more easily found by trace-based heuristics in \autoref{sec:heuristic-trace};
+For Mutants 18--20, the requests should be sent at specific time periods so that
+the resulting trace is unacceptable per specification, which is discussed in
+\autoref{chap:discussion}.
 
 \section{File synchronizer}
 \label{sec:sync}
