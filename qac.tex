@@ -8,6 +8,7 @@ model programs that exhibit the space of valid behavior.  Networked servers can
 be modelled as infinite stateful programs that compute the answer for each
 query.
 \begin{definition}[Deterministic server model]
+  \label{def:qaserver}
 Let $Q$ be the query type, $A$ be the response type, and $S$ be some server
 state type.  Then a deterministic server is an infinite loop, defined by a loop
 body and an initial state.  The loop body is a state monad that takes a query,

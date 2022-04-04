@@ -222,5 +222,157 @@ For Mutants 18--20, the requests should be sent at specific time periods so that
 the resulting trace is unacceptable per specification, which is discussed in
 \autoref{chap:discussion}.
 
-\section{File synchronizer}
+\section{Testing file synchronizer}
 \label{sec:sync}
+
+To demonstrate the generality of my specification-based testing methodology, I
+applied it to file synchronizers.  \autoref{sec:file-sut} introduces my
+specification of the file system and synchronization semantics.  From these
+specifications, I derived a tester program for the Unison file
+synchronizer~\cite{unison}, with results shown in \autoref{sec:file-result}.
+
+\subsection{System Under Test}
+\label{sec:file-sut}
+A file synchronizer manipulates the file system to reconcile updates in
+different replicas~\cite{what-sync}.  To check a synchronizer's correctness, the
+tester needs to update replicas, launch the synchronization process, and observe
+the propagated updates.
+
+\begin{figure}
+\begin{coq}
+  Inductive node :=
+    File      : content          -> node
+  | Directory : list (name*node) -> node.
+
+  Context read : path -> node    -> option content.
+  Context write: path -> content -> node -> option node.
+  Context mkdir: path -> node    -> option node.
+  Context ls   : path -> node    -> list name.
+  Context rm   : path -> node    -> option node.
+\end{coq}
+\caption{File system specification.}
+\label{fig:file-spec}
+\end{figure}
+
+My specification consists of two parts:
+\begin{enumerate}
+  \item A file system model represented as a tree, where the leaves are files
+    and the branches are directories.  As shown in \autoref{fig:file-spec}, the
+    file system model is a simplified abstraction from the POSIX file interface,
+    ignoring metadata and file permissions.  Specifying more aspects of the file
+    system is discussed in \autoref{chap:discussion}.
+
+    Based on the file system model, I specified five basic file operations
+    the tester may perform: (i) reading contents from a file, (ii) writing
+    contents to a file, (iii) creating a new directory, (iv) listing entries
+    under a directory, and (v) removing a file or directory recursively.
+
+    Some file operations may fail {\it e.g.} when reading from a path that
+    refers to a directory.  These failures are represented as return value
+    \ilc{(None: option _)} in the node functions.
+  \item A file synchronizer model that syncs updates between two replicas,
+    implementing the reconcilation algorithm by \citet{what-sync}:
+\begin{coq}
+  Definition sigma := node*node*node.
+      
+  Context reconcile: sigma -> sigma.
+\end{coq}
+Notice that the \ilc{reconcile} function manipulates three replicas.  This is
+because the synchronizations might be partial: Upon write-write and write-delete
+conflicts, the synchronizer does not propagate the conflicting updates, and
+leaves the dirty files untouched in both replicas.
+
+The third parameter of the reconcile function represents the subset of the two
+replicas that were synchronized: \ilc{(reconcile (a,b,g))} syncs replicas \ilc a
+and \ilc b based on their previous consensus \ilc g.  The consensus is initially
+empty, and updated when a change in one replica is propagated to another, or the
+two replicas have made identical changes.
+\end{enumerate}
+
+\begin{figure}
+\begin{coq}
+  Variant F :=        (* file operations *)
+  Fls    (p: path)
+| Fread  (p: path)
+| Fwrite (p: path) (c: content)
+| Fmkdir (p: path)
+| Frm    (p: path).
+
+Variant R := R1 | R2. (* replicas      *)
+
+Variant Q :=          (* query type    *)
+  QFile (r: R) (f: F)
+| QSync.
+
+Variant A :=          (* response type *)
+  Als   (l: list name)
+| Aread (c: content)
+| Aexit (z: Z).       (* exit code     *)
+\end{coq}
+\caption{Query and response types for testing file synchronizer.}
+\label{fig:file-type}
+\end{figure}
+
+Having specified the file system interface and the reconcilation semantics, I
+modelled the SUT as a deterministic QA server described in
+\autoref{def:qaserver}.  As shown in \autoref{fig:file-type}, the request type
+\ilc Q can be file operations or the synchronization command; the response type
+\ilc A carries the return value of file system queries, or the transactions'
+exit code.  For example, when synchronizing the two replicas, code 1 indicates
+partial synchronization with conflicts unresolved, and code 2 means the
+synchronizer has crashed due to uncaught exceptions or interruptions.
+
+The QA model for the file system+synchronizer was dualized into a tester program
+that makes system calls to manipulate files, launch the synchronizer, and
+observe the updates.  The system calls are made one at a time, and the file
+synchronizer is run as a foreground process that blocks other interactions.
+Testing the synchronizer as a nonblocking background process is discussed in
+\autoref{chap:discussion}.
+
+\subsection{Experiment Results}
+\label{sec:file-result}
+The tester has revealed two features of the Unison file synchronizer, and I
+reported them to the developers.  By analyzing the program's behavior, the
+developers determined that Unison did not violate its specification, which
+allows a wider set of behavior than my specification defines.  The revealed
+features are as follows:
+
+\paragraph{Synchronizing read-only directories}
+When the tester creates a directory in one replica with read and execution
+permission (mode \ilj{500}) and calls the synchronization command, Unison
+crashed without creating the corresponding directory in the other replica.
+
+The crashing behavior only occurs on macOS, and is caused by Unison's mechanism
+for propagating changes: When copying directory \ilj{foo} from replica \ilj A to
+replica \ilj B, the synchronizer first creates a temporary directory
+``\ilj{B/.unison.foo.xxxx.unison.tmp}'', and then renames it to ``\ilj{B/foo}''.
+The \inlinec{rename} implementation in macOS requires write permission to
+proceed, so the change was not propagated.
+
+This issue is not considered a violation in Unison or macOS, because: (1) Unison
+is allowed to halt without propagating an expected change, as long as its exit
+code has indicated an error, and no unexpected change was propagated.  (2) The
+POSIX specification~\cite{posix} says the \inlinec{rename} function {\it may}
+require write access to the directory.
+
+Despite being compliant to the specification, this feature in Unison is
+considered a defect, as it disables synchronization of read-only files and
+directories.  A potential fix might be substituting \inlinec{rename} with other
+system calls.
+
+This defect was revealed by accident: My file system specification in
+\autoref{fig:file-spec} does not mention file permissions, so I defaulted to
+mode \ilj{755}.  However, when implementing the test executor, I made a typo
+that wrote the permission as hexadecimal \ilc{0x755} while it should be octal
+\ilc{0o755}.  This caused the created directory to have mode bits \ilj{525},
+which triggered the aforementioned behavior.
+
+This experiment shows that my current abstraction of the file system is worth
+expanding to include more information like file permissions, which might reveal
+other features of the file synchronizer.
+
+The experiment also reveals a challenge in specifying programs, that the
+underlying operating system might also pose uncertainty to the program's
+behavior.  Such external nondeterminism may be handled by parameterizing the
+program's specification over the OS's, in a similar way as composing the server
+model with the network model in \autoref{sec:external-nondet}.
