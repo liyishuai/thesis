@@ -390,13 +390,17 @@ performance at the risk of ignoring conflicts.  With fastcheck enabled by
 default on *nix systems, the synchronizer detects file modifications by checking
 if their timestamps have changed.  When the tester writes to the files with
 short intervals, the timestamps might remain unchanged, so the synchronizer
-treats the written file as unmodified.  Such behavior can be avoided by
-disabling the fastcheck feature or writing to files after longer intervals.
+treats the written file as unmodified.  Such behavior can be avoided by updating
+the file contents after a longer interval.
 
-Interestingly, although Unison decided to propagate the file deletion, it
+Notice that although Unison decided to propagate the file deletion, it does
+check the file contents before deleting it.  As a result, the Unison process
 crashed and complained that \ilj{B/foo.txt} was modified during synchronization.
-The reason why the synchronization process did not detect the modification ahead
-is under investigation in collaboration with the developers.
+
+If the fastcheck feature was disabled, then Unison can detect the conflict by
+comparing the file contents bit-by-bit.  It'll propagate no updates and leave
+the two replicas as-is, which results the same as enabling fastcheck but at
+lower performance.
 
 This experiment shows that the executor may affect the test result by
 interacting with the SUT slowly or quickly.  It is worth expanding the test
