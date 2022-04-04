@@ -376,3 +376,34 @@ underlying operating system might also pose uncertainty to the program's
 behavior.  Such external nondeterminism may be handled by parameterizing the
 program's specification over the OS's, in a similar way as composing the server
 model with the network model in \autoref{sec:external-nondet}.
+
+\paragraph{Detecting write-delete conflict}
+Suppose replicas \ilj A and \ilj B have a synchronized file \ilj{foo.txt}.  If
+the tester deletes \ilj{A/foo.txt} and writes to \ilj{B/foo.txt}, then according
+to the specification, the synchronizer should detect this conflict and halt with
+exit code 1.  During the tests, Unison did not notice that \ilj{B/foo.txt} was
+changed, and decided to propagate the deletion from replica \ilj A to replica
+\ilj B.
+
+This behavior is caused by Unison's ``fastcheck'' feature that improves the
+performance at the risk of ignoring conflicts.  With fastcheck enabled by
+default on *nix systems, the synchronizer detects file modifications by checking
+if their timestamps have changed.  When the tester writes to the files with
+short intervals, the timestamps might remain unchanged, so the synchronizer
+treats the written file as unmodified.  Such behavior can be avoided by
+disabling the fastcheck feature or writing to files after longer intervals.
+
+Interestingly, although Unison decided to propagate the file deletion, it
+crashed and complained that \ilj{B/foo.txt} was modified during synchronization.
+The reason why the synchronization process did not detect the modification ahead
+is under investigation in collaboration with the developers.
+
+This experiment shows that the executor may affect the test result by
+interacting with the SUT slowly or quickly.  It is worth expanding the test
+harness to allow different configurations for executing the tests.
+
+So far I have demonstrated the effectiveness of my testing methodology, by
+deriving testers that can reveal violations and interesting caveats in
+real-world systems like web servers and file synchronizers.  In the following
+chapters, I'll discuss related works in specifying and testing interactive
+systems, as well as potential improvements that can be made.
