@@ -1,33 +1,67 @@
 The area of automated testing is well-studied, diverse, and difficult to
 navigate~\cite{anand2013orchestrated}.  This chapter explores methodologies in
 specifying and testing interactive systems.  I focus on techniques that have
-been practised in testing real-world programs.
+been practised in testing real-world programs.  \autoref{sec:related-validate}
+compares different specification techniques and their derived validators.
+\autoref{sec:related-harness} then discusses practices in developing test
+harnesses.
 
-This chapter partitions the techniques by the languages used for writing the
-specifications, which are motivated by the challenges posed in various testing
-scenarios.
+\section{From Specification to Validators}
+\label{sec:related-validate}
 
-\section{State machine specification: Quviq QuickCheck}
-\citet{testing-dropbox} have tested Dropbox, by specifying the synchronizer as a
-stateful program.  Their specification focuses on a single file being editted
-and synchronized among multiple nodes, while I specify the semantics for
-synchronizing directories with tree structure.
+Different testing scenarios exhibit various challenges that motivate the
+specification design.  This section partitions the validation techniques by the
+languages used for developing the specifications.
 
-To address external nondeterminism, they introduce {\em conjectured events} to
-specify that local nodes may communicate with the server at any time.  My
-network model design in \autoref{sec:external-nondet} was inspired by this idea
-of conjecturing the environment's behavior.
-
+\subsection{State machine specification: Quviq QuickCheck}
 Property-based testing with QuickCheck has been well adopted in industrial
-practices~\cite{Hughes2016}.  This paper extends QuickCheck in two dimensions:
-(i) To specify systems' nondeterministic behavior in a reasonable way, I
-designed a generic modelling language to describe ``how to produce valid
-behavior'', which is then automatically interpreted into properties that ``what
-behavior is valid''; (ii) To minimalize counterexamples and locate bugs, I
-introduced a protocol-independent representation of test input, which allows
-reproducing trace-based heuristics among different executions.
+contexts~\cite{Hughes2016}.  The specification is a boolean function over traces
+{\it i.e.} the validator.  My solutions to addressing internal and external
+nondeterminism are inspired by practices in QuickCheck.
 
-\section{Process algebra: LOTOS and TorXakis}
+\paragraph{Internal nondeterminism}
+My \http specification was initially written as a QuickCheck property.  Before
+handling preconditions like \inlinec{If-Match} and \inlinec{If-None-Match}, the
+validator implements a deterministic server model and compares its behavior with
+the observations, as shown in the \ilc{validate} function in
+\autoref{sec:interactive-testing}.  When expanding the specification to cover
+conditional requests, I implemented the ad hoc validator by manually translating
+the trace into tester-side knowledge, as shown in \autoref{fig:etag-tester}.
+
+The complexity in describing ``what behavior is valid'' motivates me to rephrase
+the specification.  I applied the idea of model-based
+testing~\cite{broy2005model}, and specified the protocol in terms of ``how to
+produce valid behavior''.  My specification represented internal nondeterminism
+with symbolic variables.  The validator then checks whether the trace is
+producible by the symbolic specification, by reducing the producibility problem
+to constraint solving.
+
+\paragraph{External nondeterminism}
+\citet{testing-dropbox} have used QuickCheck to test Dropbox.  The specification
+does not involve internal nondeterminism, but does handle external
+nondeterminism that local nodes may communicate with the server at any time.
+This is done by introducing ``conjectured events'' to represent the possible
+communications.  The validator checks if the conjectured events can be inserted
+to somewhere in the trace to make it producible by the model.
+
+To specify servers' allowed observations delayed by the network, \citet{cpp19}
+introduced the concept of ``network refinement''.  The network may scramble the
+traces by delaying some messages after others, with one exception: If the client
+has received response \ilc A before it sends request \ilc Q, then by causality,
+the server-side trace must have sent response \ilc A before receiving request
+\ilc Q.  Upon observing a client-side trace \ilc T, our QuickCheck validator
+searches for a server-side trace that (i) can be reasonably scrambled into trace
+\ilc T, and (ii) complies with the protocol specification.
+
+My network model design in \autoref{sec:external-nondet} was inspired by these
+idea of conjecturing the environment's behavior.  Instead of inserting
+conjectured communication events or reordering the trace, I specified the
+network as an independent module and composed it with the server specification.
+This provides more flexibility in specifying the environment {\it e.g.} limiting
+the buffer size or the number of concurrent connections, and allows reusing the
+network models for specifying other protocols on top of it.
+
+\subsection{Process algebra: LOTOS and TorXakis}
 Language of Termporal Ordering Specification (LOTOS)~\cite{lotos} is the ISO
 standard for specifying OSI protocols.  It defines distributed concurrent
 systems as {\em processes} that interact via {\em channels}.  Using a formal
@@ -46,7 +80,7 @@ network model, ``channels'' are the ``source'' and ``destination'' fields of
 network packets, which allows specifying a server that exposes its port to
 infinitely many clients.
 
-\section{Transition systems: NetSem and Modbat}
+\subsection{Transition systems: NetSem and Modbat}
 Using labelled transition systems (LTS), \citet{netsem} have developed rigorous
 specification for TCP, UDP, and the Sockets API.  To handle internal
 nondeterminism in real-world implementations, they symbolized the model states,
@@ -63,3 +97,15 @@ library \verb|java.nio|.  Their validator rejects the SUT upon unexpected
 exceptions or observations that fail its {\em encoded} assertions.  In
 comparison, assertions in my validator are {\em derived} from the abstract
 model, which covers full functional correctness of the SUT.
+
+\section{Test Harnesses}
+\label{sec:related-harness}
+In this section,
+
+This paper extends QuickCheck in two dimensions:
+(i) To specify systems' nondeterministic behavior in a reasonable way, I
+designed a generic modelling language to describe ``how to produce valid
+behavior'', which is then automatically interpreted into properties that ``what
+behavior is valid''; (ii) To minimalize counterexamples and locate bugs, I
+introduced a protocol-independent representation of test input, which allows
+reproducing trace-based heuristics among different executions.
