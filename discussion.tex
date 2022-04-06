@@ -1,0 +1,34 @@
+This thesis presents a systematic technique for testing interactive systems with
+uncertain behavior.  I propose a theory of dualizing protocol specification into
+validators, with formal guarantee of soundness and completeness
+(\autoref{chap:theory}).  To test systems in real-world practices, I applied the
+dualization theory to the interaction tree specification language, and derived
+specifications into interactive testing programs (\autoref{chap:practices}).  I
+then presented a test harness design to generate and shrink interactive test
+inputs effectively (\autoref{chap:harness}).  The entire methodology is
+evaluated by revealing programs' incompliant behavior with derived testers
+(\autoref{chap:eval}).
+
+To address challenges posed by internal, external, and inter-execution
+nondeterminisms, I introduced various flavors of symbolic abstract
+interpretation: Systems' internal choices are represented as symbolic variables
+and unified against the tester's observations (\autoref{sec:dualization},
+\autoref{sec:internal-nondet}); Possible impacts made by the environment are
+represented as nondeterministic branches (\autoref{sec:external-nondet}), and
+determined by backtrack searching (\autoref{sec:backtrack}); The test inputs are
+generated as symbolic intermediate representations that can adapt to different
+traces during runtime (\autoref{sec:shrinking}).
+
+The technique in this thesis can be expanded in scenario and by combination:
+\begin{enumerate}
+\item Specifying and testing other kinds of SUTs in various setups {\it e.g.}
+  background monitoring processes, distributed locks, cyber-physical systems
+  {\it etc}.  These attempts might expose the limitations of my methodology or
+  introduce new challenges in testing.
+
+\item Integrating other testing techniques to the framework {\it e.g.} tuning
+  the executor to capture time-related violations~\cite{pkt-dyn}, find bugs with
+  fewer tests by enumerating within a small input space~\cite{judge-cover}, {\it
+    etc}.  This may enhance my testers' effectiveness or reveal potential
+  improvements that existing techniques can make.
+\end{enumerate}
