@@ -871,3 +871,73 @@ author = "Tommaso Bolognesi and Ed Brinksma",
 keywords = "Concurrent languages, Formal Description Techniques, Open Systems Interconnection, Protocol Specification, Specification Languages",
 abstract = "LOTOS is a specification language that has been specifically developed for the formal description of the OSI (Open Systems Interconnection) architecture, although it is applicable to distributed, concurrent systems in general. In LOTOS a system is seen as a set of processes which interact and exchange data with each other and with their environment. LOTOS is expected to become an ISO international standard by 1988."
 }
+
+@article{fuzzchick,
+author = {Lampropoulos, Leonidas and Hicks, Michael and Pierce, Benjamin C.},
+title = {Coverage Guided, Property Based Testing},
+year = {2019},
+issue_date = {October 2019},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {3},
+number = {OOPSLA},
+url = {https://doi.org/10.1145/3360607},
+doi = {10.1145/3360607},
+abstract = {Property-based random testing, exemplified by frameworks such as Haskell's QuickCheck, works by testing an executable predicate (a property) on a stream of randomly generated inputs. Property testing works very well in many cases, but not always. Some properties are conditioned on the input satisfying demanding semantic invariants that are not consequences of its syntactic structure---e.g., that an input list must be sorted or have no duplicates. Most randomly generated inputs fail to satisfy properties with such sparse preconditions, and so are simply discarded. As a result, much of the target system may go untested.  We address this issue with a novel technique called coverage guided, property based testing (CGPT). Our approach is inspired by the related area of coverage guided fuzzing, exemplified by tools like AFL. Rather than just generating a fresh random input at each iteration, CGPT can also produce new inputs by mutating previous ones using type-aware, generic mutator operators. The target program is instrumented to track which control flow branches are executed during a run and inputs whose runs expand control-flow coverage are retained for future mutations. This means that, when sparse conditions in the target are satisfied and new coverage is observed, the input that triggered them will be retained and used as a springboard to go further.  We have implemented CGPT as an extension to the QuickChick property testing tool for Coq programs; we call our implementation FuzzChick. We evaluate FuzzChick on two Coq developments for abstract machines that aim to enforce flavors of noninterference, which has a (very) sparse precondition. We systematically inject bugs in the machines' checking rules and use FuzzChick to look for counterexamples to the claim that they satisfy a standard noninterference property. We find that vanilla QuickChick almost always fails to find any bugs after a long period of time, as does an earlier proposal for combining property testing and fuzzing. In contrast, FuzzChick often finds them within seconds to minutes. Moreover, FuzzChick is almost fully automatic; although highly tuned, hand-written generators can find the bugs faster, they require substantial amounts of insight and manual effort.},
+journal = {Proc. ACM Program. Lang.},
+month = {oct},
+articleno = {181},
+numpages = {29},
+keywords = {random testing, FuzzChick, AFL, fuzz testing, property-based testing, coverage, QuickChick}
+}
+
+@misc{afl,
+  title={American fuzzy lop},
+  author={Zalewski, Michal},
+  year={2017}
+}
+
+@article{fuzz,
+author = {Miller, Barton P. and Fredriksen, Louis and So, Bryan},
+title = {An Empirical Study of the Reliability of UNIX Utilities},
+year = {1990},
+issue_date = {Dec. 1990},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {33},
+number = {12},
+issn = {0001-0782},
+url = {https://doi.org/10.1145/96267.96279},
+doi = {10.1145/96267.96279},
+abstract = {The following section describes the tools we built to test the utilities. These tools include the fuzz (random character) generator, ptyjig (to test interactive utilities), and scripts to automate the testing process. Next, we will describe the tests we performed, giving the types of input we presented to the utilities. Results from the tests will follow along with an analysis of the results, including identification and classification of the program bugs that caused the crashes. The final section presents concluding remarks, including suggestions for avoiding the types of problems detected by our study and some commentary on the bugs we found. We include an Appendix with the user manual pages for fuzz and ptyjig.},
+journal = {Commun. ACM},
+month = {dec},
+pages = {32–44},
+numpages = {13}
+}
+
+@software{honggfuzz,
+  author={Swiecki, Robert},
+  title={Honggfuzz},
+  url={https://github.com/google/honggfuzz}
+}
+
+@article{narrowing,
+author = {Antoy, Sergio and Echahed, Rachid and Hanus, Michael},
+title = {A Needed Narrowing Strategy},
+year = {2000},
+issue_date = {July 2000},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {47},
+number = {4},
+issn = {0004-5411},
+url = {https://doi.org/10.1145/347476.347484},
+doi = {10.1145/347476.347484},
+abstract = {The narrowing relation over terms constitutes the basis of the most important operational semantics of languages that integrate functional and logic programming paradigms. It also plays an important role in the definition of some algorithms of unification modulo equational theories that are defined by confluent term rewriting systems. Due to the inefficiency of simple narrowing, many refined narrowing strategies have been proposed in the last decade. This paper presents a new narrowing strategy that is optimal in several respects. For this purpose, we propose a notion of a needed narrowing step that, for inductively sequential rewrite systems, extends the Huet and L\'{e}vy notion of a needed reduction step. We define a strategy, based on this notion, that computes only needed  narrowing steps. Our strategy is sound and complete for a large class of rewrite systems, is optimal with respect to the cost measure that counts the number of distinct steps of a derivation, computes only incomparable and disjoint unifiers, and is efficiently implemented by unification.},
+journal = {J. ACM},
+month = {jul},
+pages = {776–822},
+numpages = {47},
+keywords = {rewrite systems, narrowing strategies, call-by-need, functional logic programming languages}
+}

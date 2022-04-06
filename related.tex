@@ -6,7 +6,7 @@ compares different specification techniques and their derived validators.
 \autoref{sec:related-harness} then discusses practices in developing test
 harnesses.
 
-\section{From Specification to Validators}
+\section{From Specifications to Validators}
 \label{sec:related-validate}
 
 Different testing scenarios exhibit various challenges that motivate the
@@ -100,12 +100,90 @@ model, which covers full functional correctness of the SUT.
 
 \section{Test Harnesses}
 \label{sec:related-harness}
-In this section,
+This section explores techniques of generating and shrinking test inputs.
+\autoref{sec:related-gen} compares different heuristics used by test generators;
+\autoref{sec:related-shrink} explains existing shrinking techniques for
+interactive testing scenarios.  The executor of test harnesses is beyond the
+scope of this thesis, and will be discussed in \autoref{chap:discussion}.
 
-This paper extends QuickCheck in two dimensions:
-(i) To specify systems' nondeterministic behavior in a reasonable way, I
-designed a generic modelling language to describe ``how to produce valid
-behavior'', which is then automatically interpreted into properties that ``what
-behavior is valid''; (ii) To minimalize counterexamples and locate bugs, I
-introduced a protocol-independent representation of test input, which allows
-reproducing trace-based heuristics among different executions.
+\subsection{Generator Heuristics}
+\label{sec:related-gen}
+
+In addition to state-based and trace-based heuristics discussed in
+\autoref{sec:heuristics}, other kinds of heuristics can be applied to generating
+inputs for various testing scenarios.
+
+\paragraph{Constraint-based heuristics}
+The reason for introducing heuristics is to increase the chance of triggering
+invalid behavior.  I specified the heuristics as ``how to produce interesting
+input'', while in some cases, it's more convenient to specify ``what inputs are
+interesting''.  For example, well-typed lambda expressions can be easily defined
+in terms of typing rules, but are less intuitive to enumerate by a generator.
+
+Narrowing~\cite{narrowing} allows generating data that satisfy certain
+constraints.  \citet{gengood} have applied the idea of narrowing to the
+QuickChick testing framework in Coq~\cite{quickchick}, representing constraints
+as inductive relations.  The relations are compiled into efficient generators
+that produce satisfying data.
+
+The narrowing generator in QuickChick has been used during my preliminary
+experiment with \http, where I defined a well-formed relation for HTTP requests
+to guide the generator.  This constraint-based heuristics can be integrated to
+my testing framework by interpreting QuickChick's \ilc{Gen} (generator) monad
+into the \ilc{IO} monad used by the test harness.
+
+\paragraph{Coverage-based heuristics}
+Another strategy to increase the chance of revealing invalid behavior is to
+cover more execution paths of the SUT.  This idea is applied to fuzz
+testing~\cite{fuzz}, with popular implementations AFL~\cite{afl} and
+Honggfuzz~\cite{honggfuzz}, and combined with property-based testing by
+\citet{fuzzchick}.
+
+Coverage-based testers mutate the test inputs and observe the programs'
+execution paths.  An input is considered interesting if it causes the program to
+traverse a previously unvisited path.  The interesting inputs will be mutated
+and rerun to cover potentially more paths.
+
+To track the program's execution paths, coverage-based heuristics need to
+instrument the SUT during compilation, making it inapplicable for black-box
+testing.  When fuzzing interactive systems like web servers, the SUT is run in a
+simulator where the requests are provided as files instead of network packets.
+The responses are ignored in fuzz testing, which does not check functional
+correctness.  To produce a trace for validation, the SUT needs to be carefully
+modified to record its send and receive events.  Addressing these challenges
+would enable coverage-based heuristics to be integrated in interactive testing
+of systems' functional correctness.
+
+\subsection{Shrinking Interactive Tests}
+\label{sec:related-shrink}
+
+To address inter-execution nondeterminism in Quviq QuickCheck,
+\citet{Hughes2016} introduced the idea of shrinking abstract representations of
+test input.  The tester first generates a {\em script} using state-based
+heuristics, and instantiates the script with the tester's runtime state.  The
+scripts can be shrunk and adapted to new runtimes when rerunning the test.
+
+The language design of my test harness is inspired by the QuickCheck approach,
+and extends it in two dimensions:
+\begin{enumerate}
+\item The QuickCheck framework assumes synchronous interactions, where the
+  requests are function calls that immediately return.  When testing
+  asynchronous systems {\it e.g.} networked servers, the responses might be
+  indefinitely delayed by the environment, which would block the QuickCheck
+  tester's state transition.
+  
+  To generate test inputs asynchronously, I implemented a non-blocking algorithm
+  for instantiating scripts into requests.  When a dependant observation is
+  absent due to delays or loss by the environment, the test harness tries to
+  instantiate the request using other observations, instead of waiting for the
+  observation from the environment.
+
+\item QuickCheck requires the test developer to specify a runtime state to guide
+  the generator, and define the state transition rules for each interaction.
+
+  In comparison, I proposed trace-based and state-based heuristics as separate
+  concepts.  Generators in my testing framework are based on (i) traces recorded
+  automatically during runtime, and (ii) model states exposed by the underlying
+  specifications.  The generic intermediate representation of traces lifts the
+  requirement of specifying transitions for test generation purposes.
+\end{enumerate}
