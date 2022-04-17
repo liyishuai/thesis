@@ -39,9 +39,9 @@
 %\cosupervisortitle{Full Faculty Title and Affiliation} % If applicable, uncomment this line and edit the text between the {}. If you do, you will also need to edit line 38.
 \gradchair{Mayur Naik, Professor of Computer and Information Science}
 \committee{Steve Zdancewic, Professor of Computer and Information Science}
-\committee{Mayur Naik, Professor of Computer and Information Science}
 \committee{Boon Thau Loo, Professor of Computer and Information Science}
-\committee{John Hughes, Professor of Computing Science, Chalmers University of Technology} % If applicable, comment out or duplicate this line to remove or add a committee member
+\committee{Rajeev Alur, Professor of Computer and Information Science}
+\committee{Leonidas Lampropoulos, Assistant Professor of Computer Science, University of Maryland} % If applicable, comment out or duplicate this line to remove or add a committee member
 %-------------------------------------------
 
 %%%% OPTIONAL COPYRIGHT NOTICE
@@ -61,7 +61,23 @@
 %-------------------------------------------
 
 %%%% ABSTRACT
-\abstract{Write your abstract text here.} % Write your abstract between the {}
+\abstract{Software engineering requires rigorous testing to guarantee the
+  product's quality.  Semantic testing of functional correctness is challenged
+  by nondeterminism in systems' behavior, which makes testers difficult to write
+  and reason about.
+
+  This thesis presents a language-based technique for testing interactive
+  systems.  I propose a theory for specifying and validating systems'
+  nondeterministic behaviors, with guaranteed soundness and correctness.  I then
+  apply the theory to testing practices, and show how to derive specifications
+  into interactive tester programs.  I also introduce a language design for
+  producing test inputs that can effectively detect and reproduce systems'
+  invalid behaviors.
+
+  I evaluate the methodology by specifying and testing real-world systems such
+  as web servers and file synchronizers, demonstrating the derived testers'
+  ability to find disagreements between the specification and the
+  implementation.}
 %-------------------------------------------
 
 %%%% OPTIONAL PREFACE
@@ -335,6 +351,9 @@
 \chpt{Dualization Theory}
 \label{chap:theory}
 \input{theory}
+
+\chpt{From Synchronous Testing to Asynchronous Testing}
+\label{chap:itree}
 
 \chpt{Testing in Practice}
 \label{chap:practices}

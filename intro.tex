@@ -1,23 +1,33 @@
 Software engineering requires rigorous testing of rapidly evolving programs,
-which costs manpower comparable to developing the product itself.  To guarantee
-programs' compliance with the specification, we need testers that can tell
+which costs manpower comparable to developing the product itself~\cite{vailshery}.  To guarantee
+programs' compliance with their specifications, we need testers that can tell
 compliant implementations from violating ones.
 
 This thesis studies the testing of interactive systems' semantics: The system
 under test (SUT) interacts with the tester by sending and receiving messages,
-and the tester determines whether the messages sent by the SUT are valid or not
+and the tester determines whether the messages sent by the SUT are valid
 with respect to the protocol specification.
 
 This chapter provides a brief view of interactive testing
 (\autoref{sec:interactive-testing}), explains why nondeterminism makes this
 problem difficult
 (Sections~\ref{sec:internal-external-nondeterminism}--\ref{sec:inter-execution-nondeterminism}),
-and discusses how language designs address the challenges caused by
-nondeterminism (\autoref{sec:contribution}).
+discusses the field of existing works (\autoref{sec:existing-work}), and
+summarizes the contributions of this thesis in addressing the challenges caused
+by nondeterminism (\autoref{sec:contribution}).
 
 \section{Interactive Testing}
 \label{sec:interactive-testing}
-Suppose we want to test a web server that supports GET and PUT methods:
+Suppose we want to test a web server that supports GET and PUT methods.  The
+server is a stateful program written as a recursive function:\footnote{Syntax
+``\ilc{x <- f;; y}'' encodes a monadic program that binds the result of
+computation \ilc f as variable \ilc x in continuation \ilc y.  For example, to
+receive a request is to bind the result of \ilc{recv} as variable \ilc{request}
+in the remaining program that performs pattern matching on it.}\footnote{Syntax
+``\ilc{data [k|->v]}'' represents a key-value store where \ilc k is mapped
+to \ilc v, and all other keys are mapped by \ilc{data}.  That is, for
+all \ilc{k'} that are not equal to \ilc k, \ilc{(data [k|->v]) k'} is equal
+to \ilc{(data k')}.}
 \begin{coq}
   CoFixpoint server (data: key -> value) :=
     request <- recv;;
@@ -26,6 +36,11 @@ Suppose we want to test a web server that supports GET and PUT methods:
     | PUT k v => send  Done   ;; server (data [k |-> v])
     end.
 \end{coq}
+Here the \ilc{server} function iterates over a parameter called \ilc{data},
+which is a key-value store.  In each iteration, the server receives a request
+and computes its response.  It then sends back the response and recurses with
+the updated data.
+
 We can write a tester client that interacts with the server and determines
 whether it behaves correctly:
 \begin{coq}
@@ -57,10 +72,12 @@ not:
     | GET k   => (data k, data)
     | PUT k v => (Done  , data [k |-> v])
     end.
+
   (* Validate the transaction against the stateful specification. *)
   Definition validate spec request response data :=
     let (expect, next) := spec request data in
     if response =? expect then Success next else Failure.
+
   (* Produce transactions for the validator. *)
   CoFixpoint harness validator state :=
     request <- random;;
@@ -69,33 +86,35 @@ not:
     if validator request response state is Success next
     then harness validator next
     else reject.
+
   Definition tester := harness (validate serverSpec).
 \end{coq}
-Such testing method works for deterministic systems, whose behavior can be
-precisely computed from its input.  Whereas, many systems are allowed to behave
-nondeterministically.  How to test systems that involve randomness?  How to
-validate servers' behavior against concurrent clients?  The following sections
+This testing method works for deterministic systems, whose behavior can be
+precisely computed from their inputs.  But, many systems are allowed to behave
+nondeterministically.  For example, systems may implement various hash
+algorithms, or buffer network packets in different ways.  The following sections
 discuss nondeterminism by partitioning it in two ways, and explains how they
 pose challenges to the validator and the test harness.
 
 \section{Internal and external nondeterminism}
 \label{sec:internal-external-nondeterminism}
-When people talk to each other, voice is transmitted over substances.  When
-testers interact with the SUT, messages are transmitted via the runtime
-environment.  The specification might allow SUTs to behave differently from each
-other, just like people speaking in different accents, we call it {\em internal
-  nondeterminism}.  The runtime environment might affect the transmission of
-messages, just like solids transmit voice faster than liquids and gases, we call
-it {\em external nondeterminism}.
+When people talk to each other, voice is transmitted over substances like air or
+metal.  When testers interact with the SUT, messages are transmitted via the
+runtime environment.  The specification might allow SUTs to behave differently
+from each other, just like people speaking in different accents; we call it {\em
+internal nondeterminism}.  The runtime environment might affect the transmission
+of messages, just like solids transmit voice faster than liquids and gases; we
+call it {\em external nondeterminism}.
 
 \subsection{Internal nondeterminism}
 \label{sec:internal-nondeterminism}
-Within the SUT, correct behavior may be \mbox{underspecified}.  For example,
-HTTP~\cite{rfc7232} allows requests to be conditional: If the client has a local
-copy of some resource and the copy on the server has not changed, then the
-server needn't resend the resource.  To achieve this, an HTTP server may
-generate a short string, called an ``entity tag'' (ETag), identifying the
-content of some resource, and send it to the client:
+Within the SUT, correct behavior may be \mbox{underspecified}.  Consider web
+browsing as an example: If a client has cached a local copy of some resource,
+then when fetching updates for the resource, the client can ask the server not
+to send the resource's contents if it is the same as the cached copy.  To
+achieve this, an HTTP server may generate a short string, called an ``entity
+tag'' (ETag)~\cite{rfc7232}, identifying the content of some resource, and send
+it to the client:
 \begin{center}
   \begin{minipage}[t]{.4\textwidth}
     \begin{cpp}
@@ -132,7 +151,7 @@ If the ETag does not match, the server responds with code 200 and the updated
 content as usual.
 
 Similarly, if a client wants to modify the server's resource atomically by
-compare-and-swap, it can include the ETag in the PUT request as
+compare-and-swap, it can include the ETag in the PUT request as an
 \inlinec{If-Match} precondition, which instructs the server to only update the
 content if its current ETag matches:
 \begin{center}
@@ -206,7 +225,7 @@ includes an ETag), and cannot enumerate all of them (as ETags can be arbitrary
 strings), then it needs to maintain a space of all possible values, and narrow
 the space upon further interactions with the server.  For example, ``If the
 server has revealed some resource's ETag as \inlinec{"tag-foo"}, then it must
-not reject requests targetting this resource conditioned over \inlinec{If-Match:
+not reject requests targeting this resource conditioned over \inlinec{If-Match:
   "tag-foo"}, until the resource has been modified''; and ``Had the server
 previously rejected an \inlinec{If-Match} request, it must reject the same
 request until its target has been modified.''
@@ -260,15 +279,15 @@ request until its target has been modified.''
 This idea of remembering matched and mismatched ETags is implemented in
 \autoref{fig:etag-tester}.  For each key, the validator maintains three internal
 states: (i) The value stored in \ilc{data}, (ii) the corresponding resource's
-ETag, if known by the tester, stored in \ilc{tag_is}, and (iii) ETags that
-should not match with the resource's, stored in \ilc{tag_is_not}.  Each pair of
+ETag, if known by the tester, stored in \ilc{tag_is}, and (iii) ETags that are
+known to not match the resource's, stored in \ilc{tag_is_not}.  Each pair of
 request and response contributes to the validator's knowledge of the target
 resource.  The tester rejects the SUT if the observed behavior does not match
-its knowledge gained in previous interactions.
+the knowledge gained in previous interactions.
 
-Even a simple nondeterminism like ETags requires such careful design of the
-validator, based on thorough comprehension of the specification.  For more
-complex protocols, we hope to construct the validator in a reasonable way.
+Even simple nondeterminism like ETags requires such careful design of the
+validator, based on thorough comprehension of the specification.  We need to
+construct the validator in a scalable way for more complex protocols.
 
 \subsection{External nondeterminism}
 \label{sec:intro-external-nondet}
@@ -281,9 +300,9 @@ environment concept in testing scenario.
     Observation} is the tester's view of the environment.
 \end{definition}
 When testing servers, the environment is the network stack between the client
-and the server.  The input is the request sent by the client, and the output is
-the response sent by the server.  The response is transmitted via the network,
-until reaching the client side as observations.
+and the server.  The input is the sequence of requests sent by the client, and
+the output is the sequence of responses sent by the server.  The responses are
+transmitted via the network, until reaching the client side as observations.
 
 \begin{figure}
   \centering
@@ -306,7 +325,7 @@ until reaching the client side as observations.
   2< "new"
 \end{coq}
   \end{minipage}
-  \caption[Linear trace upon no concurrency.]{Upon no concurrency, the
+  \caption[Linear trace with no concurrency.]{With no concurrency, the
     observation is identical to the output.}
   \label{fig:linear-trace}
 \end{figure}
@@ -352,7 +371,7 @@ until reaching the client side as observations.
   \caption[Invalid trace that violates the specification.]{Unacceptable: The
     tester received the \ilc{Done} response before sending the \ilc{GET}
     request, thus the SUT must have processed the \ilc{PUT} request before the
-    \ilc{GET} request.  Therefore, the \ilc{"old"} response must be invalid.}
+    \ilc{GET} request.  Therefore, the \ilc{"old"} response is invalid.}
   \label{fig:invalid-trace}
 \end{figure}
 The tester shown in \autoref{sec:interactive-testing} runs one client at a time.
@@ -372,7 +391,7 @@ outputs that can explain such observation, and see if anyone of them complies
 with the specification.  If no valid output can explain the observation, then
 the tester should reject the SUT, as shown in \autoref{fig:invalid-trace}.
 
-We hope to construct a tester that can handle external nondeterminism
+We need to construct a tester that can handle external nondeterminism
 systematically, and provide a generic way for reasoning on the environment.
 
 \section{Test harness and inter-execution nondeterminism}
@@ -383,8 +402,8 @@ observations effectively.  \autoref{sec:internal-external-nondeterminism} has
 explained the challenges in the validator.  Here we discuss the test harness.
 
 \subsection{Test harness}
-Intuitively, a tester generates test input and executes the test.  It then
-validates the observation and accepts/rejects the SUT, as shown in
+Intuitively, a tester generates test input and launches the test execution.  It
+then validates the observation and accepts/rejects the SUT, as shown in
 \autoref{fig:gen-only}.
 \begin{figure}
   \includegraphics[width=.5\linewidth]{figures/gen-only}
@@ -393,14 +412,14 @@ validates the observation and accepts/rejects the SUT, as shown in
 \end{figure}
 
 However, to achieve better coverage, a randomized generator might produce huge
-test input.  Suppose the tester has revealed invalid observation after thousands
-of interactions, such report provides limited intuition of where the bug was
-introduced.  To help developers locate the bug more effectively, the tester
-should present a {\em minimal counterexample} that can reproduce the violation.
-This is done by {\em shrinking} the failing input and rerunning the test with
-the input's substructures.  As shown in \autoref{fig:gen-shrink}, if a test
-input has no substructure that can cause any failure, then we report it as the
-minimal counterexample.
+test input~\cite{Hughes2016}.  Suppose the tester has revealed an invalid
+observation after thousands of interactions; such a report provides limited
+intuition of where the bug was introduced.  To help developers locate the bug
+more effectively, the tester should present a {\em minimal counterexample} that
+can reproduce the violation.  This is done by {\em shrinking} the failing input
+and rerunning the test with the input's substructures.  As shown
+in \autoref{fig:gen-shrink}, if a test input has no substructure that can cause
+any failure, then we report it as the minimal counterexample.
 \begin{figure}
   \includegraphics[width=.8\linewidth]{figures/gen-shrink}
   \caption{Tester architecture with shrinking mechanism.}
@@ -408,17 +427,15 @@ minimal counterexample.
 \end{figure}
 
 The test harness consists of generator, shrinker, and executor.  This thesis
-studies the generator and the shrinker that produce the test input.  The
-executor that produces observations based on the input is discussed in the
-related works chapter.
+studies the generator and the shrinker that produce the test input.
 
 Interesting test inputs are those that are more likely to reveal invalid
 observations.  Such subset is usually sparse and cannot be enumerated within
 reasonable budget {\it e.g.} in \autoref{sec:internal-nondeterminism}, request
 ETags that match the target resources'.  The tester needs to manipulate the
-inputs' distribution, by implementing heuristics that emphasize certain input
-patterns.  Such heuristics is challenged by another form of nondeterminism
-discussed as follows.
+inputs' distribution, by implementing {\em heuristics} that emphasize certain
+input patterns, which is challenged by another form of nondeterminism discussed
+as follows.
 
 \subsection{Inter-execution nondeterminism}
 \label{sec:inter-execution}
@@ -442,19 +459,71 @@ than the precondition's:
                              HTTP/1.1 304 Not Modified
 \end{lstlisting}
 In this scenario, an interesting candidate for the \inlinec{If-Modified-Since}
-precondition is the \inlinec{Last-Modified} timestamp of a previous response.
-To emphasize this request pattern, the tester needs to implement heuristics that
-generates test inputs based on previous observations.
+precondition in a test case is the \inlinec{Last-Modified} timestamp of a
+previous response.  To emphasize this request pattern, the tester needs to
+implement heuristics that generate test inputs based on previous observations.
 
 In case the tester has revealed invalid observations from the server, it needs
 to rerun the test with shrunk input.  The timestamps on the server might be
 different from the previous execution, so an interesting timestamp in a previous
 run might become trivial in this run.
 
-Such inter-execution nondeterminism poses challenges to the input minimization
-process: To preserve the input pattern, the shrunk \http request should use the
-timestamps from the new execution.  We hope to implement a generic shrinking
-mechanism that can reproduce the heuristics in the test generator's design.
+The uncertainty that a system may perform differently among executions is called
+{\em inter-execution nondeterminism}.  Such nondeterminism poses challenges to
+the input minimization process: To preserve the input pattern, the shrunk \http
+request should use the timestamps from the new execution.  We need to implement
+a generic shrinking mechanism that can reproduce the heuristics in the test
+generator's design.
+
+\section{State of the Art}
+\label{sec:existing-work}
+This section explains the context for this thesis.  I discuss the state of the
+art in the field of testing, and describe their limitations in addressing the
+challenges posed by nondeterminism.
+
+\subsection{Property-based testing: QuickCheck}
+Property-based testing~\cite{pbt} is a testing methodology for validating
+semantic properties of programs' behavior.  The properties are specified as
+executable boolean predicates over the behavior.  To check whether an SUT
+satisfies a specification, the tester generates test input and executes the SUT
+with the generated input.  The tester then observes the SUT's behavior, and
+computes the predicates with the observations.
+
+Practices of property-based testing include QuickCheck for Haskell~\cite{qc} and
+its variant QuickChick for Coq~\cite{quickchick}.  These tools can generate
+random inputs that satisfy logical conditions~\cite{gengood} and integrate with
+fuzz testing~\cite{fuzzchick} and combinatorial testing~\cite{judge-cover}, and
+have tested real-world systems like telecoms software~\cite{Quviq2006} and
+Dropbox~\cite{testing-dropbox}.
+
+\subsection{Model-based testing: TorXakis}
+Instead of specifying predicates over systems' behavior, model-based
+testing~\cite{mbt} defines an abstract model that produces valid behavior.  When
+a tester observes an SUT's behavior, it checks whether the behavior is
+producible by the specification model.
+
+Practical tools for model-based testing include TorXakis~\cite{TorXakis}, whose
+modelling language is inspired by Language of Temporal Ordering Specification
+(LOTOS)~\cite{lotos}, the ISO standard for specifying distributed systems.  The
+tool can compile process algebra specifications into tester programs, and can be
+used for testing dropbox~\cite{torxakis-dropbox}.
+
+\subsection{Limitations}
+In property-based testing, internal and external nondeterminism makes predicates
+difficult to write, as discussed
+in \autoref{sec:internal-external-nondeterminism}.  TorXakis provides limited
+support for internal nondeterminism, allowing the specification to enumerate all
+possible values of internal choices.  This works for scenarios where the space
+of choices is small {\it e.g.} within a dozen.  When testing ETags
+in \autoref{sec:internal-nondeterminism}, it's infeasible to include a list of
+all strings in the specification.
+
+To handle inter-execution nondeterminism in QuickCheck, \citet{Hughes2016}
+introduced abstract representations for generating and shrinking test inputs
+that can adapt to different runtime observations.  His technique works for
+synchronous interactions that blocks the tester to wait for observations, and
+lacks support for asynchronous testing where the SUT's output may be
+indefinitely delayed by the environment.
 
 \section{Contribution}
 \label{sec:contribution}
@@ -465,15 +534,15 @@ representing test input, and {\em dualize} the specification into the tester's
 
 \begin{enumerate}
 \item The specification is written as a reference implementation---a
-  nondeterministic program that exhibits all possible behavior allowed by the
+  nondeterministic program that exhibits all possible behaviors allowed by the
   protocol.  Internal and external nondeterminism are represented by symbolic
   variables, and the space of nondeterministic behavior is defined by all
-  possible assignments of the variables.
+  possible assignments to the variables.
 
   For internal nondeterminism, the validator computes the symbolic
   representation of the SUT's output.  The symbolic output expectation is then
-  {\em unified} against the tester's observations, reducing the protocol
-  compliance problem into constraint solving.
+  {\em unified} against the tester's observations, reducing the problem of
+  validating observations to constraint solving.
 
   For external nondeterminism, I introduce a model that specifies the
   environment.  The environment model describes the relation between the SUT's
@@ -485,7 +554,7 @@ representing test input, and {\em dualize} the specification into the tester's
   intermediate representations for observations and test inputs, which are
   protocol-independent.
 
-  Heuristics in this framework produces symbolic test inputs that are
+  Heuristics in this framework produce symbolic test inputs that are
   parameterized over observations.  During execution, the test harness computes
   the concrete input by {\em instantiating} the symbolic input's arguments with
   runtime observations.
@@ -527,11 +596,22 @@ This claim is supported by the following publications:
   describes my technique of specifying \http with symbolic reference
   implementations, and from the specification, automatically deriving a tester
   program that can find bugs in Apache and Nginx.
-\item {\it Testing by Dualization} (to be submitted to OOPSLA), a theory for
-  interactive testing, explaining how to specify protocols using abstract model
-  implementations, and how to guarantee the soundness and completeness of
-  validators derived from the abstract model.
+%% \item {\it Testing by Dualization} (to be submitted to OOPSLA), a theory for
+%%   interactive testing, explaining how to specify protocols using abstract model
+%%   implementations, and how to guarantee the soundness and completeness of
+%%   validators derived from the abstract model.
 \end{enumerate}
 
 \subsection*{Outline}
-This thesis is structured as follows:
+This thesis is structured as follows: \autoref{chap:theory} introduces a theory
+for validators and shows how to address internal nondeterminism for synchronous
+testing.  \autoref{chap:itree} transitions from synchronous testing to
+asynchronous testing and introduces the ITree specification
+language.  \autoref{chap:practices} then shows how to derive ITree
+specifications into tester programs that can also address external
+nondeterminism.  \autoref{chap:harness} presents a mechanism for generating and
+shrinking test inputs that address inter-execution nondeterminism.  To evaluate
+the techniques I proposed in this thesis, \autoref{chap:eval} applies them to
+testing web servers and file synchronizers.  I then compare my technique with
+related works in \autoref{chap:related-work}, and discuss future directions
+in \autoref{chap:discussion}.
