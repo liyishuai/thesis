@@ -4,9 +4,41 @@ network protocols that involve internal nondeterminism.
 
 \subsection{Specifying protocols with server models}
 Network protocols can be specified with ``reference implementations'' {\it i.e.}
-model programs that exhibit the space of valid behavior.  Networked servers can
-be modelled as infinite stateful programs that compute the answer for each
-query.
+model programs that exhibit the space of valid behaviors.  For client-server
+systems such as WWW, we can specify networked servers as programs that receive
+queries and compute the responses.  Here I model the server programs with a data
+structure called state monad.
+
+\begin{definition}[State monad]
+  Let $S$ be the state type, $A$ be the result type, then type $(S\to A\times
+  S)$ represents a computation that, given an initial state, yields a result and
+  the final state.
+
+  For example, let the state be a key-value mapping $(K\to V)$, then we can
+  define \ilc{get} and \ilc{put} computations as follows:
+  \begin{align}
+    \tag{1}&\mathtt{get}:K\to((K\to V)\to V\times(K\to V))\\
+    \tag{2}&\mathtt{get}(k)(f)\triangleq (f(k), f)\\
+    \tag{3}&\mathtt{put}:K\times V\to((K\to V)\to ()\times(K\to V))\\
+    \tag{4}&\mathtt{put}(k,v)(f)\triangleq((),\update f k v)
+  \end{align}
+
+  These function definitions should be read as:
+  \begin{enumerate}
+    \item The \ilc{get} function takes a key as argument, and constructs a
+      state monad that yields a value.
+    \item Given argument $k$ of type $K$, $\mathtt{get}(k)$ takes a mapping $f$
+      as initial state and yields the mapped value $f(k)$ as result.  The final
+      state is the original mapping $f$ unchanged.
+    \item The \ilc{put} function takes a key-value pair as argument, and
+      constructs a state monad whose result is of unit type (similar to
+      \inlinec{void} return type in C/Java).
+    \item Given argument $(k,v)$ of type $(K\times V)$, $\mathtt{put}(k,v)$
+      takes a mapping $f$ as initial state and substitues its value at key $k$
+      with $v$.  The final state is the substituted mapping $\update f k v$.
+  \end{enumerate}
+\end{definition}
+
 \begin{definition}[Deterministic server model]
   \label{def:qaserver}
 Let $Q$ be the query type, $A$ be the response type, and $S$ be some server
