@@ -15,6 +15,7 @@ implementation side.  Asynchronous testing will be discussed in
 \autoref{chap:practices}.
 
 \begin{definition}[Specification, Validity, and Compliance]
+  \label{def:compliance}
   A {\em specification} is a description of valid traces.  ``Trace $t$ is {\em
     valid} per specification $s$'' is written as ``$\valid s t$''.
 
@@ -25,8 +26,11 @@ implementation side.  Asynchronous testing will be discussed in
 \end{definition}
 
 \begin{definition}[Tester components and correctness]
-  A tester consists of (i) a {\em validator} that accepts or rejects traces, and
-  (ii) a {\em test harness} that triggers different traces with various inputs.
+  \label{def:tester}
+  A tester consists of (i) a {\em validator} that accepts or rejects
+  traces (written as ``$\accepts v t$'' and ``$\rejects v t$''), and
+  (ii) a {\em test harness} that triggers different traces with
+  various inputs.
 
   A tester is {\em correct} if its acceptances and rejections are sound and
   complete.  A tester is {\em rejection-sound} if it only rejects non-compliant

@@ -46,8 +46,8 @@ Now we can define the server model in terms of state monad:
 \begin{definition}[Deterministic server model]
   \label{def:qaserver}
   A deterministic server is an infinite loop whose loop body takes a query and
-  produces a response.  The server definition consists of the loop body and an
-  initial state:
+  produces a response.  The server definition consists of the loop body and a
+  current state:
   \[\mathsf{DeterministicServer}\triangleq\sigT{S}{(Q \to S \to A \times S) \times S}\]
   This type definition is pronounced as: A deterministic server has an initial
   state of some type $S$.  Its loop body takes a request of type $Q$ and
@@ -81,39 +81,29 @@ S, then the server responds with \inlinec 0.  Otherwise, the server sets
 
 Such a server can be modelled as:
 \begin{align*}
-  \existT{S}{\Int}{(&\lam{(q,n)}{\begin{cases}
+  \existT{S}{\Int}{(&\lam{(q)(n)}{\begin{cases}
         (0,s)&q\le n\\
         (1,q)&\mathrm{otherwise}
     \end{cases}},\\
     &0)}
 \end{align*}
 
-\begin{align*}
-  &\mathsf{stepDeterministicServer}(q)(\existT{S}{\sigma}{(\sstep, state)})\triangleq\\
-  &\qquad\letin{(a,state')}{\sstep(q)(state)} \\
-  &\qquad(a, \existT{S}{\sigma}{(\sstep, state')})
-\end{align*}
-
 In general, servers' responses and transitions might depend on choices that are
-invisible to the testers.  These choices include inter-implementation
-nondetermism like algorithm design, and inter-execution nondeterminism like
-random numbers and timestamps.
+invisible to the testers, so called internal nondeterminism, as discussed in
+\autoref{sec:internal-nondeterminism}.  I represent the space of nondeterminstic
+behaviors by parameterizing it over the server's internal choice.
+
 \begin{definition}[Nondeterministic server model]
   \label{def:server}
-  Let $C$ be the space of invisible choices, then a nondeterministic server is
-  specified as:
-\begin{align*}
-  &\Server\triangleq\sigT{S}{(Q \times C \times S \to A \times S) \times S} \\
-  &\stepServer:Q\times C \times \Server \to A\times \Server \\
-  &\stepServer(q,c,\existT{S}{\sigma}{(\sstep, state)})\triangleq\\
-  &\qquad\letin{(a,state')}{\sstep(q,c,state)} \\
-  &\qquad(a, \existT{S}{\sigma}{(\sstep, state')})
-\end{align*}
+  A nondeterministic server is an infinite loop whose loop body takes a query
+  and an internal choice to produce a responses.  The nondeterministic server
+  definition extends \autoref{def:qaserver} with a choice argument of type $C$:
+  \[\Server\triangleq\sigT S{(Q\times C\to S\to A\times S)\times S}\]
 \end{definition}
 
-Consider changing the aforementioned CMP-SET into CMP-RST: When the
-request is greater than \inlinec S, the server resets \inlinec S to a
-random number:
+Consider changing the aforementioned CMP-SET into compare-and-reset (CMP-RST):
+When the request is greater than \inlinec S, the server may reset \inlinec S to
+an arbitrary number:
 \begin{lstlisting}[style=customc]
   int S = 0;
   while (true) {
@@ -124,7 +114,7 @@ random number:
 \end{lstlisting}
 Its corresponding server model can be written as
 \begin{align*}
-  \existT{S}{\Int}{(&\lam{(q,c,s)}{
+  \existT{S}{\Int}{(&\lam{(q,c)(s)}{
       \begin{cases}
         (0,s)& q\le s\\
         (1,c)&\mathrm{otherwise}
@@ -133,14 +123,38 @@ Its corresponding server model can be written as
     &0)}
 \end{align*}
 
-\subsection{Validating traces}
-In the QAC language family, a trace is a list of $Q\times A$ pairs.  The
-validator takes a trace and determines whether it is valid per the protocol
-specification.
-\begin{definition}[Trace validity]
-  Trace $t$ is valid per protocol specification $s$ (written as ``$\valid s
-  t$'') if and only if it can be {\em produced} by the specification {\it i.e.}
-  server model:
+\subsection{Valid traces of a server model}
+By specifying protocols with server models, we can now instantiate the trace
+validity notation ``$\valid s t$'' in \autoref{def:compliance} in terms of
+operational semantics.
+
+\begin{definition}[Server transitions]
+  Upon request $q$, server model $s$ can step to $s'$ yielding response $a$
+  (written ``$\behaves s{(q,a)}s'$~'') if and only if the response and the post
+  model can be computed by the $\stepServer$ function:
+
+\begin{align*}
+  &\behaves s{(q,a)}s'\quad\triangleq\quad\exists c,\stepServer(q,c)(s)=(a,s')\\
+  &\stepServer:Q\times C \to \Server \to A\times \Server \\
+  &\stepServer(q,c)(s)\triangleq\\
+  &\qquad\letin{(\existT{S}{\sigma}{(\sstep, state)})}{s}\\
+  &\qquad\letin{(a,state')}{\sstep(q,c)(state)} \\
+  &\qquad(a, \existT{S}{\sigma}{(\sstep, state')})
+\end{align*}
+
+The $\stepServer$ function takes a query and a choice and computes a state monad
+with state type $\Server$ and result type $A$, by pattern matching on argument
+$(s:\Server)$.  Let $\sigma$ be the server state type of $s$, $\sstep$ be the
+loop body, and $(state:\sigma)$ be the current state of $s$, then
+$\stepServer(q,c)(s)$ computes the result $(a:A)$ and the post state
+$(state':\sigma)$ using the $\sstep$ function, and substitutes the server's
+pre-step $state$ with the post-step $state'$.
+\end{definition}
+
+\begin{definition}[Trace validity in QAC]
+  In the QAC language family, a trace is a list of $Q\times A$ pairs.  When
+  specifying a protocol with a $\Server$ model, a trace $t$ is valid per
+  specification $s$ if and only if it can be {\em produced} by the server model:
   \[\valid s t\quad\triangleq\quad\exists s',\behaves s t s'\]
   Here the producibility relation in \autoref{sec:concepts} is expanded with an
   argument $s'$ representing the post-transition state, pronounced
@@ -151,53 +165,77 @@ specification.
   \item A server model can produce a non-empty trace if it can produce the head
     of the trace, and step to some server model that produces the tail of the
     trace:
-    \[\behaves s {t+(q,a)} s_2\quad\triangleq\quad\exists s_1,\behaves s t s_1\wedge
-    \exists c,\stepServer(q,c,s_1)=(a,s_2)\]
+    \[\behaves s {t+(q,a)} s_2\quad\triangleq\quad\exists s_1,\behaves s t s_1\wedge\behaves {s_1}{(q,a)}s_2\]
   \end{enumerate}
 \end{definition}
 
-The validator is encoded as an infinite loop, where the loop body is a state
-monad that determines whether each $Q\times A$ pair is valid.
+\subsection{Validating traces}
+The validator takes a trace and determines whether it is valid per the protocol
+specification.
+
 \begin{definition}[Validator]
-Let $V$ be some validator state type, then a validator starts from an initial
-state, takes a query and its corresponding response, determines whether the
-interaction are valid, and computes the next validator state upon valid:
-\begin{align*}
-  &\Validator\triangleq\sigT{V}{(Q \times A \times V \to \option V) \times V} \\
-  &\stepValidator:Q\times A \times \Validator \to \option \Validator \\
-  &\stepValidator(q,a,\existT{V}{\beta}{(\vstep, state)})\\
-  &\qquad\triangleq\begin{cases}
-  \Some{(\existT{V}{\beta}{(\vstep,state')})} & \vstep(q,a,state)=\Some{state'} \\
-  \None & \vstep(q,a,state)=\None
-  \end{cases}
-\end{align*}
+A validator is an infinite loop whose loop body takes a pair of query and
+response and determines whether it is valid or not.  The validator iterates over
+a state of some type $V$.  Given a $Q\times A$ pair, the loop body may return a
+next validator state or return nothing, written as type ``$\option V$'':
+\[\begin{array}{lll}
+  \Validator&\triangleq&\sigT{V}{(Q\times A\to V\to\option V)\times V}\\
+  \option X&\triangleq&\Some(x:X)\mid\None
+\end{array}\]
 \end{definition}
 
 For example, a validator for the CMP-SET protocol is written as:
 \begin{align*}
-  \existT{V}{\Int}{(&\lam{(q,a,v)}{
+  \existT{V}{\Int}{(&\lam{(q,a)(v)}{
       \begin{cases}
-        \If a\Is 0\Then\Some v\Else\None&q\le v\\
+        \If a\Is 1\Then\Some v\Else\None&q\le v\\
         \If a\Is 1\Then\Some q\Else\None&\mathrm{otherwise}
       \end{cases}
     },\\
     &0)}
 \end{align*}
+Here the validator state the same as the server model's.  The loop body computes
+the expected response and compares it with the observed response.  If they are
+the same, then the next server state is used as the next validator state.
+Otherwise, the function returns $\None$, indicating that the response is
+invalid.
 
-\begin{definition}[Trace acceptance]
-A validator accepts a trace if its step function {\em consumes} the entire
-trace:
+Having defined the validator type, we can now instantiate the trace acception
+notation ``$\accepts v t$'' in \autoref{def:tester} in terms of operational
+semantics.
+
+\begin{definition}[Validator transitions]
+  Validator $v$ can consume request $q$ and response $a$ and step to $v'$
+  (written ``$\behaves v{(q,a)}v'$~'') if and only if the post validator can be
+  computed by the $\stepValidator$ function:
+\begin{align*}
+  &\behaves v{(q,a)}v'\quad\triangleq\quad\stepValidator(q,a)(v)=\Some v'\\
+  &\stepValidator:Q\times A\to\Validator\to\option\Validator\\
+  &\stepValidator(q,a)(\existT{V}{\beta}{(\vstep,state)})\\
+  &\qquad\triangleq\begin{cases}
+  \Some{(\existT{V}{\beta}{(\vstep,state')})} & \vstep(q,a,state)=\Some{state'} \\
+  \None & \vstep(q,a,state)=\None
+  \end{cases}
+\end{align*}
+The $\stepValidator$ function takes a query and a response, and computes the
+validator transition by pattern matching on argument $(v:\Validator)$.  Let
+$\beta$ be the validator state type of $v$, $\vstep$ be the loop body, and
+$(state:\beta)$ be the current state of $v$, then $\stepValidator(q,a)(v)$ calls
+the $\vstep$ function to validate the $Q\times A$ pair.  If the pair is valid,
+then $\vstep$ returns a post-validation $state'$, which replaces the validator's
+current $state$.  Otherwise, the validator halts with $\None$.
+\end{definition}
+
+\begin{definition}[Trace acceptance in QAC]
+A validator accepts a trace if it cosumes the entire trace:
 \[\accepts v t\quad\triangleq\quad\exists v',\behaves v t v'\]
-
-Here the cossumability relation ``$\behaves v t v'$~'' is pronounced ``validator
-$v$ can consume trace $t$ and step into validator $v'$~'':
 \begin{enumerate}
 \item A validator can consume an empty trace and step to itself:
   \[\behaves v\nil v\]
 \item A validator consumes a non-empty trace if it can consume the head of the
-  trace, and step to some validator that can consume the tail of the trace:
+  trace, and step to some validator that consumes the tail of the trace:
   \[\behaves v {t+(q,a)} v_2\quad\triangleq\quad\exists v_1,\behaves v t v_1\wedge
-  \stepValidator (q,a,v_1)=\Some v_2\]
+  \behaves{v_1}{(q,a)}{v_2}\]
 \end{enumerate}
 \end{definition}
 
