@@ -11,8 +11,9 @@ structure called state monad.
 
 \begin{definition}[State monad]
   Let $S$ be the state type, $A$ be the result type, then type $(S\to A\times
-  S)$ represents a computation that, given an initial state, yields a result and
-  the final state.
+  S)$ represents a computation that, given a pre state, yields a result and the
+  post state.  This computation is pronounced a ``state monad with state type
+  $S$ and result type $A$''.
 
   For example, let the state be a key-value mapping $(K\to V)$, then we can
   define \ilc{get} and \ilc{put} computations as follows:
@@ -26,58 +27,71 @@ structure called state monad.
   These function definitions should be read as:
   \begin{enumerate}
     \item The \ilc{get} function takes a key as argument, and constructs a
-      state monad that yields a value.
+      state monad with state type $(K\to V)$ and result type $V$.
     \item Given argument $k$ of type $K$, $\mathtt{get}(k)$ takes a mapping $f$
-      as initial state and yields the mapped value $f(k)$ as result.  The final
-      state is the original mapping $f$ unchanged.
+      as pre state and yields the mapped value $f(k)$ as result.  The post state
+      is the original mapping $f$ unchanged.
     \item The \ilc{put} function takes a key-value pair as argument, and
-      constructs a state monad whose result is of unit type (similar to
-      \inlinec{void} return type in C/Java).
+      constructs a state monad with state type $(K\to V)$ and result type $()$
+      (unit type, which is similar to \inlinec{void} return type in C/Java
+      functions).
     \item Given argument $(k,v)$ of type $(K\times V)$, $\mathtt{put}(k,v)$
-      takes a mapping $f$ as initial state and substitues its value at key $k$
-      with $v$.  The final state is the substituted mapping $\update f k v$.
+      takes a mapping $f$ as pre state and substitues its value at key $k$ with
+      $v$.  The post state is the substituted mapping $\update f k v$.
   \end{enumerate}
 \end{definition}
 
+Now we can define the server model in terms of state monad:
+
 \begin{definition}[Deterministic server model]
   \label{def:qaserver}
-Let $Q$ be the query type, $A$ be the response type, and $S$ be some server
-state type.  Then a deterministic server is an infinite loop, defined by a loop
-body and an initial state.  The loop body is a state monad that takes a query,
-produces the response based on its current state, and computes the next server
-state:
-\begin{align*}
-  &\mathsf{DeterministicServer}\triangleq\sigT{S}{(Q \times S \to A \times S) \times S} \\
-  &\mathsf{stepDeterministicServer}:Q\times \mathsf{DeterministicServer} \to A\times \mathsf{DeterministicServer} \\
-  &\mathsf{stepDeterministicServer}(q,\existT{S}{\sigma}{(\sstep, state)})\triangleq\\
-  &\qquad\letin{(a,state')}{\sstep(q,state)} \\
-  &\qquad(a, \existT{S}{\sigma}{(\sstep, state')})
-\end{align*}
-Here $\existT{S}{\sigma}{(\sstep, state)}$ is an instance of the
-$\mathsf{DeterministicServer}$ existential type~\cite{tapl}, where $\sstep$ is
-of type $Q\times\sigma\to A\times\sigma$, and $state$ has type $\sigma$.
+  A deterministic server is an infinite loop whose loop body takes a query and
+  produces a response.  The server definition consists of the loop body and an
+  initial state:
+  \[\mathsf{DeterministicServer}\triangleq\sigT{S}{(Q \to S \to A \times S) \times S}\]
+  This type definition is pronounced as: A deterministic server has an initial
+  state of some type $S$.  Its loop body takes a request of type $Q$ and
+  computes a state monad with state type $S$ and result type $A$, where type $A$
+  represents the response.
+
+  Notice that the server's state type is existentially quantified~\cite{tapl},
+  while its query and response types are not.  This is because a protocol
+  specification only defines the space of valid traces, and doesn't require the
+  implementation's internal state to be a specific type.
+
+  An instance of server model is written as:
+  \[\existT S \sigma (\sstep,state_0)\]
+  This expression is pronounced as: The server state is of type $\sigma$.  Its
+  loop body is function $\sstep$ (which has type $Q\to\sigma\to A\times\sigma$)
+  and its initial state is $state_0$ (which has type $\sigma$).
 \end{definition}
 
-For example, consider an CMP-SET protocol: The server stores a number
-\inlinec S.  If the client sends a request that is smaller than
-\inlinec S, then the server responds with \inlinec 0.  Otherwise, the
-server sets \inlinec S to the request, and responds with \inlinec 1:
+For example, consider a compare-and-set (CMP-SET) protocol: The server stores a
+number \inlinec n.  If the client sends a request that is smaller than \inlinec
+S, then the server responds with \inlinec 0.  Otherwise, the server sets
+\inlinec n to the request and responds with \inlinec 1:
 \begin{lstlisting}[style=customc]
-  int S = 0;
+  int n = 0;
   while (true) {
     int request = recv();
-    if (request <= S) send(0);
-    else { S = request; send(1); }
+    if (request <= n) send(0);
+    else { n = request; send(1); }
   }
 \end{lstlisting}
 
-Such server can be modelled as:
+Such a server can be modelled as:
 \begin{align*}
-  \existT{S}{\Int}{(&\lam{(q,s)}{\begin{cases}
-        (0,s)&q\le s\\
+  \existT{S}{\Int}{(&\lam{(q,n)}{\begin{cases}
+        (0,s)&q\le n\\
         (1,q)&\mathrm{otherwise}
     \end{cases}},\\
     &0)}
+\end{align*}
+
+\begin{align*}
+  &\mathsf{stepDeterministicServer}(q)(\existT{S}{\sigma}{(\sstep, state)})\triangleq\\
+  &\qquad\letin{(a,state')}{\sstep(q)(state)} \\
+  &\qquad(a, \existT{S}{\sigma}{(\sstep, state')})
 \end{align*}
 
 In general, servers' responses and transitions might depend on choices that are
