@@ -103,16 +103,17 @@ behaviors by parameterizing it over the server's internal choice.
 
 Consider changing the aforementioned CMP-SET into compare-and-reset (CMP-RST):
 When the request is greater than \inlinec S, the server may reset \inlinec S to
-an arbitrary number:
+any arbitrary number:
 \begin{lstlisting}[style=customc]
+  int arbitrary();
   int S = 0;
   while (true) {
     int request = recv();
     if (request <= S) send(0);
-    else { S = rand(); send(1); }
+    else { S = arbitrary(); send(1); }
   }
 \end{lstlisting}
-Its corresponding server model can be written as
+Its corresponding server model can be written as:
 \begin{align*}
   \existT{S}{\Int}{(&\lam{(q,c)(s)}{
       \begin{cases}
@@ -122,6 +123,9 @@ Its corresponding server model can be written as
     },\\
     &0)}
 \end{align*}
+This model represents the space of uncertain behavior with the internal choice
+parameter of type integer.  For any value $(c:\Int)$, the server is allowed to
+reset $S$ to $c$.
 
 \subsection{Valid traces of a server model}
 By specifying protocols with server models, we can now instantiate the trace

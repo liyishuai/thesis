@@ -6,10 +6,15 @@ derive validators from the specification.
 \label{sec:proglang}
 To write an algorithm from the specification to the validator, we need to
 analyze the computations defined by the specification's model program.  The QAC
-language family only provides a state monad interface, which is not destructable
-by itself.  We need to introduce a programming language to represent the
-specification, and derive validators by interpreting programs written in that
-language.
+language family only provides a state monad interface, which is insufficient for
+deriving validators.  To enable structural analysis of the specification, we
+need to introduce a programming language to represent the server model, and
+derive validators by interpreting programs written in that language.
+
+For simplicity, I demonstrate the computations with an abstract machine model
+featuring random-access memory (RAM) and arithmetic operations of integers.  To
+handle more complex data types like HTTP, we can extend the abstraction to
+support those types, or reduce the computation from other types to integers.
 
 \begin{definition}[Server and validator of a program]
   A program $p\in\Lang$ is a representation of computation that can be
