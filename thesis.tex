@@ -174,11 +174,11 @@
 \newcommand{\complies}[2]{\mathsf{comply}_{#1}~{#2}}
 \newcommand{\ncomplies}[2]{\neg(\complies{#1}{#2})}
 \newcommand{\valid}[2]{\mathsf{valid}_{#1}~{#2}}
-\newcommand{\invalid}[2]{\neg(\valid{#1}{#2})}
+\newcommand{\invalid}[2]{\neg\valid{#1}{#2}}
 \newcommand{\accepts}[2]{\mathsf{accept}_{#1}~{#2}}
-\newcommand{\rejects}[2]{\neg(\accepts{#1}{#2})}
-\newcommand{\rejSound}[2]{#1\;\mathsf{sound}_{#2}^\mathfrak{Rej}}
-\newcommand{\rejComplete}[2]{#1\;\mathsf{complete}_{#2}^\mathfrak{Rej}}
+\newcommand{\rejects}[2]{\neg\accepts{#1}{#2}}
+\newcommand{\rejSound}[2]{#1\;\mathsf{sound}_{#2}^\mathsf{Rej}}
+\newcommand{\rejComplete}[2]{#1\;\mathsf{complete}_{#2}^\mathsf{Rej}}
 \newcommand{\exhaustive}[2]{\mathsf{exhaustive}_{#1}~{#2}}
 \newcommand{\triggers}[3]{#1\overset{#3}\longrightarrow_{#2}}
 \newcommand{\behaves}[2]{\triggers{#1}{}{#2}}
@@ -348,9 +348,13 @@
 \label{chap:introduction}
 \input{intro}
 
-\chpt{Dualization Theory}
+\chpt{Validator Theory}
 \label{chap:theory}
 \input{theory}
+
+\chpt{Validator by Dualization}
+\label{chap:dualize}
+\input{dualize}
 
 \chpt{From Synchronous Testing to Asynchronous Testing}
 \label{chap:itree}

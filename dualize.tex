@@ -11,23 +11,30 @@ deriving validators.  To enable structural analysis of the specification, we
 need to introduce a programming language to represent the server model, and
 derive validators by interpreting programs written in that language.
 
-For simplicity, I demonstrate the computations with an abstract machine model
-featuring random-access memory (RAM) and arithmetic operations of integers.  To
-handle more complex data types like HTTP, we can extend the abstraction to
-support those types, or reduce the computation from other types to integers.
+For simplicity, I demonstrate the methodology with a subset of server models
+called integer machine model, featuring random-access memory (RAM) and
+arithmetic operations of integers.
 
-\begin{definition}[Server and validator of a program]
-  A program $p\in\Lang$ is a representation of computation that can be
-  ``instantiated'' into a server model:
-  \[\serverOf:\Lang\to\Server\]
-  
-  A program can also be ``interpreted'' into other computations, including
-  validators:
-  \[\validatorOf:\Lang\to\Validator\]
+\begin{definition}[Integer machine model]
+  The server state of an integer machine model is a key-value mapping, where the
+  keys are natural numbers, and the values are integers.  The initial server
+  state maps all keys to zero:
+  \begin{align*}
+    &s_0:\Nat\to\Int\\
+    &s_0=(\_\mapsto0)\\
+    &\textit{i.e. }\forall (k:\Nat), s_0!k=0
+  \end{align*}
+  Here syntax ``$s!k$'' represents the integer value of key $(k:\Nat)$ mapped by
+  $(s:\Nat\to\Int)$.
+
+  The server's query, response, and choices ($Q$, $A$, $C$) are of type integer.
+  At the beginning of each server loop, the query is written to address $!0$,
+  and the internal choice is written to address $!1$.  The server then performs
+  some computation that manipulates the server state, and then sends back the
+  value stored in address $!0$ as the response:
 \end{definition}
-To encode specifications for protocols like CMP-RST, I introduce a simple
-language $\Prog$ in the QAC family, which supports arithmetic operations and
-memory access:
+
+
 \[\begin{array}{lrll}
 \Prog&\triangleq&\Return&\text{end computation and send response}\\
 &\mid&!dst\coloneqq\Sexp;\Prog&\text{write to address }dst\in\Nat\\\null
@@ -38,14 +45,21 @@ memory access:
 \end{array}
 \]
 
+\begin{definition}[Server and validator of a program]
+  A program $p\in\Lang$ is a representation of computation that can be
+  ``instantiated'' into a server model:
+  \[\serverOf:\Lang\to\Server\]
+  
+  A program can also be ``interpreted'' into other computations, including
+  validators:
+  \[\validatorOf:\Lang\to\Validator\]
+\end{definition}
+
 Servers specified in this $\Prog$ language are defined as follows:
 \begin{enumerate}
-\item The server state is a key-value mapping, where the keys are natural
-  numbers, and the values are integers.
-\item The initial server state maps all keys to zero:
-  \[\serverOf(p)\triangleq\existT{S}{\Nat\to\Int}{(\sstep_p,(\_\mapsto0))}\]
 \item The server's query, response, and choices ($Q$, $A$, $C$) are all
   natural numbers.
+  \[\serverOf(p)\triangleq\existT{S}{\Nat\to\Int}{(\sstep_p,(\_\mapsto0))}\]
 \item At the beginning of each server loop, the query is written to address
   $!0$, and the internal choice is written to address $!1$.
 \item After writing the query and response, the server $\Exec$utes the $\Prog$
@@ -308,3 +322,7 @@ For example, by dualizing the $\Prog$ model for CMP-RST in
 \autoref{sec:proglang}, we get a validator as shown in
 \autoref{fig:derived-validator}.  Such derived validators are proven sound and
 complete in the following section.
+
+\section{Correctness Proof}
+\label{sec:proof}
+\input{proof}

@@ -603,15 +603,18 @@ This claim is supported by the following publications:
 \end{enumerate}
 
 \subsection*{Outline}
-This thesis is structured as follows: \autoref{chap:theory} introduces a theory
-for validators and shows how to address internal nondeterminism for synchronous
-testing.  \autoref{chap:itree} transitions from synchronous testing to
-asynchronous testing and introduces the ITree specification
-language.  \autoref{chap:practices} then shows how to derive ITree
-specifications into tester programs that can also address external
-nondeterminism.  \autoref{chap:harness} presents a mechanism for generating and
-shrinking test inputs that address inter-execution nondeterminism.  To evaluate
-the techniques I proposed in this thesis, \autoref{chap:eval} applies them to
-testing web servers and file synchronizers.  I then compare my technique with
-related works in \autoref{chap:related-work}, and discuss future directions
-in \autoref{chap:discussion}.
+This thesis is structured as follows: \autoref{chap:theory} presents a theory
+for synchronous testing, introduces a language family for representing
+validators, and shows how to reason about their correctness.
+\autoref{chap:dualize} applies the validator theory to an integer machine model,
+showing how to derive validators from protocol specifications.
+\autoref{chap:itree} transitions from synchronous testing to asynchronous
+testing and introduces the ITree specification language.
+\autoref{chap:practices} then shows how to derive ITree specifications into
+tester programs that can also address external nondeterminism.
+\autoref{chap:harness} presents a mechanism for generating and shrinking test
+inputs that address inter-execution nondeterminism.  To evaluate the techniques
+I proposed in this thesis, \autoref{chap:eval} applies them to testing web
+servers and file synchronizers.  I then compare my technique with related works
+in \autoref{chap:related-work}, and discuss future directions in
+\autoref{chap:discussion}.

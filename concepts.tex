@@ -4,22 +4,23 @@ notations in interactive testing.
 
 \begin{definition}[Implementations and Traces]
   {\em Implementations} are programs that can interact with their environment.
-  {\em Traces} are the outputs and inputs during execution.  ``Implementation
-  $i$ can {\em produce} trace $t$'' is written as ``$\behaves i t$''.
+  {\em Traces} are the implementations' inputs and outputs during execution.
+  ``Implementation $i$ can {\em produce} trace $t$'' is written as ``$\behaves i
+  t$''.
 \end{definition}
 
 This chapter focuses on synchronous testing that assumes no external
 nondeterminism.  Here the tester's observation is identical to the
 implementation's output, so the tester-side trace is the same as that on the
 implementation side.  Asynchronous testing will be discussed in
-\autoref{chap:practices}.
+\autoref{chap:itree}.
 
 \begin{definition}[Specification, Validity, and Compliance]
   \label{def:compliance}
   A {\em specification} is a description of valid traces.  ``Trace $t$ is {\em
     valid} per specification $s$'' is written as ``$\valid s t$''.
 
-  An implementation $i$ {\em complies} with a specification $s$ (written
+  An implementation $i$ {\em complies} with a specification $s$ (written as
   ``$\complies s i$'') if it only produces traces that are valid per the
   specification:
   \[\complies s i\quad\triangleq\quad\forall t,(\behaves i t)\implies\valid s t\]
@@ -41,13 +42,13 @@ implementation side.  Asynchronous testing will be discussed in
     literature~\cite{Tretmans}, but explicitly uses ``rejection-'' prefix for
     clarity.  ``Rejection soundness'' is equivalent to ``acceptance
     completeness'', and vice versa.}
-
-  The tester's correctness is based on its components' properties: A
-  rejection-sound tester requires its validator to be rejection-sound; A
-  rejection-complete tester consists of (i) a rejection-complete validator
-  and (ii) an exhaustive test harness that can eventually trigger invalid
-  traces.
 \end{definition}
+
+The tester's correctness is based on its components' properties: A
+rejection-sound tester requires its validator to be rejection-sound; A
+rejection-complete tester consists of (i) a rejection-complete validator and
+(ii) an exhaustive test harness that can eventually trigger invalid traces.  The
+validators' soundness and completeness are defined as follows:
 
 \begin{definition}[Correctness of validators]
   A validator $v$ is {\em rejection-sound} with respect to specification $s$
@@ -61,5 +62,5 @@ implementation side.  Asynchronous testing will be discussed in
   \[\rejComplete v s\quad\triangleq\quad\forall t,\invalid s t\implies\rejects v t\]
 \end{definition}
 
-The rest of this chapter shows how to build validators that can be proven sound
-and complete.
+The rest of this chapter shows how to construct specifications and validators,
+and how to prove the validators' correctness with respect to the specifications.

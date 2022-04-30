@@ -1,12 +1,8 @@
-This chapter provides a theoretic view of validators in synchronous
-testing and shows how to address internal nondeterminism by dualizing
-symbolic specifications.
-
-\autoref{sec:concepts} defines the concepts in testing.  \autoref{sec:qac}
-introduces a simple language that exhibits internal nondeterminism.  From
-specifications written in this language, \autoref{sec:dualization} derives
-validators by dualization.  The derived validators are proven correct
-in \autoref{sec:proof}.
+This chapter provides a theoretic view of synchronous testing that involve
+internal nondeterminsm.  \autoref{sec:concepts} defines the basic concepts in
+testing.  \autoref{sec:qac} introduces a language family for writing protocol
+specifications and validators.  \autoref{sec:correctness} shows how to reason on
+validators' soundness and completeness with respect to the specification.
 
 \section{Concepts}
 \label{sec:concepts}
@@ -16,10 +12,6 @@ in \autoref{sec:proof}.
 \label{sec:qac}
 \input{qac}
 
-\section{Dualizing specifications into validators}
-\label{sec:dualization}
-\input{dualize}
-
-\section{Soundness and completeness of derived validators}
-\label{sec:proof}
-\input{proof}
+\section{Soundness and completeness of validators}
+\label{sec:correctness}
+\input{correctness}

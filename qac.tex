@@ -1,6 +1,6 @@
-To illustrate how to write specifications for testing purposes, this section
-introduces the ``query-answer-choice'' (QAC) language family for specifying
-network protocols that involve internal nondeterminism.
+In this section, I introduce the ``query-answer-choice'' (QAC) language family
+for writing specifications and validators for network protocols that involve
+internal nondeterminism.
 
 \subsection{Specifying protocols with server models}
 Network protocols can be specified with ``reference implementations'' {\it i.e.}
@@ -32,9 +32,9 @@ structure called state monad.
       as pre state and yields the mapped value $f(k)$ as result.  The post state
       is the original mapping $f$ unchanged.
     \item The \ilc{put} function takes a key-value pair as argument, and
-      constructs a state monad with state type $(K\to V)$ and result type $()$
-      (unit type, which is similar to \inlinec{void} return type in C/Java
-      functions).
+      constructs a state monad with state type $(K\to V)$ and result type
+      ``$()$'' (unit type, which corresponds to \inlinec{void} return type in
+      C/Java functions).
     \item Given argument $(k,v)$ of type $(K\times V)$, $\mathtt{put}(k,v)$
       takes a mapping $f$ as pre state and substitues its value at key $k$ with
       $v$.  The post state is the substituted mapping $\update f k v$.
@@ -242,21 +242,3 @@ A validator accepts a trace if it cosumes the entire trace:
   \behaves{v_1}{(q,a)}{v_2}\]
 \end{enumerate}
 \end{definition}
-
-\subsection{Soundness and completeness of validators}
-We can now phrase the correctness properties in \autoref{sec:concepts} in terms
-of the QAC language family:
-\begin{enumerate}
-  \item A rejection-sound ({\it i.e.} acceptance-complete) validator consumes
-    all traces that are producible by the protocol specification:
-    \[\begin{array}{lrl}
-      \rejSound v s&\triangleq&\forall t,\rejects v t\implies\invalid s t\\
-      &\triangleq&\forall t,(\exists s',\behaves s t s')\implies\exists v',\behaves v t v'
-    \end{array}\]
-  \item A rejection-complete ({\it i.e.} acceptance-sound) validator only
-    consumes traces that are producible by the protocol specification:
-    \[\begin{array}{lrl}
-      \rejComplete v s&\triangleq&\forall t,\invalid s t\implies\rejects v t\\
-      &\triangleq&\forall t,(\exists v',\behaves v t v')\implies\exists s',\behaves s t s'
-    \end{array}\]
-\end{enumerate}
