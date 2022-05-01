@@ -133,12 +133,13 @@ validity notation ``$\valid s t$'' in \autoref{def:compliance} in terms of
 operational semantics.
 
 \begin{definition}[Server transitions]
-  Upon request $q$, server model $s$ can step to $s'$ yielding response $a$
-  (written ``$\behaves s{(q,a)}s'$~'') if and only if the response and the post
-  model can be computed by the $\stepServer$ function:
+  \label{def:server-step}
+  Upon request $q$ and choice $c$, server model $s$ can step to $s'$ yielding
+  response $a$ (written ``$\triggers sc{(q,a)}s'$~'') if and only if the
+  response and the post model can be computed by the $\stepServer$ function:
 
 \begin{align*}
-  &\behaves s{(q,a)}s'\quad\triangleq\quad\exists c,\stepServer(q,c)(s)=(a,s')\\
+  &\triggers sc{(q,a)}s'\quad\triangleq\quad\stepServer(q,c)(s)=(a,s')\\
   &\stepServer:Q\times C \to \Server \to A\times \Server \\
   &\stepServer(q,c)(s)\triangleq\\
   &\qquad\letin{(\existT{S}{\sigma}{(\sstep, state)})}{s}\\
@@ -169,7 +170,7 @@ pre-step $state$ with the post-step $state'$.
   \item A server model can produce a non-empty trace if it can produce the head
     of the trace, and step to some server model that produces the tail of the
     trace:
-    \[\behaves s {t+(q,a)} s_2\quad\triangleq\quad\exists s_1,\behaves s t s_1\wedge\behaves {s_1}{(q,a)}s_2\]
+    \[\behaves s {t+(q,a)} s_2\quad\triangleq\quad\exists s_1,c,\behaves s t s_1\wedge\triggers {s_1}c{(q,a)}s_2\]
   \end{enumerate}
 \end{definition}
 
@@ -209,6 +210,7 @@ notation ``$\accepts v t$'' in \autoref{def:tester} in terms of operational
 semantics.
 
 \begin{definition}[Validator transitions]
+  \label{def:validator-step}
   Validator $v$ can consume request $q$ and response $a$ and step to $v'$
   (written ``$\behaves v{(q,a)}v'$~'') if and only if the post validator can be
   computed by the $\stepValidator$ function:

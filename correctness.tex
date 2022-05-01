@@ -21,49 +21,65 @@ need to show the correspondence between each server and validator step.  This is
 done by introducing some loop invariant between the server and validator states,
 and show that it is preserved by the server's and the validator's loop body.
 
+This section shows how to prove that validator $\existT{V}{\beta}{(\vstep,v_0)}$
+is sound and complete with respect to the server model
+$\existT{S}{\sigma}{(\sstep,s_0)}$.  The core of the proof is the loop invariant
+defined as a binary relation between the validator state $\beta$ and the server
+state $\sigma$.  Notation ``$(\Reflects v s)$'' is pronounced ``validator state
+$v$ simulates server state $s$''.
+
 \subsection{Proving rejection soundness}
-To prove that any trace producible by server $\existT{S}{\sigma}{(\sstep,s_0)}$
-is consumable by validator $\existT{V}{\beta}{(\vstep,v_0)}$, I perform forward
-induction on the server's execution path, and show that every step has a
-corresponding validator step:
+To prove that any trace producible by the server is consumable by the validator,
+I perform forward induction on the server's execution path, and show that every
+step has a corresponding validator step:
+
 \begin{itemize}
 \item The initial server state $s_0$ simulates the initial validator state $v_0$:
   \begin{equation}
     \tag{RejSound-Init}
     \label{eq:rs1}
-    \Reflects{(v_0:\beta)}{(s_0:\sigma)}
+    \Reflects{v_0}{s_0}
   \end{equation}
-\item Any server step $\sstep(q,c,s)=(a,s')$ whose pre-execution state $s$
+\item Any server step $\triggers sc{(q,a)}s'$ whose pre-execution state $s$
   reflects some pre-validation state $v$ can be consumed by the validator
-  yielding a post-validation state $v'$ that reflects the post-execution state $s'$:
+  yielding a post-validation state $v'$ that reflects the post-execution state
+  $s'$:
   \begin{align*}
     \tag{RejSound-Step}
     \label{eq:rs2}
     &\forall(q:Q)(c:C)(a:A)(s,s':\sigma)(v:\beta),\\
-    &\sstep(q,c,s)=(a,s')\wedge\Reflects{v}{s}\\
-    &\implies\exists v':\beta,\vstep(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}
+    &\triggers sc{(q,a)}s'\;\wedge\;\Reflects{v}{s}\\
+    &\implies\exists(v':\beta),\;\behaves v{(q,a)}v'\;\wedge\;\Reflects{v'}{s'}
   \end{align*}
   \begin{center}
     \includegraphics[width=.5\textwidth]{figures/sound}
   \end{center}
 \end{itemize}
 
+Here syntax ``$\triggers sc{(q,a)}s'$~'' and ``$\behaves v{(q,a)}v'$~'' are
+simplified from \autoref{def:server-step} and \autoref{def:validator-step},
+representing the server and validator instances by their states.  This is
+because their state types $\sigma,\beta$ and step functions $\sstep,\vstep$
+remain constant over the transitions.
+
 \subsection{Proving rejection completeness}
-To prove that any trace consumable by validator
-$\existT{V}{\beta}{(\vstep,v_0)}$ is producible by server
-$\existT{S}{\sigma}{(\sstep,s_0)}$, we need backward induction on the
-validator's execution path and show that every step has a corresponding server
-step:
+Rejection completeness says that any trace consumable by the validator is
+producible by the server model.  I construct the server's execution path
+$\behaves sts'$ by {\em backward} induction of the validation path $\behaves
+vtv'$:
 \begin{itemize}
-\item Any accepting validator step $\vstep(q,a,v)=\Some v'$ has some server
+\item Any accepting validator step $\behaves v{(q,a)}v'$ has some server
   state $s'$ that reflects the post-validation state $v'$:
   \begin{align*}
     \tag{RejComplete-End}
     \label{eq:rc1}
-    \forall(q:Q)(a:A)(v, v':\beta),\;&\vstep(q,a,v)=\Some{v'}\\
+    \forall(q:Q)(a:A)(v, v':\beta),\;&\behaves v{(q,a)}v'\\
     &\implies\exists s':\sigma,\Reflects{v'}{s'} 
   \end{align*}
-\item Any accepting validator step $\vstep(q,a,v)=\Some v'$ whose
+  This gives us a final server state from which we can construct the server's
+  execution path inductively.
+
+\item Any accepting validator step $\behaves v{(q,a)}v'$ whose
   post-validation state $v'$ reflects some post-execution server state $s'$
   has a corresponding server step from a pre-execution state $s$
   that reflects the pre-validation state $v$:
@@ -91,4 +107,5 @@ is proven by backward induction.  This is because the choice $C$ is known from
 the server step, but unknown from the validator step: Given a validator step, we
 cannot predict ``what choices the server will make in the future'', but can
 analyze ``what choices the server might have made in the past''.  This proof
-strategy is further explained with the $\Prog$ example.
+strategy is formalized in the Coq proof assistant, and will be demonstrated with
+an example in \autoref{sec:proof}.
