@@ -1,19 +1,27 @@
-So far we have defined the QAC language family, where specifications and
-validators are represented as state monads.  This section will show how to
-derive validators from the specification.
+As discussed in \autoref{sec:internal-external-nondeterminism}, nondeterminism
+makes validators difficult to write.  To address this challenge, I construct
+validators {\em automatically} from the specification.  The key idea is to
+encode the specification with a programming language, and {\em dualize} the
+specification program into the validator.
 
-\subsection{Encoding specifications and validators}
-\label{sec:proglang}
-To write an algorithm from the specification to the validator, we need to
-analyze the computations defined by the specification's model program.  The QAC
-language family only provides a state monad interface, which is insufficient for
-deriving validators.  To enable structural analysis of the specification, we
-need to introduce a programming language to represent the server model, and
-derive validators by interpreting programs written in that language.
+This chapter demonstrates the dualization technique with a programming language
+in the QAC family.  \autoref{sec:encode-spec} introduces the $\Prog$ language
+for encoding specifications.  Specification written in $\Prog$ are dualized into
+validators in \autoref{sec:dualize-prog}, with correctness proven in
+\autoref{sec:proof}.
 
-For simplicity, I demonstrate the methodology with a subset of server models
-called integer machine model, featuring random-access memory (RAM) and
-arithmetic operations of integers.
+\section{Encoding Specification Programs}
+\label{sec:encode-spec}
+Constructing the validator automatically requires analyzing the computations of
+the specification program.  The QAC language family in \autoref{sec:qac} only
+provides a state monad interface for server models, which is insufficient for
+performing structural analysis.  This section introduces a programming language
+for encoding specifications.
+
+For readability, I demonstrate the dualization technique on a subset of QAC
+server models called integer machine model, featuring random-access memory (RAM)
+and arithmetic operations of integers.  To test real-world systems like HTTP,
+I'll employ a more complex specification language in \autoref{chap:itree}.
 
 \begin{definition}[Integer machine model]
   The server state of an integer machine model is a key-value mapping, where the
@@ -119,7 +127,7 @@ memory access, and internal nondeterminism.  It also exhibits a tree structure
 that allows inductive reasoning.  The rest of this section derives validators
 from $\Prog$ models, and prove the correctness of such derived validators.
 
-\subsection{Dualize model program into validator}
+\section{Dualize model program into validator}
 \label{sec:dualize-prog}
 The validator of a model $p\in\Prog$ needs to determine whether the trace is
 producible by $p$.  More specifically, whether the responses in the trace can be
