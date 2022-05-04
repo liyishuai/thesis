@@ -129,29 +129,40 @@ the validator automatically by dualization.
 
 \section{Dualizing Specification Programs}
 \label{sec:dualize-prog}
-The validator of a model $p\in\Prog$ needs to determine whether the trace is
-producible by $p$.  More specifically, whether the responses in the trace can be
-{\em explained} by $p$'s return value stored at address $!0$.
+This section presents an algorithm that constructs a validator from the
+specification program:
+\[\validatorOf:\Prog\to\Validator\]
 
-The idea is similar to \ilc{tester} in \autoref{sec:interactive-testing}, which
-\ilc{validate}s the trace by executing the \ilc{serverSpec}, and comparing the
-expected response against the tester's observation.
+For every program $p$, $\validatorOf(p)$ determines whether a trace is
+producible by $\serverOf(p)$:
+\begin{align*}
+  &\forall (p:\Prog)(t:\List(Q\times A),\\
+  &(\behaves{\validatorOf(p)}t)\;\iff\;(\behaves{\serverOf(p)}t)
+\end{align*}
 
-However, when the specification is nondeterministic, the expectation of response
-$A$ is parameterized over the internal choice $C$.  Therefore, the validator
-should determine whether there exists such $C$ that led the specification to
-produce the observed $A$.
+More specifically, given a trace of $Q\times A$ pairs, the validator determines
+whether there exists a sequences of internal choices $C$ that explains how the
+server produces the trace in \autoref{def:trace-validity}.
 
-This reduces the trace validation problem to constraint solving.  Upon observing
-a response, the validator adds a constraint that the observation can be
-explained by running the specification with certain value of choices.
+The idea is similar to the \ilc{tester} in \autoref{sec:interactive-testing},
+which \ilc{validate}s the trace by executing the \ilc{serverSpec}, and comparing
+the expected response against the tester's observation.
+
+However, executing a nondeterministic specification does not produce a specific
+expectation of response, but a space of responses parameterized over the
+internal choices.  Therefore, upon observing a response $A$, the validator
+should determine whthere there exists a choice $C$ that leads the specification
+to produce this response.
+
+This reduces the trace validation problem to constraint solving.  The validator
+maintains a set of constraints that unify the responses produced by the
+specification with the responses observed from the implementation.
 
 More specifically, the validator executes the $\Prog$ model and represents
 internal choices with {\em symbolic variables}.  These variables are carried
 along the program execution, so the expected responses are computed as {\em
   symbolic expressions} that might depend on those variables.  The validator
-then constraints that the symbolic response is equal to the concrete
-observation.
+then constrains that the symbolic response is equal to the concrete observation.
 
 To achieve this goal, the validator needs to store the symbolic expression for
 each address of the server model.  It also needs to remember all the constraints
