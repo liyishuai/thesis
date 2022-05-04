@@ -10,7 +10,7 @@ for encoding specifications.  Specification written in $\Prog$ are dualized into
 validators in \autoref{sec:dualize-prog}, with correctness proven in
 \autoref{sec:proof}.
 
-\section{Encoding Specification Programs}
+\section{Encoding Specifications}
 \label{sec:encode-spec}
 Constructing the validator automatically requires analyzing the computations of
 the specification program.  The QAC language family in \autoref{sec:qac} only
@@ -20,114 +20,114 @@ for encoding specifications.
 
 For readability, I demonstrate the dualization technique on a subset of QAC
 server models called integer machine model, featuring random-access memory (RAM)
-and arithmetic operations of integers.  To test real-world systems like HTTP,
-I'll employ a more complex specification language in \autoref{chap:itree}.
+and arithmetic operations.  To test real-world systems like web servers, I'll
+employ a more complex specification language in \autoref{chap:itree}.
 
-\begin{definition}[Integer machine model]
-  The server state of an integer machine model is a key-value mapping, where the
-  keys are natural numbers, and the values are integers.  The initial server
-  state maps all keys to zero:
-  \begin{align*}
-    &s_0:\Nat\to\Int\\
-    &s_0=(\_\mapsto0)\\
-    &\textit{i.e. }\forall (k:\Nat), s_0!k=0
-  \end{align*}
-  Here syntax ``$s!k$'' represents the integer value of key $(k:\Nat)$ mapped by
-  $(s:\Nat\to\Int)$.
+\subsection{Integer machine model}
+The server state of an integer machine model is a key-value mapping that
+resembles a RAM.  The addresses are natural numbers, and the data are integers.
+The initial server state has zero data in all addresses:
+\begin{align*}
+  &s_0:\Nat\to\Int\\
+  &s_0=(\_\mapsto0)\\
+  &\textit{i.e. }\forall (k:\Nat), s_0!k=0
+\end{align*}
+Here syntax ``$s!k$'' is pronounced ``data stored in address $!k$ of memory
+$s$''.
 
-  The server's query, response, and choices ($Q$, $A$, $C$) are of type integer.
-  At the beginning of each server loop, the query is written to address $!0$,
-  and the internal choice is written to address $!1$.  The server then performs
-  some computation that manipulates the server state, and then sends back the
-  value stored in address $!0$ as the response:
-\end{definition}
+The server's query, response, and choices ($Q$, $A$, $C$) are of type integer.
+At the beginning of each server loop, the internal choice is written to address
+$!0$, and the query is written to address $!1$.  The server then performs some
+computation $f:(\Nat\to\Int)\to(\Nat\to\Int)$ that manipulates the memory, and
+then sends back the value stored in address $!1$ as the response:
+\begin{align*}
+  \sstep_f(q,c)(s)\quad\triangleq\quad&\letin{s_1}{\update s0c}\\
+  &\letin{s_2}{\update{s_1}1q}\\
+  &\letin{s_3}{f(s_2)}\\
+  &(s_3!1,s_3)
+\end{align*}
 
+Each memory-manipulating computation $f$ defines an instance of the integer
+machine model:
+\[\existT{S}{\Nat\to\Int}{(\sstep_f,s_0)}\]
 
+Dualizing an integer machine model requires structural analysis of its memory
+manipulation.  Next I'll introduce a programming language to encode computations
+$(\Nat\to\Int)\to(\Nat\to\Int)$.
+
+\subsection{The $\Prog$ modelling language}
+\paragraph{Syntax}
+A program in the $\Prog$ language may read and write at any address of the
+memory, perform arithmetic operations, and make conditional branches:
 \[\begin{array}{lrll}
-\Prog&\triangleq&\Return&\text{end computation and send response}\\
+\Prog&\triangleq&\Return&\text{end computation}\\
 &\mid&!dst\coloneqq\Sexp;\Prog&\text{write to address }dst\in\Nat\\\null
 &\mid&\If\Sexp\le\Sexp\Then\Prog\Else\Prog&\text{conditional branch}\\
 \Sexp&\triangleq&\Int&\text{constant integer}\\
 &\mid&!src&\text{read from address }src\in\Nat\\
 &\mid&\Sexp\oop\Sexp&op\in\{+,-,\times,\div\}
-\end{array}
-\]
+\end{array}\]
 
-\begin{definition}[Server and validator of a program]
-  A program $p\in\Lang$ is a representation of computation that can be
-  ``instantiated'' into a server model:
-  \[\serverOf:\Lang\to\Server\]
-  
-  A program can also be ``interpreted'' into other computations, including
-  validators:
-  \[\validatorOf:\Lang\to\Validator\]
-\end{definition}
+For example, the following program computes the absolute value of data stored in
+$!1$, and stores it in address $!1$:
+\[\begin{array}{ll}
+  \If&!1\le0\\
+  \tthen&!1\gets(0-!1);\;\Return\\
+  \eelse&\Return
+\end{array}\]
 
-Servers specified in this $\Prog$ language are defined as follows:
-\begin{enumerate}
-\item The server's query, response, and choices ($Q$, $A$, $C$) are all
-  natural numbers.
-  \[\serverOf(p)\triangleq\existT{S}{\Nat\to\Int}{(\sstep_p,(\_\mapsto0))}\]
-\item At the beginning of each server loop, the query is written to address
-  $!0$, and the internal choice is written to address $!1$.
-\item After writing the query and response, the server $\Exec$utes the $\Prog$
-  model, which manipulates the key-value store.
-\item When the $\Prog$ model $\Return$s, the server sends back the value stored
-  in address $!0$ as the response.
-\end{enumerate}
-Let $p\in\Prog$ be the model program, then the server's loop body $\sstep_p$ is
-defined as:
-\[\begin{array}{lr@{\,}l}
-\sstep_p(q,c,s_0)&\triangleq&\letin{s_1}{\update{s_0}{1}{c}}\\
-&&\letin{s_2}{\update{s_1}{0}{q}}\\
-&&\letin{s_3}{\Exec(p,s_2)}\\
-&&(s_3!0,s_3)\\
-\Exec(p,s)&\triangleq&
+\paragraph{Semantics}
+Each program $(p:\Prog)$ specifies a computation on the integer machine:
+\[\begin{array}{ll}
+\multicolumn{2}{l}{\Exec\;:\;\Prog\to(\Nat\to\Int)\to(\Nat\to\Int)}\\
+\Exec(p)(s)&\triangleq
 \begin{cases}
   s&p\Is\Return\\
   \Exec(p',\update{s}{dst}{e^s})&p\Is !dst\coloneqq e;p'\\
   \Exec(\If {e_1}^s\le{e_2}^s\Then p_1\Else p_2,s)&p\Is\If e_1\le e_2\Then p_1\Else p_2
 \end{cases}\\
-e^s&\triangleq&
+e^s&\triangleq
 \begin{cases}
-  z&e\Is z:\Int\\
+  z\hphantom{\Exec(\If {e_1}^s\le{e_2}^s\Then p_1\Else p_2,)}&e\Is z:\Int\\
   s!src&e\Is !src\\
   {e_1}^s\oop{e_2}^s&e\Is e_1\oop e_2
 \end{cases}
 \end{array}\]
-Here ``$e^s$'' is pronounced ``evaluating server expression $(e:\Sexp)$ with
-state $(s:\Nat\to\Int)$''.  It substitutes all occurences of ``$!src$'' with the
-value stored at address $src$ of mapping $s$, written as ``$s!src$''.
-``$s[k\mapsto v]$'' is pronounced ``updating mapping $s$ at address $k$ to value
-$v$''.  It produces a new state where $k$ is mapped to $v$, while other
-addresses remain unchanged from $s$:
+
+Here ``$e^s$'' is pronounced ``evaluating server expression $(e:\Sexp)$ on
+memory $(s:\Nat\to\Int)$''.  It substitutes all occurences of ``$!src$'' with
+the data stored in address $!src$ of memory $s$.
+
+Syntax ``$s[k\mapsto v]$'' is pronounced ``writing value $v$ to address $!k$ of
+memory $s$''.  It produces a new memory that maps address $!k$ to $v$, while
+other addresses remain unchanged from $s$:
 \[s[k\mapsto v]!k'\triangleq\begin{cases}v&k'=k\\
 s!k'&k'\neq k\end{cases}\]
 
-To specify protocols with this $\Prog$ language, the model program should read
-the query from address $!0$, and parameterize the space of nondeterministic
-behavior over the internal choice in address $!1$.  When the model program
-returns, it should have stored the computed response in address $!0$.  Addresses
-greater than $!1$ are only writable by the specification, and can be used for
-storing the server state.
+\paragraph{From $\Prog$ to server model}
+Every program in the $\Prog$ language corresponds to a server model that
+performs the computations it specifies:
+\begin{align*}
+  &\serverOf:\Prog\to\Server\\
+  &\serverOf(p)\;\triangleq\;\existT{S}{\Nat\to\Int}{(\sstep_{\Exec(p)},s_0)}
+\end{align*}
 
-For example, the CMP-RST specification in \autoref{sec:qac} can be written in
-$\Prog$ as:
+For example, the CMP-RST protocol in \autoref{sec:qac-model} can be constructed
+by applying $\serverOf$ to the following program:
 \[\begin{array}{ll}
-\If !0\le!2\Then !0\coloneqq0;\Return&(1)\\
-\eelse!0\coloneqq1;!2\coloneqq!1;\Return&(2)
+\If !1\le!2\Then !1\coloneqq0;\Return&(1)\\
+\eelse!1\coloneqq1;!2\coloneqq!0;\Return&(2)
 \end{array}\]
-When the query is less than or equal to the value stored in $!2$ (case 1), the
-server writes response $0$ to address $!0$, and leave address $!2$ untouched.
-For queries greater than the value in $!2$ (case 2), the server writes $1$ as
-response, and updates address $!2$ with the internal choice stored in $!1$.
+The constructed server stores its data $n$ in address $!2$.  When the query
+stored in $!1$ is less than or equal to $!2$ (case 1), the server writes $0$ to
+address $!1$ as response, and leaves the data untouched in address $!2$.  For
+queries greater than $!2$ (case 2), the server writes $1$ as response, and
+updates the data in $!2$ with the internal choice stored in $!0$.
 
-This $\Prog$ language features arithmetic operations, conditional branches,
-memory access, and internal nondeterminism.  It also exhibits a tree structure
-that allows inductive reasoning.  The rest of this section derives validators
-from $\Prog$ models, and prove the correctness of such derived validators.
+Based on specifications written in the $\Prog$ language, we can now construct
+the validator automatically by dualization.
 
-\section{Dualize model program into validator}
+\section{Dualizing Specification Programs}
 \label{sec:dualize-prog}
 The validator of a model $p\in\Prog$ needs to determine whether the trace is
 producible by $p$.  More specifically, whether the responses in the trace can be

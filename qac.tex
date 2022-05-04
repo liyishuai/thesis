@@ -3,6 +3,7 @@ for writing specifications and validators for network protocols that involve
 internal nondeterminism.
 
 \subsection{Specifying protocols with server models}
+\label{sec:qac-model}
 Network protocols can be specified with ``reference implementations'' {\it i.e.}
 model programs that exhibit the space of valid behaviors.  For client-server
 systems such as WWW, we can specify networked servers as programs that receive
@@ -106,18 +107,18 @@ When the request is greater than \inlinec S, the server may reset \inlinec S to
 any arbitrary number:
 \begin{lstlisting}[style=customc]
   int arbitrary();
-  int S = 0;
+  int n = 0;
   while (true) {
     int request = recv();
-    if (request <= S) send(0);
-    else { S = arbitrary(); send(1); }
+    if (request <= n) send(0);
+    else { n = arbitrary(); send(1); }
   }
 \end{lstlisting}
 Its corresponding server model can be written as:
 \begin{align*}
-  \existT{S}{\Int}{(&\lam{(q,c)(s)}{
+  \existT{S}{\Int}{(&\lam{(q,c)(n)}{
       \begin{cases}
-        (0,s)& q\le s\\
+        (0,n)& q\le n\\
         (1,c)&\mathrm{otherwise}
       \end{cases}
     },\\
