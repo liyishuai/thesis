@@ -56,6 +56,7 @@ manipulation.  Next I'll introduce a programming language to encode computations
 $(\Nat\to\Int)\to(\Nat\to\Int)$.
 
 \subsection{The $\Prog$ modelling language}
+\label{sec:prog-lang}
 \paragraph{Syntax}
 A program in the $\Prog$ language may read and write at any address of the
 memory, perform arithmetic operations, and make conditional branches:
@@ -64,7 +65,7 @@ memory, perform arithmetic operations, and make conditional branches:
 &\mid&!dst\coloneqq\Sexp;\Prog&\text{write to address }dst\in\Nat\\\null
 &\mid&\If\Sexp\le\Sexp\Then\Prog\Else\Prog&\text{conditional branch}\\
 \Sexp&\triangleq&\Int&\text{constant integer}\\
-&\mid&!src&\text{read from address }src\in\Nat\\
+&\mid&!\src&\text{read from address }\src\in\Nat\\
 &\mid&\Sexp\oop\Sexp&op\in\{+,-,\times,\div\}
 \end{array}\]
 
@@ -79,24 +80,24 @@ $!1$, and stores it in address $!1$:
 \paragraph{Semantics}
 Each program $(p:\Prog)$ specifies a computation on the integer machine:
 \[\begin{array}{ll}
-\multicolumn{2}{l}{\Exec\;:\;\Prog\to(\Nat\to\Int)\to(\Nat\to\Int)}\\
-\Exec(p)(s)&\triangleq
+\multicolumn{2}{l}{\Eval\;:\;\Prog\to(\Nat\to\Int)\to(\Nat\to\Int)}\\
+\Eval(p)(s)&\triangleq
 \begin{cases}
   s&p\Is\Return\\
-  \Exec(p',\update{s}{dst}{e^s})&p\Is !dst\coloneqq e;p'\\
-  \Exec(\If {e_1}^s\le{e_2}^s\Then p_1\Else p_2,s)&p\Is\If e_1\le e_2\Then p_1\Else p_2
+  \Eval(p',\update{s}{\dst}{e^s})&p\Is !\dst\coloneqq e;p'\\
+  \Eval(\If {e_1}^s\le{e_2}^s\Then p_1\Else p_2,s)&p\Is\If e_1\le e_2\Then p_1\Else p_2
 \end{cases}\\
 e^s&\triangleq
 \begin{cases}
   z\hphantom{\Exec(\If {e_1}^s\le{e_2}^s\Then p_1\Else p_2,)}&e\Is z:\Int\\
-  s!src&e\Is !src\\
+  s!\src&e\Is !\src\\
   {e_1}^s\oop{e_2}^s&e\Is e_1\oop e_2
 \end{cases}
 \end{array}\]
 
 Here ``$e^s$'' is pronounced ``evaluating server expression $(e:\Sexp)$ on
-memory $(s:\Nat\to\Int)$''.  It substitutes all occurences of ``$!src$'' with
-the data stored in address $!src$ of memory $s$.
+memory $(s:\Nat\to\Int)$''.  It substitutes all occurences of ``$!\src$'' with
+the data stored in address $!\src$ of memory $s$.
 
 Syntax ``$s[k\mapsto v]$'' is pronounced ``writing value $v$ to address $!k$ of
 memory $s$''.  It produces a new memory that maps address $!k$ to $v$, while
@@ -109,7 +110,7 @@ Every program in the $\Prog$ language corresponds to a server model that
 performs the computations it specifies:
 \begin{align*}
   &\serverOf:\Prog\to\Server\\
-  &\serverOf(p)\;\triangleq\;\existT{S}{\Nat\to\Int}{(\sstep_{\Exec(p)},s_0)}
+  &\serverOf(p)\;\triangleq\;\existT{S}{\Nat\to\Int}{(\sstep_{\Eval(p)},s_0)}
 \end{align*}
 
 For example, the CMP-RST protocol in \autoref{sec:qac-model} can be constructed
@@ -156,7 +157,7 @@ to produce this response.
 
 This reduces the trace validation problem to constraint solving.  The validator
 maintains a set of constraints that unify the responses produced by the
-specification with the responses observed from the implementation.
+specification against the responses observed from the implementation.
 
 More specifically, the validator executes the $\Prog$ model and represents
 internal choices with {\em symbolic variables}.  These variables are carried
@@ -164,95 +165,61 @@ along the program execution, so the expected responses are computed as {\em
   symbolic expressions} that might depend on those variables.  The validator
 then constrains that the symbolic response is equal to the concrete observation.
 
-To achieve this goal, the validator needs to store the symbolic expression for
-each address of the server model.  It also needs to remember all the constraints
-added upon observation.  I store these information as ``validation states'':
-\[(\Nat\to\Vexp)\times\Set\constraint\]
+To achieve this goal, the validator stores a symbolic variables for each address
+of the server model.  It also remembers all the constraints added upon
+observation.  These information are called ``validation states'':
+\[(\Nat\to\Var)\times\Set\constraint\]
 Here the $\constraint$s are relations between validator expressions ($\Vexp$s)
 that may depend on symbolic $\Var$iables:
 \[\begin{array}{lrl@{\qquad}l}
-\constraint&\triangleq&\Vexp\ccmp\Vexp&cmp\in\{<,\le,\equiv\}\\
+\constraint&\triangleq&\Vexp\ccmp\Vexp&cmp\in\{<,\le,=\}\\
 \Vexp&\triangleq&\Int&\text{constant integer}\\
 &\mid&\#x&\text{variable }x\in\Var\\
 &\mid&\Vexp\oop\Vexp&op\in\{+,-,\times,\div\}\\
 \end{array}\]
+The $\Vexp$ type replaces $\Sexp$'s address constructor $!\src$ with variable
+constructor $\#x$.  This allows the validator to constrain the values of the
+same address at different times {\it e.g.} the internal choice stored in $!0$ in
+different iterations.  The validation state maps each address to its current
+representing variable $(\Nat\to\Var)$, which updates as the validator
+symbolically executes the server program.
 
-In practice, I use an equivalent definition for the validator state:
-\[(\Nat\to\Var)\times\Set\constraint\]
-The key-expression mapping $(k\mapsto e)$ above can be simulated with the
-key-variable $(k\mapsto x)$ mapping here, by adding $(\#x\equiv e)$ to the set
-of constraints.  I alter the type interface for convenience of developing the
-validator.
-
-Notice that the internal choices might affect branch conditions, so the
-validator doesn't know which branch in the specification was taken.  Therefore,
-it should maintain multiple validation states, one for each possible execution
-path of the specification:
+Notice that the server program in \autoref{sec:prog-lang} has conditional
+branches.  When executing the specification program, the branch condition might
+depend on the internal choices, which is invisible to the validator.  As a
+result, the validator doesn't know the exact branch taken by the specification,
+so it maintains multiple validation states, one for each possible execution
+path:
 \[\Set((\Nat\to\Var)\times\Set\constraint)\]
 
 The initial state of the validator is a single validation state that corresponds
 to the specification's initial state:
-\[\{(\_\mapsto\#0,\{\#0\equiv0\})\}\]
+\[\{(\_\mapsto\#0,\{\#0=0\})\}\]
 Here the initial validation state says ``all addresses are mapped to variable
 $\#0$, and the value of variable $\#0$ is constrained to be zero''.  This
 reflects the initial server state that maps all addresses to zero value.
 
 The validator's loop body is derived by dualzing the server model:
 
-\begin{figure}[h]
-\[\begin{array}{l@{\;}r@{\;}l}
-\validatorOf(p)&\triangleq&\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}{\\
-  &&(\vstep_p,\{(\_\mapsto\#0,\{\#0\equiv0\})\})}\\
-\vstep_p(q,a,v)&\triangleq&\letin{v'}{v_0\gets v;\vstep'_p(q,a,v_0)}\\
-&&\If v'\Is\varnothing\Then\None\Else\Some v'\hfill(\ref{rule:reject})\\
-\vstep'_p(q,a,v_0)&\triangleq&\letin{v_1}{\Havoc(1,v_0)}\\
-&&\letin{v_2}{\Write(0,q,v_1)}\\
-&&(vs_3,cs_3)\gets\Exec(p,v_2);\\
-&&\letin{cs_4}{cs_3\cup\{\#(vs_3!0)\equiv a\}}\hfill(\ref{rule:return})\\
-&&\If\solvable cs_4\Then\{(vs_3,cs_4)\}\Else\varnothing\hfill(\ref{rule:unsat})\\
-\Exec(p,(vs,cs))&\triangleq&\begin{cases}
-  \{(vs,cs)\}&p\Is\Return\\
-  \Exec(p',\Write(d,e,(vs,cs)))&p\Is !d\coloneqq e;p'\\
-  \left(\begin{array}{@{}l}
-    \letin{v_1}{(vs,cs\cup\{{e_1}^{vs}\le{e_2}^{vs}\})}\\
-    \letin{v_2}{(vs,cs\cup\{{e_2}^{vs}<{e_1}^{vs}\})}\\
-    \Exec(p_1,v_1)\cup\Exec(p_2,v_2)\hfill(\ref{rule:branch})
-  \end{array}\right)&\begin{array}{@{}l}p\Is\\
-    \If e_1\le e_2\\
-    \tthen p_1\Else p_2\end{array}
-\end{cases}\\
-\Write(d,e,(vs,cs))&\triangleq&\letin{x_e}{\Fresh (vs,cs)}\hfill(\ref{rule:write})\\
-&&(\update{vs}{d}{x_e},cs\cup\{\#x_e\equiv e^{vs}\})\\
-\Havoc(d,(vs,cs))&\triangleq&\letin{x_c}{\Fresh (vs,cs)}(\update{vs}{d}{x_c},cs)\hfill(\ref{rule:choice})\\
-e^{vs}&\triangleq&\begin{cases}
-  n&e\Is n:\Nat\\
-  \#(vs!src)&e\Is!src\\
-  {e_1}^{vs}\oop{e_2}^{vs}&e\Is e_1\oop e_2
-\end{cases}
-\end{array}\]
-\caption[Dualizing server model into validator]{Dualizing server model into
-  validator, with derivation rules annotated.}
-\label{fig:dualize}
-\end{figure}
-
 \begin{enumerate}
 \item \label{rule:write} When the server performs a write operation
-  $!dst\coloneqq exp$, the validator creates a fresh variable $x$ to represent
-  the new value stored in address $!dst$, and adds a constraint that says $x$'s
-  value is equal to that of $exp$.
+  $!\dst\coloneqq \mathit{exp}$, the validator creates a fresh variable $x$ to represent
+  the new value stored in address $!\dst$, and adds a constraint that says $x$'s
+  value is equal to that of $\mathit{exp}$.  This rule also applies to writing the
+  request to address $!1$ before executing the program.
 \item \label{rule:branch} When the server makes a nondeterministic branch $\If
   e_1\le e_2\Then p_1\Else p_2$, consider both cases: (a) If $p_1$ was taken,
   then the validator should add a constraint $e_1\le e_2$; or (b) If $p_2$ was
   taken, then the validator should add constraint $e_2<e_1$.
 \item \label{rule:choice} Before executing the program, the server writes the internal
-    choice $c$ to address $!1$.  Accordingly, the validator creates a fresh
-    variable to represent the new value stored in address $!1$, without adding
+    choice $c$ to address $!0$.  Accordingly, the validator creates a fresh
+    variable to represent the new value stored in address $!0$, without adding
     any constraint.
 \item \label{rule:return} After executing the program, the server sends back the
-  value stored in $!0$ as response.  Accordingly, the validator adds a
-  constraint that says the variable representing address $!0$ is equal to the
+  value stored in $!1$ as response.  Accordingly, the validator adds a
+  constraint that says the variable representing address $!1$ is equal to the
   observed response.
-\item \label{rule:unsat} When the constraints of a validation state becomes
+\item \label{rule:unsat} When the constraints of a validation state become
   unsatisfiable, it indicates that the server model cannot explain the
   observation.  This is because either (i) the observation is invalid {\it i.e.}
   not producible by the server model, or (ii) the observation is valid, but was
@@ -265,82 +232,138 @@ e^{vs}&\triangleq&\begin{cases}
   execution path of the specification, so the validator should reject the trace.
 \end{enumerate}
 
-This mechanism is formalized in \autoref{fig:dualize}.  Here notation
-``$v_0\gets v;\vstep'_p(q,a,v_0)$'' is a monadic bind for sets: Let $\vstep'_p$
+\begin{figure}
+\[\begin{array}{l@{\;}r@{\;}l}
+\vstep_p(q,a)(v)&\triangleq&\letin{v'}{v_0\gets v;\vstep'_p(q,a)(v_0)}\\
+&&\If v'\Is\varnothing\Then\None\Else\Some v'\hfill(\ref{rule:reject})\\
+\vstep'_p(q,a)(v_0)&\triangleq&\letin{v_1}{\Havoc(0,v_0)}\\
+&&\letin{v_2}{\Write(1,q,v_1)}\\
+&&(\vs_3,\cs_3)\gets\Exec(p,v_2);\\
+&&\letin{\cs_4}{\cs_3\cup\{\#(\vs_3!1)= a\}}\hfill(\ref{rule:return})\\
+&&\If\solvable \cs_4\Then\{(\vs_3,\cs_4)\}\Else\varnothing\hfill(\ref{rule:unsat})\\
+\Exec(p,(\vs,\cs))&\triangleq&\begin{cases}
+  \{(\vs,\cs)\}&\text{if }p\Is\Return\\
+  \Exec(p',\Write(d,e,(\vs,\cs)))&\text{if }p\Is(!d\coloneqq e;p')\\
+  \left(\begin{array}{@{}l}
+    \letin{v_1}{(\vs,\cs\cup\{{e_1}^{\vs}\le{e_2}^{\vs}\})}\\
+    \letin{v_2}{(\vs,\cs\cup\{{e_2}^{\vs}<{e_1}^{\vs}\})}\\
+    \Exec(p_1,v_1)\cup\Exec(p_2,v_2)\hfill(\ref{rule:branch})
+  \end{array}\right)&\begin{array}{@{}l@{}l}\text{if }&p\Is\\
+    &(\If e_1\le e_2\\
+    &\tthen p_1\Else p_2)\end{array}
+\end{cases}\\
+\Write(d,e,(\vs,\cs))&\triangleq&\letin{x_e}{\Fresh (\vs,\cs)}\hfill(\ref{rule:write})\\
+&&(\update{\vs}{d}{x_e},\cs\cup\{\#x_e=e^{\vs}\})\\
+\Havoc(d,(\vs,\cs))&\triangleq&\letin{x_c}{\Fresh (\vs,\cs)}(\update{\vs}{d}{x_c},\cs)\hfill(\ref{rule:choice})
+\end{array}\]
+\caption[Dualizing server model into validator]{Dualizing server model into
+  validator, with derivation rules annotated.}
+\label{fig:dualize}
+\end{figure}
+
+This mechanism is formalized in \autoref{fig:dualize}.  Here the notation
+``$v_0\gets v;\vstep'_p(q,a)(v_0)$'' is a monadic bind for sets: Let $\vstep'_p$
 map each element $v_0$ in $v$ to a set of validation states
-$(\vstep'_p(q,a,v_0):\Set((\Nat\to\Var)\times\Set\constraint))$, and return the
+$(\vstep'_p(q,a)(v_0):\Set((\Nat\to\Var)\times\Set\constraint))$, and return the
 union of all result sets as $v'$.
+
+The validator adds constraints in three circumstances: \autoref{rule:write} says
+the write operation updates the destination with the source expression;
+\autoref{rule:branch} guards the branch condition to match its corresponding
+execution path; \autoref{rule:return} unifies the server's symbolic response
+against the concrete response observed from the implementation.
+
+The constraints added in \autoref{rule:write} and \autoref{rule:branch} are
+translated from the specification program.  Given a server expression
+$(e:\Sexp)$ from the source expression or the branch condition, syntax $e^\vs$
+translates it into a validator expression $\Vexp$ using the validation state
+$\vs$, by replacing its addresses with the corresponding variables:
+\[e^{\vs}\triangleq\begin{cases}
+  n&e\Is z:\Int\\
+  \#(\vs!\src)&e\Is!\src\\
+  {e_1}^{\vs}\oop{e_2}^{\vs}&e\Is e_1\oop e_2
+\end{cases}\]
 
 The validator assumes a constraint solver that can determine whether a set of
 constraints is satisfiable, {\it i.e.} whether there exists an {\em assignment}
 of variables $(\Var\to\Int)$ that satisfy all the constraints:
 \begin{gather*}
-  \forall cs,\solvable cs\iff\exists (asgn:\Var\to\Int),\satisfy{asgn}cs\\
+  \forall \cs,\solvable \cs\iff\exists (\asgn:\Var\to\Int),\satisfy{\asgn}\cs\\
   \begin{array}{r@{\;}l}
-    \satisfy{asgn}cs\triangleq&\forall(e_1\ccmp e_2)\in cs, {e_1}^{asgn}\ccmp{e_2}^{asgn}\\
-    e^{asgn}\triangleq&\begin{cases}
+    \satisfy{\asgn}\cs\triangleq&\forall(e_1\ccmp e_2)\in \cs, {e_1}^{\asgn}\ccmp{e_2}^{\asgn}\\
+    e^{\asgn}\triangleq&\begin{cases}
       z&e\Is z:\Int\\
-      asgn!x&e\Is \#x\\
-      {e_1}^{asgn}\oop{e_2}^{asgn}&e\Is e_1\oop e_2
+      \asgn!x&e\Is \#x\\
+      {e_1}^{\asgn}\oop{e_2}^{\asgn}&e\Is e_1\oop e_2
     \end{cases}
   \end{array}
 \end{gather*}
-Here ``$e^{asgn}$'' is pronounced ``evaluating validator expression $(e:\Vexp)$
-with assignment $(asgn:\Var\to\Int)$''.  It substitutes all occurences of
-``$\#x$'' with their assigned value $(asgn!x)$.
+Here ``$e^{\asgn}$'' is pronounced ``evaluating validator expression $(e:\Vexp)$
+with assignment $(\asgn:\Var\to\Int)$''.  It substitutes all occurences of
+``$\#x$'' with their assigned value $(\asgn!x)$.
 
-When the $\Prog$ model writes to memories or makes conditional branches, the
-operands are represented as specification expressions ($\Sexp$) that refer to
-server addresses.  To construct the constraints over symbolic variables, the
-validator translates the expressions $(e:\Sexp)$ into validator expressions
-$(e^{vs}:\Vexp)$ by {\em symbolizing} it with the validation state
-$(vs:\Nat\to\Var)$, which substitutes all addresses $(!src)$ with their
-corresponding variable $\#(vs!src)$.
+Now we have the algorithm that constructs the validator from the specification
+program $p$:
+\begin{align*}\validatorOf(p)\;\triangleq\quad&\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}\\
+  &(\vstep_p,\{(\_\mapsto\#0,\{\#0=0\})\})
+\end{align*}
 
-\begin{figure}[h]
+\begin{figure}
 \begin{align*}
-&\validatorOf(\texttt{CMP-RST})\triangleq\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}\\
+&\existT{V}{\Set((\Nat\to\Var)\times\Set\constraint)}\\
   &\begin{array}{rll}
-     (&\lam{(q,a,v)}{&\llet v'=\begin{array}[t]{@{}l@{}l@{}ll}
+     (&\lam{(q,a)(v)}{&\llet v'=\begin{array}[t]{@{}l@{}l@{}ll}
        \multicolumn{3}{@{}l}{(vs_0,cs_0)\gets v;}\\
-       \letin{vs_1&}{\update{vs_0}{1}{\Fresh (vs_0,cs_0)}&}&\text{(1)}\\
+       \letin{vs_1&}{\update{vs_0}{0}{\Fresh (vs_0,cs_0)}&}&\text{(1)}\\
        \letin{x_q&}{\Fresh (vs_1,cs_0)&}\\
-       \letin{vs_2&}{\update{vs_1}{0}{x_q}&}\\
-       \letin{cs_2&}{cs_0\cup\{\#x_q\equiv q\}&}\\
-       \letin{cs_{3a0}&}{cs_2\cup\{\#(vs_2!0)\le\#(vs_2!2))\}&}&\text{(2a)}\\
+       \letin{vs_2&}{\update{vs_1}{1}{x_q}&}\\
+       \letin{cs_2&}{cs_0\cup\{\#x_q= q\}&}\\
+       \letin{cs_{3a0}&}{cs_2\cup\{\#(vs_2!1)\le\#(vs_2!2))\}&}&\text{(2a)}\\
        \letin{x_{3a1}&}{\Fresh (vs_2,cs_{3a0})&}\\
-       \letin{vs_{3a1}&}{\update{vs_2}{0}{x_{3a1}}&}\\
-       \letin{cs_{3a1}&}{cs_{3a0}\cup\{\#x_{3a1}\equiv0\}&}\\
-       \letin{cs_{3b0}&}{cs_2\cup\{\#(vs_2!2)<\#(vs_2!0)\}&}&\text{(2b)}\\
+       \letin{vs_{3a1}&}{\update{vs_2}{1}{x_{3a1}}&}\\
+       \letin{cs_{3a1}&}{cs_{3a0}\cup\{\#x_{3a1}=0\}&}\\
+       \letin{cs_{3b0}&}{cs_2\cup\{\#(vs_2!2)<\#(vs_2!1)\}&}&\text{(2b)}\\
        \letin{x_{3b1}&}{\Fresh (vs_2,cs_{3b0})&}\\
-       \letin{vs_{3b1}&}{\update{vs_2}{0}{x_{3b1}}&}\\
-       \letin{cs_{3b1}&}{cs_{3b0}\cup\{\#x_{3b1}\equiv1\}&}\\
+       \letin{vs_{3b1}&}{\update{vs_2}{1}{x_{3b1}}&}\\
+       \letin{cs_{3b1}&}{cs_{3b0}\cup\{\#x_{3b1}=1\}&}\\
        \letin{x_{3b2}&}{\Fresh (vs_{3b1},cs_{3b1})&}\\
        \letin{vs_{3b2}&}{\update{vs_{3b1}}{2}{x_{3b2}}&}\\
-       \letin{cs_{3b2}&}{cs_{3b1}\cup\{\#x_{3b2}\equiv\#(vs_{3b2}!1)\}&}\\
+       \letin{cs_{3b2}&}{cs_{3b1}\cup\{\#x_{3b2}=\#(vs_{3b2}!1)\}&}\\
        \multicolumn{3}{@{}l}{((vs_4,cs_4)\gets\{(vs_{3a1},cs_{3a1}),(vs_{3b2},cs_{3b2})\};}&\text{(3)}\\
-       \letin{cs_5&}{cs_4\cup\{\#(vs_4!0)\equiv a\}&}\\
+       \letin{cs_5&}{cs_4\cup\{\#(vs_4!1)= a\}&}\\
        \multicolumn{3}{@{}l}{\If\solvable cs_5\Then\{(vs_4,cs_5)\}\Else\varnothing}\\
        \end{array}\\
        &&\iin\\
        &&\If v'\Is\varnothing\Then\None\Else\Some v'
      }\\
-     ,&\multicolumn{2}{l}{\{(\_\mapsto\#0,\{\#0\equiv0\})\}})
+     ,&\multicolumn{2}{l}{\{(\_\mapsto\#0,\{\#0=0\})\}})
    \end{array}
 \end{align*}
-\caption[Validator for protocol CMP-RST]{Validator for CMP-RST, derived from
-  $\Prog$ model.  This program consists of three parts: (1) symbolizing the
-  query and internal choice before executing the model, (2) considering both
-  branches in the model program, propagating a validation state for each branch,
-  (3) filtering the validation states by constraint satisfiability, removing
-  invalid states.}
+\caption[Validator for protocol CMP-RST]{Validator for CMP-RST automatically
+  derived from its specification in $\Prog$.  This program consists of three
+  parts: (1) symbolizing the query and internal choice before executing the
+  model, (2) considering both branches in the model program, propagating a
+  validation state for each branch, (3) filtering the validation states by
+  constraint satisfiability, removing invalid states.}
 \label{fig:derived-validator}
 \end{figure}
 
-For example, by dualizing the $\Prog$ model for CMP-RST in
-\autoref{sec:proglang}, we get a validator as shown in
-\autoref{fig:derived-validator}.  Such derived validators are proven sound and
-complete in the following section.
+For example, to construct a validator for the CMP-RST protocol in
+\autoref{sec:qac-model}, we first specify it in $\Prog$ as:
+\begin{align*}
+  &\If!1\le!2\\
+  &\tthen!1\gets0;\Return\\
+  &\eelse!1\gets0;!2\gets!0;\Return
+\end{align*}
+This program stores the data $n$ in address $!2$.  If the request is less than
+or equal to $n$, then the program writes response $0$ to address $!1$, and
+leaves the data unchanged; Otherwise, it writes $1$ as response, and updates
+address $!2$ with the internal choice in $!0$.
+
+We then apply function $\validatorOf$ to this $\Prog$-based specification,
+resulting in a validator as shown in \autoref{fig:derived-validator}.
+Validators constructed in this way are proven sound and complete in the next
+section.
 
 \section{Correctness Proof}
 \label{sec:proof}
