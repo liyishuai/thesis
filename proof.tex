@@ -1,8 +1,9 @@
-So far I have introduced the QAC language family for representing servers and
-validators, and demonstrated the derivation mechanism with a $\Prog$ language.
-Next I'll show how to prove that QAC validators are sound and complete:
+So far I have introduced the $\Prog$ language for writing specifications and
+shown how to construct a validator from it.  This section shows how to prove the
+soundness and completeness of all validators dualized from $\Prog$-based
+specifications:
 \[\begin{array}{r@{\;}l}
-\forall p:\Lang,&\letin{s}{\serverOf(p)}\\
+\forall p:\Prog,&\letin{s}{\serverOf(p)}\\
 &\letin{v}{\validatorOf(p)}\\
 &\rejSound v s\wedge\rejComplete v s\\
 &\text{\it i.e. }\forall t:\List(Q\times A),\\
@@ -10,18 +11,29 @@ Next I'll show how to prove that QAC validators are sound and complete:
 &\qquad\text{\it i.e. }\exists s',\behaves s t s'\iff\exists v',\behaves v t v'
 \end{array}\]
 
-This section first presents a generic framework for proving validators'
-correctness properties, and then demonstrates its usage by applying it to
-$\Prog$-based validators.
+To apply the proof techniques in \autoref{sec:correctness}, I design the loop
+invariant in \autoref{sec:proof-invariant}.  I then use the invariant to prove
+the hypotheses for soundness and completeness in \autoref{sec:proof-sound}
+and \autoref{sec:proof-complete}, respectively.
 
+\subsection{Loop invariant}
+\label{sec:proof-invariant}
+Let $\beta=\Set((\Nat\to\Var)\times\Set\constraint)$ be the validator state
+type, and $\sigma=\Nat\to\Int$ be the server state type, then the loop invariant
+$\Reflects{(v:\beta)}{(s:\sigma)}$ is a binary relation between the validator
+state $v$ and the server state $s$.
 
-\subsection{Case study: Proving $\Prog$-based validators' correctness}
-Specifications written in the $\Prog$ language are dualized into validators as
-shown in \autoref{sec:dualize-prog}.  Here I show that validators dualized in
-this way are sound and complete, using the proof strategy described
-in \autoref{sec:strategy}.
+A validator state consists of an address-variable mapping and a set of
+constraints over the variables.
 
-\paragraph{Invariant design}
+\subsection{Proving rejection soundness}
+\label{sec:proof-sound}
+
+\subsection{Proving rejection completeness}
+\label{sec:proof-complete}
+
+\lys{Under construction:}
+
 The hypotheses in the proof strategy are based some loop invariant, which
 depends on the modelling language.  We need to define the invariant for the
 language, and show that it is preserved between the server and validator steps.
@@ -89,7 +101,7 @@ Thus: \[\satisfy{asgn} cs\]
 
 We also know that: \[\forall k, asgn!(vs!k)=0=(s!k)\]
 
-Thus: \[vs^{asgn}\equiv s\]
+Thus: \[vs^{asgn}\equiv s\qedhere\]
 \end{proof}
 
 \begin{lemma}[\ref{eq:rs2}]
