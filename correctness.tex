@@ -29,6 +29,7 @@ state $\sigma$.  Notation ``$(\Reflects v s)$'' is pronounced ``validator state
 $v$ simulates server state $s$''.
 
 \subsection{Proving rejection soundness}
+\label{sec:qac-soundness}
 To prove that any trace producible by the server is consumable by the validator,
 I perform forward induction on the server's execution path, and show that every
 step has a corresponding validator step:
@@ -63,6 +64,7 @@ because their state types $\sigma,\beta$ and step functions $\sstep,\vstep$
 remain constant over the transitions.
 
 \subsection{Proving rejection completeness}
+\label{sec:qac-completeness}
 Rejection completeness says that any trace consumable by the validator is
 producible by the server model.  I construct the server's execution path
 $\behaves sts'$ by {\em backward} induction of the validation path $\behaves

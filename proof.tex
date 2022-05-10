@@ -16,213 +16,206 @@ invariant in \autoref{sec:proof-invariant}.  I then use the invariant to prove
 the hypotheses for soundness and completeness in \autoref{sec:proof-sound}
 and \autoref{sec:proof-complete}, respectively.
 
-\subsection{Loop invariant}
+\subsection{Designing loop invariant}
 \label{sec:proof-invariant}
 Let $\beta=\Set((\Nat\to\Var)\times\Set\constraint)$ be the validator state
 type, and $\sigma=\Nat\to\Int$ be the server state type, then the loop invariant
 $\Reflects{(v:\beta)}{(s:\sigma)}$ is a binary relation between the validator
-state $v$ and the server state $s$.
+state $v$ and the server state $s$.  To define this relation, I first discuss
+the semantics of validator states.
 
-A validator state consists of an address-variable mapping and a set of
-constraints over the variables.
+The validator state is a set of validation states that consist of an
+address-variable mapping and a set of constraints over the variables.  Each
+validation state defines a space of server states.  A validator accepts a trace
+if it has a validation state whose constraints are satisfiable, which indicates
+the existence of a server that produces the trace.  A corresponding server state
+can be constructed from any assignment that satisfies the validation state's
+constraints:
+\[\vs^{\asgn}\quad\triangleq\quad \mathit{addr}\mapsto \asgn!(\vs!\mathit{addr})\]
+Let $(\vs:\Nat\to\Var)$ be a mapping in the validation state,
+$(\asgn:\Var\to\Int)$ be an assignment of variables, then
+$(\vs^\asgn:\Nat\to\Int)$ is a server state that maps each address
+$!\mathit{addr}$ to the value assigned by $\asgn$ to the address' corresponding
+variable in $\vs$.
+
+\begin{definition}[Loop invariant for $\Prog$-based validators]
+Validator state $v$ reflects server state $s$ (written ``$\Reflects vs$'') if
+the server state lies within the space of servers defined by some validation
+state $(\vs,cs)\in v$.  That is, there exists an assignment that relates the
+server state and the validation state:
+\begin{align*}
+\Reflects vs\quad\triangleq\quad&\exists(\vs,\cs)\in
+  v,\;\exists\asgn,\\
+  &\satisfy{\asgn} \cs\;\wedge\;\vs^{\asgn}=s
+  \end{align*}
+\end{definition}
+
+Having defined the loop invariant, we only need to instantiate the hypotheses
+in \autoref{sec:qac-soundness}--\ref{sec:qac-completeness} with $\Prog$-based
+definitions.  The rest of this section proves the hypotheses for establishing
+validators' soundness and completeness.  The entire proof is formalized in the
+Coq proof assitant.
 
 \subsection{Proving rejection soundness}
 \label{sec:proof-sound}
-
-\subsection{Proving rejection completeness}
-\label{sec:proof-complete}
-
-\lys{Under construction:}
-
-The hypotheses in the proof strategy are based some loop invariant, which
-depends on the modelling language.  We need to define the invariant for the
-language, and show that it is preserved between the server and validator steps.
-
-A $\Prog$-based validator maintains a set of validation states, each state
-corresponds to a possible execution path of the server model.
-
-A validation state is accepting if its constraints are satisfiable, {\it i.e.}
-there exists an assignment of the symbolic variables that can unify the trace
-with the server model.
-
-The validator accepts the trace if any of its validation states is accepting,
-which indicates that some execution path of the server model can produce the
-trace.
-
-Given an accepting validation state, we can construct the server steps that
-produce the trace, using the assignment $(\Var\to\Int)$ that satisfies the
-constraints.  This assignment evaluates internal choices' symbolic variables
-into concrete values, and evaluates the validator's key-variable mapping
-$(\Nat\to\Var)$ to the server's key-value mapping $(\Nat\to\Int)$.
-
-Therefore, we only need to show that each server and validator step preserves
-the existence of such assignment that relates their states, thus defines the
-invariant:
-
-\begin{definition}[Loop invariant between $\Prog$-based specification and validator]
-  Validator state $v$ simulates server state $s$ if it contains a validation
-  state $(vs,cs)$ that {\em reflects} the server state, {\it i.e.}  (1) There
-  exists an assignment $asgn$ that can satisfy the constraints $cs$; and (2) The
-  key-variable mapping $vs$ can be evaluated with $asgn$ (written as
-  $vs^{asgn}$) into a key-value mapping that is equivalent with
-  $s$:\footnote{For the rest of this section,
-  $\beta=\Set((\Nat\to\Var)\times\Set\constraint)$ represents the validator
-  state type, and $\sigma=\Nat\to\Int$ represents the server state type.}
-\[\begin{array}{lll} \Reflects{(v:\beta)}{(s:\sigma)}&\triangleq& \exists((vs,cs)\in
-  v)(asgn:\Var\to\Int),\satisfy{asgn} cs\wedge vs^{asgn}\equiv s\\
-  vs^{asgn}&\triangleq&addr\mapsto asgn!(vs!addr) \end{array}\]
-\end{definition}
-
-\paragraph{Applying proof strategy}
-Having defined the loop invariants, we only need to instantiate the QAC-generic
-proof strategy with $\Prog$-based definitions.  If the hypotheses are all
-satisfied, then we have the soundness and completeness guarantee of every
-validator derived from $\Prog$ models.
-
 \begin{lemma}[\ref{eq:rs1}]
 \[\begin{array}{ll}
 \text{If:}&
-vs=(\_\mapsto\#0)\qquad
-cs=\{\#0\equiv0\}\qquad
+\vs=(\_\mapsto\#0)\qquad
+\cs=\{\#0=0\}\qquad
 s=(\_\mapsto0)\\
-\text{Then:}&\Reflects{\{(vs,cs)\}}{s}
+\text{Then:}&\Reflects{\{(\vs,\cs)\}}{s}
 \end{array}\]
 \end{lemma}
 \begin{proof}
-Since $(vs,cs)$ is the only element in the validator state, we only need to show
+Since $(\vs,\cs)$ is the only element in the validator state, we only need to show
 that:
-\[\exists(asgn:\Var\to\Int),\satisfy{asgn} cs\wedge vs^{asgn}\equiv s\]
+\[\exists(\asgn:\Var\to\Int),\quad\satisfy{\asgn} \cs\;\wedge\;\vs^{\asgn}=s\]
 
-By constructing the assignment as: \[asgn=(\_\mapsto0)\]
+By constructing the assignment as: \[\asgn=(\_\mapsto0)\]
 
-We have: \[\#0^{asgn}=0\]
+We have: \[\#0^{\asgn}=0\]
 
-Thus: \[\satisfy{asgn} cs\]
+Thus: \[\satisfy{\asgn} \cs\]
 
-We also know that: \[\forall k, asgn!(vs!k)=0=(s!k)\]
+We also know that: \[\forall k, \asgn!(\vs!k)=0=(s!k)\]
 
-Thus: \[vs^{asgn}\equiv s\qedhere\]
+Thus: \[\vs^{\asgn}=s\qedhere\]
 \end{proof}
 
 \begin{lemma}[\ref{eq:rs2}]
   \begin{align*}
-    &\forall(p:\Prog)(q,c,a:\Int)(s,s':\sigma)(v:\beta),\\
-    &\sstep_p(q,c,s)=(a,s')\wedge\Reflects{v}{s}\\
-    &\implies\exists v':\beta,\vstep_p(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}
+    &\forall(q,c,a:\Int)(s,s':\sigma)(v:\beta),\\
+    &\triggers sc{(q,a)}s'\;\wedge\;\Reflects{v}{s}\\
+    &\implies\exists v':\beta,\;\behaves v{(q,a)}v'\;\wedge\;\Reflects{v'}{s'}
   \end{align*}
 \begin{proof}
-The invariant $\Reflects{v}{s}$ tells us that $v$ contains a validation state
-that reflects the server state $s_0$:
-\[\exists(vs,cs)\in v,\exists asgn:\Var\to\Int,\quad\satisfy{asgn} cs\wedge {vs}^{asgn}\equiv s\]
+The invariant $\Reflects{v}{s}$ tells us that $v$ contains a pre-validation
+state that reflects the pre-step server state $s$:
+\[\exists(\vs,\cs)\in v,\;\exists asgn,\quad\satisfy{\asgn} \cs\;\wedge\;{\vs}^{\asgn}=s\]
 
-Since the server's internal choice was provided, we can compute the server's
-actual execution path.  For each small step of the server's execution, we can
-construct its corresponding validator small step, based on the derivation rules
-in \autoref{sec:dualization}.  By making the same internal choice and branch
-decisions as the server did, we can construct the assignment that unifies the
-validator with the server.  The proof details are shown in \autoref{sec:rs2-proof}.
+The $\vstep'_p$ function in \autoref{fig:dualize} leads to a set of
+post-validation states.  We need to show that some state in it reflects the
+post-step server state $s'$:
+\[\exists(\vs',\cs')\in\vstep_p'(q,a)(\vs,\cs),\;\exists\asgn',\quad\satisfy{\asgn'}\cs'\;\wedge\;{\vs'}^{~\asgn'}=s'\]
+
+The server's internal choice $c$ was provided, so we know the server's entire
+execution path.  By induction on the $\Prog$ syntax, we can choose the right
+post-validation state $(\vs',\cs')$ by computing each branch condition, and
+deduct the satisfying assignment $\asgn'$ by computing each write operation's
+source value and destination variable.
 \end{proof}
 \end{lemma}
+
+\subsection{Proving rejection completeness}
+\label{sec:proof-complete}
 
 \begin{lemma}[\ref{eq:rc1}]
 \begin{align*}
-\forall(p:\Prog)(q,a:\Int)(v,v':\beta),\;&\vstep_p(q,a,v)=\Some{v'}\\
-&\implies\exists s':\sigma,\Reflects{v'}{s'}
+\forall(q,a:\Int)(v,v':\beta),\;&\behaves v{(q,a)}v'\\
+&\implies\exists s':\sigma,\;\Reflects{v'}{s'}
 \end{align*}
 \begin{proof}
-Since $\vstep_p$ checks the nonemptiness of the result, we know that $v'$ must
-be nonempty.  Consider validation state $(vs',cs')\in v'$.  Since $\vstep'_p$
-checks that $(\solvable cs')$, we know that:
-\[\exists asgn,\quad\satisfy{asgn}cs'\]
+Since the $\vstep_p$ function in \autoref{fig:dualize} checks the nonemptiness
+of the result, we know that $v'$ must be nonempty.  Consider validation state
+$(\vs',\cs')\in v'$.  Since $\vstep'_p$ checks that $(\solvable \cs')$, we know
+that:
+\[\exists \asgn,\quad\satisfy{\asgn}cs'\]
 
 Let:
-\[s'=vs'^{~asgn}\]
+\[s'=\vs'^{~\asgn}\]
 
 Then we have:
 \begin{align*}
-&(vs',cs')\in v'\wedge \satisfy{asgn}{cs'}\wedge vs'^{~asgn}\equiv s'\\
-&\textit{i.e. }\Reflects{v'}{s'}
+&(\vs',\cs')\in v'\wedge \satisfy{\asgn}{\cs'}\wedge \vs'^{~\asgn}=s'\\
+&\textit{i.e. }\Reflects{v'}{s'}\tag*{\qedhere}
 \end{align*}
 \end{proof}
 \end{lemma}
 
+\lys{Under construction:}
+
 \begin{lemma}[\ref{eq:rc2}]
 \begin{align*}
-&\forall(p:\Prog)(q,a:\Int)(v,v':\beta)(s':\sigma),\\
-&\vstep_p(q,a,v)=\Some{v'}\wedge\Reflects{v'}{s'}\\
-&\implies\exists(s:\sigma)(c:\Int),\sstep_p(q,c,s)=(a,s')\wedge\Reflects{v}{s}
+&\forall(q,a:\Int)(v,v':\beta)(s':\sigma),\\
+&\behaves v{(q,a)}v'\;\wedge\;\Reflects{v'}{s'}\\
+&\implies\exists(s:\sigma)(c:\Int),\;\triggers sc{(q,a)}s'\;\wedge\;\Reflects{v}{s}
 \end{align*}
 \begin{proof}
-We first construct the initial server state $(s:\sigma\mid\Reflects{v}{s})$.  We
-then compute the internal choice $c$ and construct the server step that
-corresponds with the validator step.
+We first construct the pre-step server state $(s:\sigma\mid\Reflects{v}{s})$.
+We then compute the internal choice $c$ and prove the server step $\triggers
+sc{(q,a)}s'$.
 
 The definition of $\Reflects{v'}{s'}$ says:
-\[\exists (vs',cs')\in v',\exists asgn,\quad \satisfy{asgn}{cs'}\wedge vs'^{~asgn}\equiv s'\]
+\[\exists (\vs',\cs')\in v',\;\exists \asgn,\quad \satisfy{\asgn}{\cs'}\;\wedge\;\vs'^{~\asgn}=s'\]
 
 From the definition of $\vstep_p$, we know that:
-\[\exists (vs,cs)\in v,\quad \vstep'_p(q,a,(vs,cs))=(vs',cs')\]
+\[\exists (\vs,\cs)\in v,\quad (\vs',\cs')\in\vstep'_p(q,a)(\vs,\cs)\]
 
-Since $\vstep'_p$ monotonically increases set of constraints, we have
-$cs\subseteq cs'$.  Therefore: \[\satisfy{asgn}{cs}\]
+Since $\vstep'_p$ monotonically increases the set of constraints, we have
+$\cs\subseteq \cs'$.  Therefore: \[\satisfy{\asgn}{\cs}\]
 
-Let: \[s=vs^{asgn}\]
+Let: \[s=\vs^{\asgn}\]
 
 Then we have:
 \begin{align*}
-&(vs,cs)\in v\wedge\satisfy{asgn}{cs}\wedge vs^{asgn}\equiv s\\
+&(\vs,\cs)\in v\quad\wedge\quad\satisfy{\asgn}{\cs}\quad\wedge\quad \vs^{\asgn}=s\\
 &\textit{i.e. }\Reflects{v}{s}
 \end{align*}
 
 From the definition of $\vstep'_p$, the validator first creates a fresh variable
-to represent the server's internal choice.  Let:
-\[x_c=\Fresh(vs,cs)\qquad c=asgn!x_c\]
+to represent the server's internal choice, so we can deduct the internal choice
+from the assignment:
+\[x_c=\Fresh(\vs,\cs)\qquad c=\asgn!x_c\]
 
-We now have a server step $\sstep_p(q,c,s)$, and need to show that it results in
+Now we need to show that the server's loop body $\sstep_p(q,c)(s)$ results in
 response $a$ and post-execution state $s'$.  Since the post-validation state
-$v'$ simulates $s'$ and guarantees the response to be $a$, we only need to show
-that the server step is reflected in the validator.  This is done by analyzing
-the server's execution path, proving that each derivation rule preserves such
-small-step reflection.  The proof details are shown in \autoref{sec:rc2-proof}
+$v'$ simulates $s'$ and guarantees the response to be $a$, we only need to prove
+the post-execution state to be $s'$.
+
+We have known that:
+\[s=\vs^\asgn\qquad s'=\vs'^{~\asgn}\qquad\behaves{(\vs,\cs)}{(q,a)}{(\vs',\cs')}\]
+
+Therefore, we can prove $\triggers sc{(q,a)}s'$ by induction on the $\Prog$
+syntax, showing that every write or branch operation preserves $\asgn$'s ability
+to unify the server state with the validation state.  This leads the
+post-execution state to be unifiable against $\vs'$ using $\asgn$, thus to be
+$s'$.
 \end{proof}
+
+The core of this proof is to find the internal choice $c$ for server step
+$\triggers sc{(q,a)}s'$.  The choice was computed with the assignment deducted
+from the loop invariant.  The assignment contains the value of all symbolic
+variables, which includes all choices made by the server, past and future.  The
+loop invariant requires the assignment to explain the past choices, but cannot
+predict future choices.  Therefore, we can only infer the server step from the
+validator step using backward induction.
 \end{lemma}
 
 \begin{lemma}[\ref{eq:rc3}]
 \[\begin{array}{ll}
 \text{If:}&
-vs=(\_\mapsto\#0)\qquad
-cs=\{\#0\equiv0\}\qquad
+\vs=(\_\mapsto\#0)\qquad
+\cs=\{\#0\equiv0\}\qquad
 s_0=(\_\mapsto0)\\
-\text{Then:}&\{s\mid\Reflects{\{(vs,cs)\}}{s}\}=\{s_0\}
+\text{Then:}&\{s\mid\Reflects{\{(\vs,\cs)\}}{s}\}=\{s_0\}
 \end{array}\]
 \begin{proof}
 The requirement for $s$ says:
-\[\exists asgn:\Var\to\Int,\quad\satisfy{asgn}{cs}\wedge vs^{asgn}=s\]
+\[\exists \asgn:\Var\to\Int,\quad\satisfy{\asgn}{\cs}\wedge \vs^{\asgn}=s\]
 
 The constraint satisfaction tells us that:
-\[asgn!0=0\]
+\[\asgn!0=0\]
 
 We then have:
-\[\forall k:\Nat,\quad s!k=asgn!(vs!k)=asgn!0=0=s_0!k\]
+\[\forall k:\Nat,\quad s!k=\asgn!(vs!k)=\asgn!0=0=s_0!k\]
 
-Therefore, $s_0$ is the only server state that $(vs,cs)$ simulates.
+Therefore, $s_0$ is the only server state that $(\vs,\cs)$ simulates.
 \end{proof}
 \end{lemma}
 
 Now we have proven that all $\Prog$-based validators satisfy the hypotheses
-defined in \autoref{sec:strategy}, and conclude that these validatos are sound
-and complete.  The entire proof is formalized in the Coq proof assistant.
-
-The main idea of the proof is to show the reflection between the server and the
-validator, by constructing the assignments that unifies them.  This also answers
-why proving rejection completeness requires backward induction: The assignment
-evaluates the symbolic variables during the validation process, which includes
-all choces made by the server, past and future.  An assignment might include
-wrong predictions about the server's future choices, in which case the validator
-will drop it upon contradicting observations.  By the end of validation, the
-surviving assignment can let us reconstruct a server's execution path, by
-infering its internal choices.
-
-So far I have presented the theory of constructing validators with correctness
-guarantee.  Next I'll explain how to apply this theory to test real-world
+defined in \autoref{sec:qac-soundness}--\ref{sec:qac-completeness}, and we can
+conclude that the validators constructed by dualization are sound and complete.
+Next I'll show how to apply this dualization technique to test real-world
 programs.
