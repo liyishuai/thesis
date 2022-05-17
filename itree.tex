@@ -1,27 +1,52 @@
 To write specifications for protocols' rich semantics, I employed ``interaction
 tree'' (ITree), a generic data structure for representing interactive programs
-in the Coq programming language, introduced by \citet{itree}.  ITree allows
+in the Coq programming language, introduced by \citet{itree}.  ITrees allow
 specifying protocols as monadic programs that model valid implementations'
 possible behavior.  The model program can be interpreted into a tester program,
-to be discussed in later sections.
+as discussed in later sections.
 
 \subsection{Language definition}
 \label{sec:itree-lang}
 Consider an echo program, which keeps reading some data and writing it out
-verbatim, until reaching EOF:
+verbatim, until reaching EOF.  We can represent the program in Coq, with a
+reference in C as:
+\begin{multicols}{2}
 \begin{coq}
-  CoInductive echo := c <- getchar;;
-                      if c is EOF then EXIT
-                      else putchar c;; echo.
+  CoFixpoint echo :=
+    c <- getchar;;
+    if c is EOF
+    then EXIT
+    else
+      putchar c;;
+      echo.
 \end{coq}
-
-Here the behavior after \ilc{read} depends on the value actually read.  This
-monadic computation can be desugarized into:
+\columnbreak
+\begin{cpp}
+  void echo() {
+    const char c = getchar();
+    if (c == EOF)
+      return;
+    else {
+      putchar(c);
+      echo();
+    }
+\end{cpp}
+\end{multicols}
+Here the behavior after \ilc{getchar} depends on the value actually read.  The
+monadic computation in Coq can be desugared into:
 \begin{coq}
-  CoInductive echo2 := (* equivalent to echo *)
-    Bind getchar (fun c => if c is EOF then EXIT
-                         else Bind (putchar c) (fun _ => echo)).
+  CoFixpoint echo :=
+    Bind getchar
+         (fun c => if c is EOF
+                 then EXIT
+                 else Bind (putchar c)
+                           (fun _ => echo)
+         ).
 \end{coq}
+Such continuation-passing style can be represented as a tree of interactions.
+To help readers better understand the interaction tree language, I first provide
+a modified version of it that better shows its tree structure, and then explain
+the actual type definition used in practice.
 
 \begin{figure}
 \begin{coq}
@@ -40,21 +65,17 @@ monadic computation can be desugarized into:
   \label{fig:echo-itree}
 \end{figure}
 
-Such continuation-passing style can be represented as a tree of interactions.
-To help readers better understand the interaction tree language, I first provide
-a modified version of it that better shows its tree structure, and then explain
-the actual type definition used in practice.
-
 \paragraph{Mock interaction trees}
 As shown in \autoref{fig:mock-itree}, a mock interaction tree (\ilc{itreeM}) has
-two kinds of nodes, \ilc{Ret} and \ilc{Trigger}, and has edges constructed by
-\ilc{Bind}:
+two kinds of leaves, \ilc{Ret} and \ilc{Trigger}, and has internal nodes
+constructed by \ilc{Bind}:
 \begin{itemize}
 \item \ilc{(Ret r)} represents a pure computation that yields a value \ilc r.
   In the echo example, \ilc{EXIT} halts the program with return value zero:
 \begin{coq}
-  Definition EXIT {E} : itreeM E Z := Ret 0.
+  Definition EXIT := Ret 0.
 \end{coq}
+
 \item \ilc{(Trigger e)} performs an impure event \ilc e and returns its result.
   Here \ilc{(e: E R)} is an event whose result is of type \ilc R.  For example,
   \ilc{getchar} has result type \ilc{char}, and \ilc{putchar}'s result type is
@@ -66,65 +87,50 @@ two kinds of nodes, \ilc{Ret} and \ilc{Trigger}, and has edges constructed by
     GetChar:         stdioE char
   | PutChar: char -> stdioE unit.
   
-  Definition getchar : itreeM stdioE char := Trigger GetChar.
-  Definition putchar (c: char) : itreeM stdioE unit
-                               := Trigger (PutChar c).
+  Definition getchar           : itreeM stdioE char := Trigger  GetChar.
+  Definition putchar (c: char) : itreeM stdioE unit := Trigger (PutChar c).
 \end{coq}
 \item \ilc{(Bind m k)} binds the return value of \ilc m to the continuation
   function \ilc k.  It first runs program \ilc m until it returns some value of
   type \ilc X.  The return value \ilc{(x: X)} then instantiates \ilc k into the
   following computation \ilc{(k x: itreeM E R)}.  This corresponds to the
-  \ilc{(;;)} syntax in \ilc{echo}:
+  monadic \ilc{(;;)} syntax:
 \begin{coq}
   Notation "x <- m1;; m2" := (Bind m1 (fun x => m2)).
   Notation "m1;; m2"      := (Bind m1 (fun _ => m2)).
 \end{coq}
 
 As illustrated in \autoref{fig:echo-itree}, each possible return value \ilc x is
-an edge that leads to the child it instantiates {\it i.e.} \ilc{(k x)}.  In this
+an edge that leads to the child it instantiates, {\it i.e.}, \ilc{(k x)}.  In this
 way, the \ilc{Ret} and \ilc{Trigger} nodes are connected into a tree
 structure.
 \end{itemize}
 
 The mock interaction tree provides an intuitive continuation-passing structure
-for representing impure programs.  However, this language is not suitable for
-writing specifications and deriving them into tester programs, because the test
-derivation requires analyzing and transforming the specification program.
-
-A mock interaction tree has infinitely many syntactic variants that are
-semantically equivalent, due to monad laws.  For example, consider the following
-programs:
-\begin{coq}
-  Example bind_ret  r k     := Bind (Ret r) k.
-  Example bind_bind m k1 k2 := Bind (Bind m k1) k2.
-\end{coq}
-These programs are semantically equivalent to:
-\begin{coq}
-  Example bind_ret2  r k     := k r.
-  Example bind_bind2 m k1 k2 := x <- m;; Bind (k1 x) k2.
-\end{coq}
-
-To make program analysis more effective, we need to redefine the tree structure
-in a normal form, where each semantics corresponds to a unique syntax.  The
-revised language eliminates expressions like \ilc{bind_ret} and \ilc{bind_bind}.
+for representing impure programs.  However, to implement dualization
+effectively, we need to revise the language definition of monadic binding.
 
 \paragraph{Practical interaction trees}
-\footnote{For readability, the ``practical'' ITree definition here is a
-  simplified version from \citet{itree}.}
+
 \begin{figure}
 \begin{coq}
   CoInductive itree (E: Type -> Type) (R: Type) :=
     Pure   : R -> itree E R
   | Impure : forall {X : Type}, E X -> (X -> itree E R) -> itree E R.
 \end{coq}
-\caption{Formal definition of interaction trees}
+\caption{Formal definition of interaction trees (simplified)}
 \label{fig:itrees}
 \end{figure}
-The type definition of ITree restricts that only single events can be bound to a
-continuation.  As shown in \autoref{fig:itrees}, I use \ilc{(Impure e k)} to
-replace \ilc{(Bind (Trigger e) k)} representations in \ilc{itreeM}.  A
-\ilc{Pure} computation cannot be bound to a continuation, and must be the leaf
-of an ITree.
+
+Instead of binding a program to a continuation, ITree binds single events, as
+shown in \autoref{fig:itrees}.  I use \ilc{(Impure e k)} to replace \ilc{(Bind
+(Trigger e) k)} representations in \ilc{itreeM}.  A \ilc{Pure} computation
+cannot be bound to a continuation, and must be the leaf of an
+ITree.\footnote{For readability, the ``practical'' ITree definition is a
+simplified version from \citet{itree}.  Here \ilc{Pure} and \ilc{Impure}
+correspond to the \ilc{Ret} and \ilc{Vis} constructors.  I dropped the \ilc{(Tau
+: itree E R -> itree E R)} constructor, which carries no semantics and is used
+for satisfying Coq's guardedness condition.}
 
 The \ilc{Ret}, \ilc{Trigger}, and \ilc{Bind} constructors introduced in
 \ilc{itreeM} have equivalent representations in \ilc{itree}, so we can still
@@ -150,6 +156,10 @@ write programs in the monadic syntax:
     | Bind m1 k => x <- translateM m1;; translateM (k x)
     end.
 \end{coq}
+
+\lys{Under construction:  End this section by embedding QAC into ITrees.
+Move interpretation to next section, which handles internal nondeterminism.
+After that, talk about external nondeterminism and network composition.}
 
 ITrees can specify various kinds of programs like servers and testers, by
 defining different event types.  For example, the QAC server in

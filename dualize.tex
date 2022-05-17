@@ -21,7 +21,7 @@ for encoding specifications.
 For readability, I demonstrate the dualization technique on a subset of QAC
 server models called integer machine model, featuring random-access memory (RAM)
 and arithmetic operations.  To test real-world systems like web servers, I'll
-employ a more complex specification language in \autoref{chap:itree}.
+employ a more complex specification language in \autoref{chap:practices}.
 
 \subsection{Integer machine model}
 The server state of an integer machine model is a key-value mapping that
@@ -84,8 +84,8 @@ Each program $(p:\Prog)$ specifies a computation on the integer machine:
 \Eval(p)(s)&\triangleq
 \begin{cases}
   s&p\Is\Return\\
-  \Eval(p',\update{s}{\dst}{e^s})&p\Is !\dst\coloneqq e;p'\\
-  \Eval(\If {e_1}^s\le{e_2}^s\Then p_1\Else p_2,s)&p\Is\If e_1\le e_2\Then p_1\Else p_2
+  \Eval(p')(\update{s}{\dst}{e^s})&p\Is !\dst\coloneqq e;p'\\
+  \Eval(\If {e_1}^s\le{e_2}^s\Then p_1\Else p_2)(s)&p\Is\If e_1\le e_2\Then p_1\Else p_2
 \end{cases}\\
 e^s&\triangleq
 \begin{cases}
@@ -102,7 +102,7 @@ the data stored in address $!\src$ of memory $s$.
 Syntax ``$s[k\mapsto v]$'' is pronounced ``writing value $v$ to address $!k$ of
 memory $s$''.  It produces a new memory that maps address $!k$ to $v$, while
 other addresses remain unchanged from $s$:
-\[s[k\mapsto v]!k'\triangleq\begin{cases}v&k'=k\\
+\[s[k\mapsto v]\quad\triangleq\quad k'\mapsto\begin{cases}v&k'=k\\
 s!k'&k'\neq k\end{cases}\]
 
 \paragraph{From $\Prog$ to server model}

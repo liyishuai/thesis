@@ -1,30 +1,31 @@
-In \autoref{chap:theory}, I introduced the theory of validators using the QAC
-language family.  I also shown how to prove validators' correctness with a
-simple $\Prog$ language.
+So far I've introduced the theory of validating synchronous interactions using
+the QAC language family, and shown how to construct validators by dualization
+with a simple $\Prog$ language.
 
 However, in real-world testing practices, there are more problems to consider.
 For example: How to interact with the SUT via multiple channels?  How to handle
 external nondeterminism?
 
-\begin{figure}
-  \includegraphics[width=\linewidth]{figures/framework}
-  \caption{Deriving tester program from specification}
-  \label{fig:framework}
-\end{figure}
+As discussed in \autoref{sec:intro-external-nondet}, a networked server's
+response may be delayed by the network environment, and an asynchronous tester
+may send other requests rather than waiting for the response.  Therefore, we
+cannot view the trace as a sequence of $Q\times A$ pairs like we did
+in \autoref{def:trace-validity}, and the state monad in the QAC language family
+becomes insufficient for defining the space of asynchronous interactions.
 
-This chapter describes how to derive specifications into tester programs that
-can interact with the SUT and reveal potential defects, using \http as an
-example.  The derivation framework is shown in outline in
-\autoref{fig:framework}.  Each box is a model program, and the arrows are
-``interpretors'' that transform one model into another.
+This chapter applies the idea of dualization to testing asynchronous systems.  I
+transition from the QAC language family to the ITree specification language,
+which allows modelling asynchronous interactions.  The ITree-based
+specifications are dualized into tester programs that can interact with the SUT
+and reveal potential defects.
 
-\autoref{sec:itree} introduces the ITree modelling language for specifying
-protocols and deriving them into testers.  \autoref{sec:external-nondet} and
-\autoref{sec:internal-nondet} address external and internal nondeterminism in
-the ITree context.  \autoref{sec:backtrack} explains how to execute the derived
+\autoref{sec:itree} introduces the ITree specification language.
+\autoref{sec:external-nondet} and \autoref{sec:internal-nondet} address external
+and internal nondeterminism in the ITree context, using \http as an
+example.  \autoref{sec:backtrack} then explains how to execute the derived
 tester model as an interactive program.
 
-\section{ITree Specification Language}
+\section{From QAC to Interaction Trees}
 \label{sec:itree}
 \input{itree}
 

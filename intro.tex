@@ -115,38 +115,34 @@ to send the resource's contents if it is the same as the cached copy.  To
 achieve this, an HTTP server may generate a short string, called an ``entity
 tag'' (ETag)~\cite{rfc7232}, identifying the content of some resource, and send
 it to the client:
-\begin{center}
-  \begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Client: */
-GET /target HTTP/1.1
-    \end{cpp}
-  \end{minipage}\begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Server: */
-HTTP/1.1 200 OK
-ETag: "tag-foo"
-... content of /target ...
-    \end{cpp}
-  \end{minipage}
-\end{center}
+\begin{multicols}{2}
+\begin{cpp}
+  /* Client: */
+  GET /target HTTP/1.1
+\end{cpp}
+\columnbreak
+\begin{cpp}
+  /* Server: */
+  HTTP/1.1 200 OK
+  ETag: "tag-foo"
+  ... content of /target ...
+\end{cpp}
+\end{multicols}
 The next time the client requests the same resource, it can include the ETag in
 the GET request, informing the server not to send the content if its ETag still
 matches:
-\begin{center}
-\begin{minipage}[t]{.4\textwidth}
+\begin{multicols}{2}
 \begin{cpp}
-/* Client: */
-GET /target HTTP/1.1
-If-None-Match: "tag-foo"
+  /* Client: */
+  GET /target HTTP/1.1
+  If-None-Match: "tag-foo"
 \end{cpp}
-\end{minipage}\begin{minipage}[t]{.4\textwidth}
+\columnbreak
 \begin{cpp}
-/* Server: */
-HTTP/1.1 304 Not Modified
+  /* Server: */
+  HTTP/1.1 304 Not Modified
 \end{cpp}
-\end{minipage}
-\end{center}
+\end{multicols}
 If the ETag does not match, the server responds with code 200 and the updated
 content as usual.
 
@@ -154,70 +150,61 @@ Similarly, if a client wants to modify the server's resource atomically by
 compare-and-swap, it can include the ETag in the PUT request as an
 \inlinec{If-Match} precondition, which instructs the server to only update the
 content if its current ETag matches:
-\begin{center}
-  \begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Client: */
-PUT /target HTTP/1.1
-If-Match: "tag-foo"
-... content (A) ...
-    \end{cpp}
-  \end{minipage}
-  \begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Server: */
-HTTP/1.1 204 No Content
-    \end{cpp}
-  \end{minipage}
-
-  \begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Client: */
-GET /target HTTP/1.1
-    \end{cpp}
-  \end{minipage}
-  \begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Server: */
-HTTP/1.1 200 OK
-ETag: "tag-bar"
-... content (A) ...
-    \end{cpp}
-  \end{minipage}
-\end{center}
+\begin{multicols}{2}
+\begin{cpp}
+  /* Client: */
+  PUT /target HTTP/1.1
+  If-Match: "tag-foo"
+  ... content (A) ...
+\end{cpp}
+\columnbreak
+\begin{cpp}
+  /* Server: */
+  HTTP/1.1 204 No Content
+\end{cpp}
+\end{multicols}
+\begin{multicols}{2}
+\begin{cpp}
+  /* Client: */
+  GET /target HTTP/1.1
+\end{cpp}
+\columnbreak
+\begin{cpp}
+  /* Server: */
+  HTTP/1.1 200 OK
+  ETag: "tag-bar"
+  ... content (A) ...
+\end{cpp}
+\end{multicols}
 If the ETag does not match, then the server should not perform the requested
 operation, and should reject with code 412:
-\begin{center}
-  \begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Client: */
-PUT /target HTTP/1.1
-If-Match: "tag-baz"
-... content (B) ...
-    \end{cpp}
-  \end{minipage}
-  \begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Server: */
-HTTP/1.1 412 Precondition Failed
-    \end{cpp}
-  \end{minipage}
+\begin{multicols}{2}
+\begin{cpp}
+  /* Client: */
+  PUT /target HTTP/1.1
+  If-Match: "tag-baz"
+  ... content (B) ...
+\end{cpp}
+\columnbreak
+\begin{cpp}
+  /* Server: */
+  HTTP/1.1 412 Precondition Failed
+\end{cpp}
+\end{multicols}
 
-  \begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Client: */
-GET /target HTTP/1.1
-    \end{cpp}
-  \end{minipage}
-  \begin{minipage}[t]{.4\textwidth}
-    \begin{cpp}
-/* Server: */
-HTTP/1.1 200 ok
-ETag: "tag-bar"
-... content (A) ...
-    \end{cpp}
-  \end{minipage}
-\end{center}
+\begin{multicols}{2}
+\begin{cpp}
+  /* Client: */
+  GET /target HTTP/1.1
+\end{cpp}
+\columnbreak
+\begin{cpp}
+  /* Server: */
+  HTTP/1.1 200 ok
+  ETag: "tag-bar"
+  ... content (A) ...
+\end{cpp}
+\end{multicols}
 Whether a server's response should be judged {\em valid} or not depends on the
 ETag it generated when creating the resource.  If the tester doesn't know the
 server's internal state ({\it e.g.}, before receiving any 200 response that
@@ -294,6 +281,7 @@ construct the validator in a scalable way for more complex protocols.
 To discuss the nondeterminism caused by the environment, we need to define the
 environment concept in testing scenario.
 \begin{definition}[Environment, input, output, and observations]
+\label{def:environment}
   {\em Environment} is the substance that the tester and the SUT interact with.
   {\em Input} is the subset of the environment that the tester can manipulate.
   {\em Output} is the subset of the environment that the SUT can alter.  {\em
@@ -498,7 +486,7 @@ Dropbox~\cite{testing-dropbox}.
 
 \subsection{Model-based testing: TorXakis}
 Instead of specifying predicates over systems' behavior, model-based
-testing~\cite{mbt} defines an abstract model that produces valid behavior.  When
+testing~\cite{broy2005model} defines an abstract model that produces valid behavior.  When
 a tester observes an SUT's behavior, it checks whether the behavior is
 producible by the specification model.
 
@@ -569,7 +557,7 @@ representing test input, and {\em dualize} the specification into the tester's
   the test generator.
 \end{enumerate}
 
-\subsection*{Thesis claim}
+\paragraph{Thesis claim}
 Symbolic abstract representation can address challenges in testing interactive
 systems with uncertain behavior.  Specifying protocols with symbolic reference
 implementation enables validating observations of systems with internal and
@@ -602,16 +590,15 @@ This claim is supported by the following publications:
 %%   validators derived from the abstract model.
 \end{enumerate}
 
-\subsection*{Outline}
+\paragraph{Outline}
 This thesis is structured as follows: \autoref{chap:theory} presents a theory
 for synchronous testing, introduces a language family for representing
 validators, and shows how to reason about their correctness.
-\autoref{chap:dualize} applies the validator theory to an integer machine model,
-showing how to derive validators from protocol specifications.
-\autoref{chap:itree} transitions from synchronous testing to asynchronous
-testing and introduces the ITree specification language.
-\autoref{chap:practices} then shows how to derive ITree specifications into
-tester programs that can also address external nondeterminism.
+\autoref{chap:dualize} applies the validator theory to an integer machine model
+that exhibits internal nondeterminism, showing how to derive validators
+automatically from protocol specifications.
+\autoref{chap:practices} transitions from synchronous testing to asynchronous
+testing, addressing external nondeterminism by specifying the environment.
 \autoref{chap:harness} presents a mechanism for generating and shrinking test
 inputs that address inter-execution nondeterminism.  To evaluate the techniques
 I proposed in this thesis, \autoref{chap:eval} applies them to testing web

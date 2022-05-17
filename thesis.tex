@@ -140,7 +140,7 @@
   {sigma}{$\sigma$}1
 }
 \lstdefinestyle{json}{
-  language=Coq
+  language=Coq,
 }
 \lstdefinestyle{customc}{
   language=C,
@@ -155,7 +155,10 @@
 \lstnewenvironment{coq}{\lstset{style=customcoq}\linespread{1}}{}
 \lstnewenvironment{cpp}{\lstset{style=customc}\linespread{1}}{}
 \lstnewenvironment{json}{\lstset{style=json}\linespread{1}}{}
-\lstset{escapechar=\%,style=customcoq}
+\lstset{escapechar=\%,style=customcoq,belowskip=0em}
+
+\usepackage{multicol}
+\setlength\multicolsep{0pt}
 
 \usepackage{mathtools}
 %% https://tex.stackexchange.com/a/127018
@@ -358,14 +361,12 @@
 \label{chap:theory}
 \input{theory}
 
-\chpt{Validator by Dualization}
+\chpt{Synchronous Validator by Dualization}
 \label{chap:dualize}
 \input{dualize}
 
-\chpt{From Synchronous Testing to Asynchronous Testing}
-\label{chap:itree}
 
-\chpt{Testing in Practice}
+\chpt{Asynchronous Tester by Dualization}
 \label{chap:practices}
 \input{practice}
 
