@@ -2,8 +2,8 @@ To write specifications for protocols' rich semantics, I employed ``interaction
 tree'' (ITree), a generic data structure for representing interactive programs
 in the Coq programming language, introduced by \citet{itree}.  ITrees allow
 specifying protocols as monadic programs that model valid implementations'
-possible behavior.  The model program can be interpreted into a tester program,
-as discussed in later sections.
+possible behavior.  The ITree specification can be interpreted into a tester
+program, as discussed in later sections.
 
 \subsection{Language definition}
 \label{sec:itree-lang}
@@ -122,11 +122,11 @@ effectively, we need to revise the language definition of monadic binding.
 \label{fig:itrees}
 \end{figure}
 
-Instead of binding a program to a continuation, ITree binds single events, as
-shown in \autoref{fig:itrees}.  I use \ilc{(Impure e k)} to replace \ilc{(Bind
-(Trigger e) k)} representations in \ilc{itreeM}.  A \ilc{Pure} computation
-cannot be bound to a continuation, and must be the leaf of an
-ITree.\footnote{For readability, the ``practical'' ITree definition is a
+Instead of binding a program to a continuation, ITree binds a single impure
+event, as shown in \autoref{fig:itrees}.  I use \ilc{(Impure e k)} to
+replace \ilc{(Bind (Trigger e) k)} representations in \ilc{itreeM}.
+A \ilc{Pure} computation cannot be bound to a continuation, and must be the leaf
+of an ITree.\footnote{For readability, the ``practical'' ITree definition is a
 simplified version from \citet{itree}.  Here \ilc{Pure} and \ilc{Impure}
 correspond to the \ilc{Ret} and \ilc{Vis} constructors.  I dropped the \ilc{(Tau
 : itree E R -> itree E R)} constructor, which carries no semantics and is used
@@ -157,102 +157,42 @@ write programs in the monadic syntax:
     end.
 \end{coq}
 
-\lys{Under construction:  End this section by embedding QAC into ITrees.
-Move interpretation to next section, which handles internal nondeterminism.
-After that, talk about external nondeterminism and network composition.}
-
-ITrees can specify various kinds of programs like servers and testers, by
-defining different event types.  For example, the QAC server in
-\autoref{def:server} exhibits internal nondeterminism.  The internal choices
-made by the server can be represented as \ilc{Choice} events whose result can be
-any value in the space of choices:
-\begin{coq}
-  Variant choiceE: Type -> Type :=
-    Choice: choiceE C.
-\end{coq}
-
-The server also needs to send requests and receive responses:
+\subsection{QAC in ITrees}
+The ITree specification language is a superset of the QAC language family.  Any
+nondeterministic server model in \autoref{def:server} can be translated into an
+interaction tree that receives requests of type $Q$, sends responses of type
+$A$, and makes internal choices of type $C$.  The ITree's event type is defined
+as follows:
 \begin{coq}
   Variant qaE: Type -> Type :=
     Recv: qaE Q           (* receive a request *)
   | Send: A -> qaE unit.  (* send a response   *)
 
+  Variant choiceE: Type -> Type :=
+    Choice: choiceE C.    (* make an internal choice *)
+
   Definition qacE: Type -> Type := qaE +' choiceE.
 \end{coq}
-
 Here \ilc{qacE} is a sum type of \ilc{qaE} and \ilc{choiceE} events, meaning
-that the server may send or receive messages, and may also make internal
-choices.  I split the event types because they'll be handled differently when I
-derive the tester later in this chapter.
+that the server's events are either sending/receiving messages or making
+internal choices.  I split the event types because they'll be handled
+differently when I derive the tester later in this chapter.
 
-Now we can represent the QAC server with step function \ilc{sstep} and initial
-state \ilc{sigma}:
+Now we can define the interaction tree of a nondeterministic server with loop
+body \ilc{sstep} and initial state \ilc s:
 \begin{coq}
-  CoInductive server (sstep: Q -> C -> sigma -> A * sigma) (s: sigma)
-              : itree qacE void :=
+  CoFixpoint server (sstep: Q -> C -> sigma -> A * sigma) (s: sigma) : itree qacE void :=
     c <- trigger Choice;;
     q <- trigger Recv;;
     let (a, s') := sstep q c s in
     trigger (Send a);;
     server sstep s'.
 \end{coq}
+The \ilc{server} is a recursive program that iterates over state \ilc{(s:
+sigma)}.  In each iteration, it makes an internal choice \ilc{(c: C)} and
+receives a request \ilc{(q: Q)}.  It then computes the response \ilc{(a: A)} and
+the post state \ilc{(s': sigma)} using the \ilc{sstep} state monad function,
+sends back the response, and recurses with the post state.
 
-This subsection has provided a brief taste of the ITree specification language.
-To construct a tester from the specification, we need to dualize the model's
-behavior into the tester-side behavior, based on the theory explained in
-\autoref{sec:dualization}.  To dualize specifications written in ITrees, we need
-an {\em interpretation} mechanism that transforms ITrees into other programs,
-which will be explained in the next subsection.
-
-\subsection{Interpreting interaction trees}
-To interpret a program \ilc p is to specify a rule that defines ``if \ilc p does
-this, then do that''.  For example, shell syntax \inlinec{(p < input > output)}
-executes \inlinec p but redirects its standard I/O.  Suppose \inlinec p is the
-\ilc{echo} program in \autoref{sec:itree-lang}, then the redirected program
-should perform file operations specified in \ilc{redirect_echo}:
-\begin{coq}
-  Variant fileE: Type -> Type :=      (* file operation events *)
-    Fgetc: file ->         fileE char
-  | Fputc: file -> char -> fileE unit.
-
-  CoInductive redirect_echo (input output: file) : itree fileE unit :=
-    c <- trigger (Fgetc input);;
-    if c is EOF then ret 0
-    else trigger (Fputc output c);;
-         redirect_echo input output.
-\end{coq}
-
-When redirecting a program's standard I/O to files, the interpretation rule is
-``whenever the program wants to read from or write to standard I/O, perform the
-read/write operation on the specified file instead'':
-\begin{coq}
-  Definition redirect (input output: file) {R: Type} (e: stdioE R) :=
-    match e in stdioE R return itree fileE R with
-    | GetChar   => trigger (Fgetc input)
-    | PutChar c => trigger (Fputc output c)
-    end.
-\end{coq}
-
-Here the \ilc{redirect} function takes a standard I/O event and turns it into an
-ITree program that performs file events.  The result program has the same return
-type as the original event, so it can ``replace'' the original \ilc{stdioE}.
-This is done by the \ilc{interp} function:
-\begin{coq}
-  CoFixpoint interp {E F R} (f: forall {T}, E T -> itree F T) (m: itree E R)
-             : itree F R :=
-    match m with
-    | Pure   r   => Pure r
-    | Impure e k => x <- f e;;
-                    interp handler (k x)
-    end.
-
-  Definition redirect_echo2 (input output: file) : itree fileE unit :=
-    interp (redirect input output) (translateM echo).
-\end{coq}
-
-For each impure event, the interpretor replaces it with the program defined by
-the handler function \ilc f.  As a result, \ilc{redirect_echo2} constructs a
-redirected echo program that is equivalent with \ilc{redirect_echo}.
-
-To derive tester programs from ITree specifications, I'll introduce multiple
-interpretation processes, with various event handlers throughout this chapter.
+The rest of this chapter shows how to derive interactive tester programs from
+specifications written as ITrees.

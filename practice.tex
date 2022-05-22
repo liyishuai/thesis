@@ -16,26 +16,35 @@ becomes insufficient for defining the space of asynchronous interactions.
 This chapter applies the idea of dualization to testing asynchronous systems.  I
 transition from the QAC language family to the ITree specification language,
 which allows modelling asynchronous interactions.  The ITree-based
-specifications are dualized into tester programs that can interact with the SUT
+specifications are derived into tester programs that can interact with the SUT
 and reveal potential defects.
 
-\autoref{sec:itree} introduces the ITree specification language.
-\autoref{sec:external-nondet} and \autoref{sec:internal-nondet} address external
-and internal nondeterminism in the ITree context, using \http as an
-example.  \autoref{sec:backtrack} then explains how to execute the derived
-tester model as an interactive program.
+\begin{figure}
+  \includegraphics[width=\linewidth]{figures/framework}
+  \caption{Deriving tester program from specification}
+  \label{fig:framework}
+\end{figure}
+
+\autoref{fig:framework} illustrates the derivation framework from ITrees to
+testers.  \autoref{sec:itree} introduces the ITree language that encodes each
+box in the framework.  \autoref{sec:internal-nondet} and
+\autoref{sec:external-nondet} address internal and external nondeterminism in
+the ITree context, and interprets the ``server model'' into a ``nondeterministic
+tester''.  \autoref{sec:backtrack} then explains how to execute the
+nondterministic tester model as an interactive tester program that runs on
+deterministic machines.
 
 \section{From QAC to Interaction Trees}
 \label{sec:itree}
 \input{itree}
 
-\section{Handling External Nondeterminism}
-\label{sec:external-nondet}
-\input{external}
-
 \section{Handling Internal Nondeterminism}
 \label{sec:internal-nondet}
 \input{internal}
+
+\section{Handling External Nondeterminism}
+\label{sec:external-nondet}
+\input{external}
 
 \section{Executing Tester Model}
 \label{sec:backtrack}
