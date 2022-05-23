@@ -224,69 +224,13 @@ model for test derivation purposes:
 This corresponds to the ``Symbolic Model'' in \autoref{fig:framework}.  The rest
 of this section will explain the interpretations from this symbolic model.
 
-
-\subsection{Interpreting interaction trees}
-\label{sec:interp}
-To interpret a program \ilc p is to specify a rule that defines ``if \ilc p does
-this, then do that''.  For example, shell syntax \inlinec{(p < input > output)}
-executes \inlinec p but redirects its standard I/O.  Suppose \inlinec p is the
-\ilc{echo} program in \autoref{sec:itree-lang}, then the redirected program
-should perform file operations specified in \ilc{redirect_echo}:
-\begin{coq}
-  Variant fileE: Type -> Type :=      (* file operation events *)
-    Fgetc: file ->         fileE char
-  | Fputc: file -> char -> fileE unit.
-
-  CoInductive redirect_echo (input output: file) : itree fileE unit :=
-    c <- trigger (Fgetc input);;
-    if c is EOF then ret 0
-    else trigger (Fputc output c);;
-         redirect_echo input output.
-\end{coq}
-
-When redirecting a program's standard I/O to files, the interpretation rule is
-``whenever the program wants to read from or write to standard I/O, perform the
-read/write operation on the specified file instead'':
-\begin{coq}
-  Definition redirect (input output: file) {R: Type} (e: stdioE R) :=
-    match e in stdioE R return itree fileE R with
-    | GetChar   => trigger (Fgetc input)
-    | PutChar c => trigger (Fputc output c)
-    end.
-\end{coq}
-
-Here the \ilc{redirect} function takes a standard I/O event and turns it into an
-ITree program that performs file events.  The result program has the same return
-type as the original event, so it can ``replace'' the original \ilc{stdioE}.
-This is done by the \ilc{interp} function:
-\begin{coq}
-  CoFixpoint interp {E F R} (f: forall {T}, E T -> itree F T) (m: itree E R)
-             : itree F R :=
-    match m with
-    | Pure   r   => Pure r
-    | Impure e k => x <- f e;;
-                    interp handler (k x)
-    end.
-
-  Definition redirect_echo2 (input output: file) : itree fileE unit :=
-    interp (redirect input output) (translateM echo).
-\end{coq}
-
-For each impure event, the interpretor replaces it with the program defined by
-the handler function \ilc f.  As a result, \ilc{redirect_echo2} constructs a
-redirected echo program that is equivalent with \ilc{redirect_echo}.
-
-To derive tester programs from ITree specifications, I'll introduce multiple
-interpretation processes, with various event handlers throughout this chapter.
-
-
-\subsection{Dualizing interactions}
+\subsection{Dualizing symbolic model}
 \label{sec:dualize-interaction}
 This subsection takes the symbolic model composed in
-\autoref{sec:symbolic-model} and dualizes its interactions, which corresponds to
-the ``Dualization'' arrow in \autoref{fig:framework}.  It applies the derivation
-rules (\ref{rule:write})--(\ref{rule:return}) for $\Prog$ in
-\autoref{sec:dualize-prog} to models written as ITrees.
+\autoref{sec:symbolic-model} and dualizes its interactions, which corresponds
+to the ``Dualization'' arrow in \autoref{fig:framework}.  It applies the idea of
+derivation rules (\ref{rule:write})--(\ref{rule:return}) for $\Prog$
+(\autoref{sec:dualize-prog}) to models written as ITrees.
 
 This interpretation phase produces a symbolic observer that models the tester's
 observation and validation behavior.  The observer sends a request when the

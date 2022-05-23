@@ -1,9 +1,18 @@
 To write specifications for protocols' rich semantics, I employed ``interaction
 tree'' (ITree), a generic data structure for representing interactive programs
-in the Coq programming language, introduced by \citet{itree}.  ITrees allow
-specifying protocols as monadic programs that model valid implementations'
-possible behavior.  The ITree specification can be interpreted into a tester
-program, as discussed in later sections.
+in the Coq programming language, introduced by \citet{itree}.  I provide a brief
+introduction to the ITree specification language in \autoref{sec:itree-lang}.
+
+ITrees allow specifying protocols as monadic programs that model valid
+implementations' possible behavior.  In \autoref{sec:qac-itree}, I show how to
+embed specifications in the QAC family in terms of interaction trees.
+
+The derivation from server specifications to interactive testers is by {\em
+interpreting} ITree programs, which corresponds to the arrows
+in \autoref{fig:framework}.  In \autoref{sec:interp}, I explain the mechanism of
+interpretation by deriving testers from deterministic server models.  The rest
+of this chapter then shows how to handle nondeterminism when interpreting
+ITrees.
 
 \subsection{Language definition}
 \label{sec:itree-lang}
@@ -160,15 +169,38 @@ write programs in the monadic syntax:
 \subsection{QAC in ITrees}
 \label{sec:qac-itree}
 The ITree specification language is a superset of the QAC language family.  Any
-nondeterministic server model in \autoref{def:server} can be translated into an
-interaction tree that receives requests of type $Q$, sends responses of type
-$A$, and makes internal choices of type $C$.  The ITree's event type is defined
-as follows:
-\begin{coq}
-  Variant qaE: Type -> Type :=
-    Recv: qaE Q           (* receive a request *)
-  | Send: A -> qaE unit.  (* send a response   *)
+server model in \autoref{sec:qac-model} can be translated into an interaction
+tree that receives requests and sends responses.
 
+The deterministic server's event type is defined as follows:
+\begin{coq}
+  Variant ioE (I O: Type) : Type -> Type := (* I/O event *)
+    Recv: qaE I                     (* receive an input  *)
+  | Send: O -> qaE unit.            (* send    an output *)
+
+  Definition qaE := ioE Q A.
+\end{coq}
+Here \ilc{ioE} is a parameterized event that takes types \ilc I and \ilc O as
+arguments.  Type \ilc{qaE} is an instance of I/O event that receives requests of
+type \ilc Q and sends responses of type \ilc A.
+
+Given a loop body \ilc{sstep} and an initial state \ilc s, we can define the
+interaction tree of the server model as a recursive program:
+\begin{coq}
+  CoFixpoint detServer (sstep: Q -> sigma -> A * sigma) (s: sigma) : itree qaE void :=
+    q <- trigger Recv;;
+    let (a, s') := sstep q s in
+    trigger (Send a);;
+    detServer sstep s'.
+\end{coq}
+The server program iterates over state \ilc{(s: sigma)}.  In each iteration, it
+receives a request \ilc{(q: Q)} and computes the response \ilc{(a: A)} using the
+state monad function \ilc{sstep}.  It then sends back the response and recurses
+with the post state \ilc{(s': sigma)}.
+
+To specify a nondeterministic server with internal choices of type $C$, I
+introduce another event to represent its internal choices.
+\begin{coq}
   Variant choiceE: Type -> Type :=
     Choice: choiceE C.    (* make an internal choice *)
 
@@ -176,11 +208,10 @@ as follows:
 \end{coq}
 Here \ilc{qacE} is a sum type of \ilc{qaE} and \ilc{choiceE} events, meaning
 that the server's events are either sending/receiving messages or making
-internal choices.  I split the event types because they'll be handled
-differently when I derive the tester later in this chapter.
+internal choices.
 
-Now we can define the interaction tree of a nondeterministic server with loop
-body \ilc{sstep} and initial state \ilc s:
+At the beginning of each iteration, the nondeterministic server makes an
+internal choice \ilc{(c: C)} as the seed of its \ilc{sstep} function:
 \begin{coq}
   CoFixpoint server (sstep: Q -> C -> sigma -> A * sigma) (s: sigma) : itree qacE void :=
     c <- trigger Choice;;
@@ -189,11 +220,78 @@ body \ilc{sstep} and initial state \ilc s:
     trigger (Send a);;
     server sstep s'.
 \end{coq}
-The \ilc{server} is a recursive program that iterates over state \ilc{(s:
-sigma)}.  In each iteration, it makes an internal choice \ilc{(c: C)} and
-receives a request \ilc{(q: Q)}.  It then computes the response \ilc{(a: A)} and
-the post state \ilc{(s': sigma)} using the \ilc{sstep} state monad function,
-sends back the response, and recurses with the post state.
 
-The rest of this chapter shows how to derive interactive tester programs from
-specifications written as ITrees.
+Such server models can be derived into tester programs by interpretation.
+
+\subsection{Interpreting interaction trees}
+\label{sec:interp}
+To interpret an ITree is to specify the operational semantics of its events.
+For example, the \ilc{tester} program in \autoref{sec:interactive-testing} can
+be constructed by interpreting a deterministic server model in
+\autoref{sec:qac-itree}.
+
+\paragraph{Tester event type}
+An interactive tester generates requests and sends them to the SUT, receives
+responses, and validates its observation against the specification:
+\begin{coq}
+  Variant genE: Type -> Type :=
+    Gen : genE Q.          (* generate a request *)
+
+  Variant exceptE: Type -> Type :=
+    Throw: forall X, exceptE X. (* throw an exception *)
+
+  Definition testE := ioE A Q +' genE +' exceptE.
+\end{coq}
+This type definition is pronounced as: ``The tester receives responses \ilc A as
+input, sends requests \ilc Q as output, generates requests to send, or throws an
+exception when it detects a violation in its observations.
+
+\paragraph{Dualizing server events}
+The tester is constructed by dualizing the server specification's behavior: When
+the specification receives a request, the tester generates a request and sends
+it to the SUT; When the specification sends a response, the tester expects to
+receive the response from the SUT.  We can write this correspondence as a
+function from server events to the tester's behaviors:
+\begin{coq}
+  Definition dualize {R} (e: qaE R) : itree testE R :=
+    match e with
+    | Recv   => q <- trigger Gen;;
+                trigger (Send q);;
+                ret q
+    | Send a => a' <- trigger Recv;;
+                if a' =? a
+                then ret tt
+                else trigger (Throw ("Expect " ++ a ++ " but observed " ++ a'))
+    end.
+\end{coq}
+The \ilc{dualize} function takes an event and yields an ITree program.  It maps
+the server's receive event to the tester's generate and send operations, and
+vice versa, maps the server's send event to the tester's receive operation.  If
+the tester's received response differs from that specified by the server model,
+then the tester throws an exception to indicate a violation it detected.
+
+\paragraph{Applying event handlers}
+The \ilc{dualize} function is also called a handler.  It produces an ITree that
+has the same result type as its argument event.  Therefore, we can construct the
+tester by substituting the server's events with the operations defined by the
+handler function:
+\begin{coq}
+  CoFixpoint interp {E F T} (handler: forall {R}, E R -> itree F R) (m: itree E T)
+             : itree F T :=
+    match m with
+    | Pure   r   => Pure r
+    | Impure e k => x <- f e;;
+                    interp handler (k x)
+    end.
+
+  Definition tester (sstep: Q -> sigma -> A * sigma) (s: sigma) : itree testE void :=
+    interp dualize (detServer sstep s).
+\end{coq}
+Applying the dualization handler to the server model gives us an ITree program
+that performs tester interactions.  The tester keeps generating, sending and
+receiving messages until observing an unexpected response when it throws an
+exception and rejects the SUT.  It is semantically equivalent to the
+\ilc{tester} in \autoref{sec:interactive-testing}.
+
+To derive testers from nondeterministic server models, I design more complex
+tester events and handlers, as discussed in the following sections.
