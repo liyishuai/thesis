@@ -5,7 +5,7 @@ evaluation based on ITree specifications.  It covers the derivation path from
 using \http entity tags introduced in \autoref{sec:internal-nondeterminism} as
 an example.
 
-As discussed in \autoref{sec:encode-spec}, dualization requires finer-grained
+As discussed in \autoref{sec:encode-spec}, dualization requires refining the
 representation of the server's computation {\it e.g.} encoding its branches over
 symbolic conditions.  This is done by designing ITrees' event types in
 \autoref{sec:symbolic-model} and specifying the server's behavior with a
@@ -28,14 +28,65 @@ representations.
 
 \subsection{Symbolic server model}
 \label{sec:symbolic-model}
+The server specification is an ITree program that exhibits all valid behavior of
+the protocol.  I combine the $\Prog$ language in \autoref{sec:prog-lang} with the
+simplistic ITree example in \autoref{sec:qac-itree}.
 
-The key idea of language design is to expose symbolic representations to the
-dualzation algorithm.  The $\Prog$ language in \autoref{sec:proglang} encodes
-data as symbolic expressions $\Sexp$, so that the responses and branch
-conditions may depend on internal choices.  I do the same for ITree
-specifications, by symbolizing the choice events and branch conditions.  Take my
-HTTP specification~\cite{issta21} as an example, its choice event has symbolic
-expression as result type:
+\paragraph{Network packet type}
+Instead of receiving requests and sending responses, the server receives and
+sends {\em packets} that carry routing information.  This allows us to specify
+the server's interaction against concurrent clients in
+\autoref{sec:external-nondet}.  A packet consists of headers that indicate its
+source and destination, and a payload of either a request or a response:
+\begin{coq}
+  Notation connection := N. (* N for natural number *)
+
+  Record packet Q A := {
+    Source      : endpoint;
+    Destination : endpoint;
+    Payload     : Q + A
+  }.
+\end{coq}
+This type definition says: the \ilc{packet} type is parameterized over the \ilc
+Q and \ilc A types that represent its request and response.  Its \ilc{Source}
+and \ilc{Destination} fields each records an \ilc{endpoint} represented as a
+natural number.  Its \ilc{Payload} type is the sum of request and response.
+
+Here's an example trace of network packets:
+\begin{coq}
+  Context get: string -> request.
+  Context ok : string -> response.
+
+  Definition server_end: endpoint := 0.
+
+  Example trace: list (packet request response) :=
+    [ { Source      := 1;
+        Destination := server_end;
+        Payload     := inl (get "/index.html")
+      }
+    ; { Source      := server_end;
+        Destination := 1;
+        Payload     := inr (ok "<p>Hello!</p>")
+      }
+    ].
+\end{coq}
+This trace encodes a transaction between client 1 and the server (represented as
+endpoint 0).  The client sends a GET request to fetch the resource in path
+\ilc{"/index.html"}, and the server responds with 200 OK and content
+\ilc{"<p>Hello!</p>"}.  The \ilc{inl} and \ilc{inr} are constructors for sum
+types:
+\begin{coq}
+  Context inl: forall {X Y}, X -> X + Y.
+  Context inr: forall {X Y}, Y -> X + Y.
+\end{coq}
+
+\paragraph{Symbolic representation}
+To specify systems' nondeterministic behavior, the $\Prog$ language in
+\autoref{sec:prog-lang} encodes data as symbolic expressions $\Sexp$, so that
+the responses and branch conditions may depend on internal choices.  I do the
+same for ITree specifications, by symbolizing the choice events and branch
+conditions.  Take my HTTP specification~\cite{issta21} as an example.  Its
+choice event has symbolic expression as result type:
 
 \begin{coq}
   Variant comparison := Strong | Weak.
@@ -46,7 +97,7 @@ expression as result type:
   | Compare  : string -> exp string -> comparison -> exp bool.
 
   Variant choiceE: Type -> Type :=
-    Choice: symE (exp string).
+    Choice: choiceE (exp string).
 \end{coq}
 
 Here I instantiate the \ilc{choiceE} in \autoref{sec:itree-lang} with symbolic
@@ -59,9 +110,17 @@ Symbolic expressions may be constructed as constant values, as variables, or
 with operators.  The \ilc{Compare} constructor takes an expression of type
 string and compares it against a constant string.  \ilc{(Compare t tx cmp)}
 represents the ETag comparison between \ilc{t} and \ilc{tx}, using ``strong
-comparison'' or ``weak comparison'' mechanism~\cite{rfc7232} specified by
-\ilc{cmp}.  The constant ETag is provided by the request, and the symbolized one
-comes from the server state.
+comparison'' or ``weak comparison'' mechanism\footnote{\http servers may choose
+to generate ETags as ``strong validators'' (with uniqueness guarantee) or ``weak
+validators'' (for potentially better performance).  When handling
+compare-and-swap operations such as PUT requests conditioned over
+\inlinec{If-Match} in \autoref{sec:internal-nondeterminism}, the server should
+evaluate its precondition with ``strong comparison'' that don't allow weak
+validators to match any ETag.  For GET requests conditioned over
+\inlinec{If-None-Match}, the server may evaluate with ``weak comparison'' where
+a weak validator may match another ETag.} specified by \ilc{cmp}.  The constant
+ETag is provided by the request, and the symbolic one comes from the server
+state.
 
 \begin{figure}
 \begin{coq}
@@ -72,12 +131,12 @@ comes from the server state.
     let respond_with a :=
       trigger (Send { Source      := server_conn;
                       Destination := pq.(Source);
-                      Data        := a } ) in
-    let q : request    := request_of pq    in
-    let v : content    := q.(Payload)      in
-    let k : path       := q.(TargetPath)   in
-    let t : string     := if_match q       in
-    let tx: exp string := (state k).(ETag) in
+                      Payload     := inr a } ) in
+    let q : request    := request_of pq        in
+    let v : string     := q.(Content)          in
+    let k : path       := q.(TargetPath)       in
+    let t : string     := if_match q           in
+    let tx: exp string := (state k).(ETag)     in
     IFX (Compare t tx Strong)
     THEN
       if q.(Method) is Put
@@ -98,12 +157,15 @@ comes from the server state.
 \label{fig:if-match-server}
 \end{figure}
 
-\autoref{fig:if-match-server} shows an ITree model for If-Match requests in
-\autoref{sec:internal-nondeterminism}.  The server first evaluates the request's
-\inlinec{If-Match} condition by ``strong comparison'' as required by HTTP.  If
-the request's ETag matches its target's, then the server updates the target's
-contents with the request payload.  The target's new ETag \ilc{tx'} can be of
-any value, so the model represents it as \ilc{Choice} event.
+\autoref{fig:if-match-server} shows an ITree model for If-Match requests 
+(\autoref{sec:internal-nondeterminism}).  The server state \ilc{sigma} \lys{I
+used \ilc{sigma} to represent the server state in QAC, so keeping this
+notation.}  maps each path to its corresponding ``resource''---file content and
+metadata like ETag.  The server first evaluates the request's \inlinec{If-Match}
+condition by ``strong comparison'' as required by HTTP.  If the request's ETag
+matches its target's, then the server updates the target's contents with the
+request payload.  The target's new ETag \ilc{tx'} is permitted to be any value,
+so the model represents it as \ilc{Choice} event.
 
 Notice that the server model exhibits two kinds of branches: (1) The \ilc{if}
 branches are provided by the ITree's embedding language Coq, which takes a
@@ -124,28 +186,23 @@ and will be handled differently during testing:
 \begin{enumerate}
 \item The ``pure'' \ilc{if} condition is used for deterministic branches like
   \ilc{(q.(Method) is Put)} in the example.  Here \ilc q is a ``concrete
-  request''\footnote{In this chapter, ``concrete'' messages are those that don't
-    involve symbolic variables, as opposed to ``symbolic'' messages.} generated
-  by the tester and sent to the server, so its method is known by the tester and
-  needn't be symbolically evaluated.
+  request''---a request that doesn't involve symbolic variables, as opposed to
+  ``symbolic'' ones---generated by the client and sent to the server, so its
+  method is known by the tester and needn't be symbolically evaluated.
 \item The ``symbolic'' \ilc{IFX} condition here plays a similar rule as the
   $\mathsf{if}$ branches in the $\Prog$ language: Which branch to take depends
   on the server's internal choices, so the tester needs to consider both cases.
 \end{enumerate}
 
-Now we can fill the hole \ilc{\{E\}} in \autoref{fig:net-compose-code}.  The
-server model receives concrete requests and sends symbolic responses, so its
-event type is defined as:
+Now we can instantiate the \ilc{qaE} type in \autoref{sec:qac-itree}.  The
+symbolic server model receives concrete requests and sends symbolic responses,
+so its event is defined as:
 \begin{coq}
-  Record packet := {
-    Source      : connection;
-    Destination : connection;
-    Data        : request + symbolic_response
-  }.
+  Definition symbolic_packet := packet request symbolic_response.
 
   Variant qaE: Type -> Type :=
-    Recv : qaE packet
-  | Send : packet -> qaE unit.
+    Recv : qaE symbolic_packet
+  | Send : symbolic_packet -> qaE unit.
 \end{coq}
 
 The HTTP server, for example, can be modelled as:
