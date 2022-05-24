@@ -127,7 +127,7 @@ potentially better performance).  Weak validators have prefix \iletag{W/} while
 strong validators do not.  When handling compare-and-swap operations such as PUT
 requests conditioned over \inlinec{If-Match} in
 \autoref{sec:internal-nondeterminism}, the server should evaluate its
-precondition with ``strong comparison'' that don't allow weak validators ({\it
+precondition with ``strong comparison'' that doesn't allow weak validators ({\it
 e.g.} \iletag{W/"foo"}) to match any ETag including itself.  For GET requests
 conditioned over \inlinec{If-None-Match}, the server may evaluate with ``weak
 comparison'' where a weak validator like \iletag{W/"bar"} matches itself and
