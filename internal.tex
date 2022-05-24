@@ -107,41 +107,58 @@ may generate, which was discussed in \autoref{sec:internal-nondeterminism}.  The
 type interface can be adjusted to other protocols under test.
 
 Symbolic expressions may be constructed as constant values, as variables, or
-with operators.  The \ilc{Compare} constructor takes an expression of type
-string and compares it against a constant string.  \ilc{(Compare t tx cmp)}
-represents the ETag comparison between \ilc{t} and \ilc{tx}, using ``strong
-comparison'' or ``weak comparison'' mechanism\footnote{\http servers may choose
-to generate ETags as ``strong validators'' (with uniqueness guarantee) or ``weak
-validators'' (for potentially better performance).  When handling
-compare-and-swap operations such as PUT requests conditioned over
-\inlinec{If-Match} in \autoref{sec:internal-nondeterminism}, the server should
-evaluate its precondition with ``strong comparison'' that don't allow weak
-validators to match any ETag.  For GET requests conditioned over
-\inlinec{If-None-Match}, the server may evaluate with ``weak comparison'' where
-a weak validator may match another ETag.} specified by \ilc{cmp}.  The constant
-ETag is provided by the request, and the symbolic one comes from the server
-state.
+with operators.  Here is an example of expressions of type string:
+\begin{coq}
+  Context x y : var.
+
+  Example expressions: list (exp string) :=
+    [ Const   "foo"
+    ; Var      x
+    ; Compare "bar" (Var y) Weak
+    ].
+\end{coq}
+
+The \ilc{Compare} constructor takes an expression of type string and compares it
+against a constant string.  \ilc{(Compare t tx cmp)} represents the ETag
+comparison between \ilc{t} and \ilc{tx}, using ``strong comparison'' or ``weak
+comparison'' mechanism\footnote{\http servers may choose to generate ETags as
+``strong validators'' (with uniqueness guarantee) or ``weak validators'' (for
+potentially better performance).  Weak validators have prefix \iletag{W/} while
+strong validators do not.  When handling compare-and-swap operations such as PUT
+requests conditioned over \inlinec{If-Match} in
+\autoref{sec:internal-nondeterminism}, the server should evaluate its
+precondition with ``strong comparison'' that don't allow weak validators ({\it
+e.g.} \iletag{W/"foo"}) to match any ETag including itself.  For GET requests
+conditioned over \inlinec{If-None-Match}, the server may evaluate with ``weak
+comparison'' where a weak validator like \iletag{W/"bar"} matches itself and
+also matches strong validator \iletag{"bar"}, but doesn't match \iletag{W/"foo"}
+or \iletag{"foo"}.} specified by \ilc{cmp}.  The constant ETag is provided by
+the request, and the symbolic one comes from the server state.
 
 \begin{figure}
-\begin{coq}
+\begin{lstlisting}[numbers=left]
   Notation sigma := (path -> resource).
+
+  Context OK PreconditionFailed : symbolic_response.
+  Context process: request -> sigma -> itree smE (symbolic_response * sigma).
 
   CoFixpoint server_http (state: sigma) :=
     pq <- trigger Recv;;
     let respond_with a :=
-      trigger (Send { Source      := server_conn;
-                      Destination := pq.(Source);
-                      Payload     := inr a } ) in
+      trigger (Send { Source      := server_conn
+                    ; Destination := pq.(Source)
+                    ; Payload     := inr a } ) in
     let q : request    := request_of pq        in
     let v : string     := q.(Content)          in
     let k : path       := q.(TargetPath)       in
     let t : string     := if_match q           in
     let tx: exp string := (state k).(ETag)     in
-    IFX (Compare t tx Strong)
+    IFX (Compare t tx Strong)%\label{line:etag-ifx}%
     THEN
-      if q.(Method) is Put
+      if q.(Method) is Put%\label{line:etag-pure-if}%
       then
-        tx' <- trigger Choice;;
+        tx' <- or (trigger Choice)%\label{line:etag-choice}%
+                  (Pure (Const EmptyString));;
         let state' := state [k |-> {Content := v; ETag := tx'}] in
         respond_with OK;;
         server_http state'
@@ -151,8 +168,8 @@ state.
         server_http state'
     ELSE
       respond_with PreconditionFailed;;
-      server_http s.
-\end{coq}
+      server_http s.%\label{line:etag-end}%
+\end{lstlisting}
 \caption{Server model for HTTP conditional requests}
 \label{fig:if-match-server}
 \end{figure}
@@ -167,11 +184,13 @@ matches its target's, then the server updates the target's contents with the
 request payload.  The target's new ETag \ilc{tx'} is permitted to be any value,
 so the model represents it as \ilc{Choice} event.
 
-Notice that the server model exhibits two kinds of branches: (1) The \ilc{if}
-branches are provided by the ITree's embedding language Coq, which takes a
-boolean value as condition; (2) The \ilc{IFX} branches are constructors of
-ITrees with nondeterministic branches, where the condition is a symbolic
-expression of type bool:
+Notice that the server model exhibits three kinds of branches:
+\begin{enumerate}
+\item The \ilc{if} branch in \autoref{line:etag-pure-if} is provided by ITree's
+embedding language Coq, and takes a boolean value as condition;
+\item The \ilc{IFX} branch in \autoref{line:etag-ifx} constructs an ITree that
+nondeterministically branches over a condition written as a symbolic expression
+of type bool:
 \begin{coq}
   Variant branchE: Type -> Type :=
     Decide: exp bool -> branchE bool.
@@ -180,9 +199,21 @@ expression of type bool:
     (b <- trigger (Decide condition);;
      if b then x else y).
 \end{coq}
+\item The \ilc{or} operator in \autoref{line:etag-choice} takes two ITrees as
+possible branches and constructs an ITree that may nondeterministically take
+either branch:
+\begin{coq}
+  Variant nondetE: Type -> Type :=
+    Or: nondetE bool.
 
-These two kinds of branch conditions play different roles in the specification,
-and will be handled differently during testing:
+  Definition or {E R} (x y: itree E R) : itree E R :=
+    b <- trigger Or;;
+    if b then x else y.
+\end{coq}
+\end{enumerate}
+
+These three kinds of branch conditions play different roles in the
+specification, and will be handled differently during testing:
 \begin{enumerate}
 \item The ``pure'' \ilc{if} condition is used for deterministic branches like
   \ilc{(q.(Method) is Put)} in the example.  Here \ilc q is a ``concrete
@@ -192,37 +223,54 @@ and will be handled differently during testing:
 \item The ``symbolic'' \ilc{IFX} condition here plays a similar rule as the
   $\mathsf{if}$ branches in the $\Prog$ language: Which branch to take depends
   on the server's internal choices, so the tester needs to consider both cases.
+\item The \ilc{or} branch defines multiple control flows the server may take.
+  In the HTTP example, the server may generate an ETag for the resource's new
+  content, but is not obliged to do so.  It may choose to generate no ETags
+  instead, using \ilc{(Pure (Const EmptyString))} as an alternative
+  to \ilc{(trigger Choice)}.
 \end{enumerate}
 
-Now we can instantiate the \ilc{qaE} type in \autoref{sec:qac-itree}.  The
-symbolic server model receives concrete requests and sends symbolic responses,
-so its event is defined as:
+In addition to \ilc{IFX} branch conditions, the symbolic expressions may also
+appear in the server's responses.  For example, after generating an ETag in
+\autoref{line:etag-choice} of \autoref{fig:if-match-server}, the server may
+receive a GET request and send the ETag to the client:
+\begin{coq}
+  Example ok_with_etag: symbolic_response :=
+    { ResponseLine := { Version := { Major := 1; Minor := 1 }
+                      ; Code    := 200
+                      ; Phrase  := OK
+                      }
+    ; ResponseFields :=
+      [ { Name := "Content-Length"; Value := Const "13" }
+      ; { Name := "ETag"          ; Value := Var    x   }
+      ]
+    ; ResponseBody := "<p>Hello!</p>"
+    }.
+\end{coq}
+Suppose the server generated the ETag as expression \ilc{(Var x)}, then we can
+use the expression to construct the symbolic response in the specification,
+rather than determining its concrete value.  The mechanism of producing
+expressions for ETags is explained in \autoref{sec:dualize-interaction}.
+
+Now we can define the specification's event type \ilc{smE}.  The symbolic server
+model receives concrete requests and sends symbolic responses, so its event is
+defined as:
 \begin{coq}
   Definition symbolic_packet := packet request symbolic_response.
 
-  Variant qaE: Type -> Type :=
-    Recv : qaE symbolic_packet
-  | Send : symbolic_packet -> qaE unit.
-\end{coq}
+  Definition qaE := ioE symbolic_packet symbolic_packet.
 
-The HTTP server, for example, can be modelled as:
-\begin{coq}
-  Definition server_http: itree (qaE +' choiceE +' branchE) void :=
-    server init_state.
+  Notation smE := (qaE +' nondetE +' choiceE +' branchE).
 \end{coq}
-
-The server model is then transformed via network composition into a symbolic
-model for test derivation purposes:
+The ``Symbolic Model'' in \autoref{fig:framework} is an ITree constructed by
+applying the \ilc{server_http} function to an initial state:
 \begin{coq}
-  (* Observer-side symbolic model's event type: *)
-  Notation smE := (netE +' nondetE +' choiceE +' branchE).
-  
   Definition sm_http: itree smE void :=
-    compose server_http tcp [] [].
+    server_http init_state.
 \end{coq}
 
-This corresponds to the ``Symbolic Model'' in \autoref{fig:framework}.  The rest
-of this section will explain the interpretations from this symbolic model.
+The rest of this section will explain the interpretations from this symbolic
+model.
 
 \subsection{Dualizing symbolic model}
 \label{sec:dualize-interaction}
@@ -248,13 +296,13 @@ Notation oE := (observeE +' nondetE +' choiceE +' constraintE).
 
 Definition observe {R} (e: smE R) : itree oE R :=
   match e with
-  | (Absorb |)     => trigger FromObserver%\label{line:observe-absorb}%
-  | (Emit px|)     => p <- trigger ToObserver;;%\label{line:observe-emit}%
-                      trigger (Guard px p)
-  | (|||Branch bx) => or (trigger (Unify bx true);;  ret true)%\label{line:observe-branch}%
-                         (trigger (Unify bx false);; ret false)
-  | (|Or|)         => trigger Or%\label{line:observe-or}%
-  | (||Choice|)    => trigger Choice%\label{line:observe-choice}%
+  | Recv      => trigger FromObserver%\label{line:observe-absorb}%
+  | Send px   => p <- trigger ToObserver;;%\label{line:observe-emit}%
+                 trigger (Guard px p)
+  | Decide bx => or (trigger (Unify bx true);;  ret true)%\label{line:observe-branch}%
+                    (trigger (Unify bx false);; ret false)
+  | Or        => trigger Or%\label{line:observe-or}%
+  | Choice    => trigger Choice%\label{line:observe-choice}%
   end.
 
 Definition observer_http: itree oE void :=
@@ -268,11 +316,7 @@ The tester observes a trace of concrete packets, so observer's interactions
 return concrete requests and responses, as opposed to the symbolic model whose
 responses are symbolic.
 \begin{coq}
-  Record concrete_packet := {
-    source      : connection;
-    destination : connection;
-    payload     : request + concrete_response
-  }.
+  Definition concrete_packet := packet request concrete_response.
 
   Variant observeE : Type -> Type :=
     FromObserver   : observeE concrete_packet
@@ -288,7 +332,7 @@ packet.
 As discussed in \autoref{sec:dualize-prog}, when the server sends a symbolic
 response or branches over a symbolic condition, the tester needs to create
 symbolic constraints accordingly.  The observer introduces ``constraint events''
-for this derivation rule:
+to represent the creation of constraints primitively.
 \begin{coq}
   Variant constraintE : Type -> Type :=
     Guard : packet -> concrete_packet -> constraintE unit
@@ -297,9 +341,9 @@ for this derivation rule:
 
 Here \ilc{(Guard px p)} creates a constraint that the symbolic packet \ilc{px}
 emitted by the specification matches the concrete packet \ilc p observed during
-runtime.  \ilc{(Unify bx b)} creates a constraint that the symbolic branch
-condition \ilc{bx} is unifiable with boolean value \ilc b.  These constraints
-will be solved in \autoref{sec:symbolic-eval}.
+runtime.  \ilc{(Unify bx b)} creates a constraint that unifies the symbolic
+branch condition \ilc{bx} with boolean value \ilc b.  These constraints will be
+solved in \autoref{sec:symbolic-eval}.
 
 The dualization algorithm in \autoref{fig:symbolic-observer} does the follows:
 \begin{enumerate}
@@ -307,8 +351,8 @@ The dualization algorithm in \autoref{fig:symbolic-observer} does the follows:
     \autoref{line:observe-absorb}, the observer generates a request packet;
   \item When the symbolic model emits a symbolic packet \ilc{px} in
     \autoref{line:observe-emit}, the observer receives a concrete packet \ilc p,
-    and adds a constraint that restricts the symbolic and concrete packets match
-    each other.
+    and adds a constraint that restricts the symbolic and concrete packets to
+    match each other.
   \item When the symbolic model branches on a symbolic condition \ilc{bx} in
     \autoref{line:observe-branch}, the tester accepts the observation if it can
     be explained by any branch.  This is done by constructing the observer as a
@@ -322,12 +366,50 @@ The dualization algorithm in \autoref{fig:symbolic-observer} does the follows:
     created in this phase.
 \end{enumerate}
 
-The result of dualization is a symbolic observer that models the tester's
-behavior like sending requests and receiving responses.  The symbolic observer
-is a nondeterministic program with primitives events like making choices and
-adding constraints over the choices.  The rest of this chapter instantiates the
-primitive events and resolves the nondeterministic branches, and executes it as
-an interactive tester.
+The result of dualization is a symbolic observer that models tester behaviors
+like sending requests and receiving responses.  The symbolic observer is a
+nondeterministic program with primitives events like making choices and adding
+constraints over the choices.
+
+For example, dualizing \autoref{line:etag-ifx}--\ref{line:etag-end} in
+\autoref{fig:if-match-server} results in an observer program as shown in
+\autoref{fig:observer-example}.  The next subsection interprets the observer's
+primitive \ilc{Guard} and \ilc{Unify} events into pure computations of symbolic
+evaluation.
+
+\begin{figure}
+\begin{coq}
+  Example observer_body: itree oE void :=
+    let guard_response a :=
+      p <- trigger ToObserver;;
+      trigger (Guard { Source      := server_conn
+                     ; Destination := pq.(Source)
+                     ; Payload     := inr a } ) in
+    let bx: exp bool := Compare t tx Strong in
+    or (
+        trigger (Unify (Compare bx true));;
+        if q.(Method) is Put
+        then
+          tx' <- or (trigger Choice)
+                    (Pure (Const EmptyString));;
+          let state' := state [k |-> {Content := v; ETag := tx'}] in
+          guard_response OK;;
+          interp observe (server_http state')
+        else
+          (a, state') <- interp observe (process q state);;
+          guard_response a;;
+          interp observe (server_http state')
+       )
+       (
+        trigger (Unify (Compare bx false));;
+        guard_response PreconditionFailed;;
+        interp observe (server_http s)
+       ).
+\end{coq}
+\caption{Symbolic observer example.}
+\label{fig:observer-example}
+\end{figure}
+
 
 \subsection{Symbolic evaluation}
 \label{sec:symbolic-eval}
@@ -346,14 +428,14 @@ Definition V: Type := list var * list (constraintE unit).
 Definition unify {R} (e: oE R) (v: V) : itree ntE (V * R) :=
   let (xs, cs) := v in
   match e with
-  | (||Choice|)     => let x: var := fresh v in%\label{line:unify-choice}%
-                       ret (x::xs, cs, Var x)
-  | (|||constraint) => let cs' := constraint::cs in%\label{line:unify-constraint}%
-                       if solvable cs'
-                       then ret (xs, cs', tt)
-                       else Trigger (Throw ("Conflict: " ++ print cs'))
-  | (|Or|) => b <- trigger Or;; ret (v, b)%\label{line:unify-or}%
-  | (oe|)  => r <- trigger oe;; ret (v, r)%\label{line:unify-observe}%
+  | Choice => let x: var := fresh v in%\label{line:unify-choice}%
+              ret (x::xs, cs, Var x)
+  | (constraint: unifyE) => let cs' := constraint::cs in%\label{line:unify-constraint}%
+                            if solvable cs'
+                            then ret (xs, cs', tt)
+                            else Trigger (Throw ("Conflict: " ++ print cs'))
+  | Or             => b <- trigger Or;; ret (v, b)%\label{line:unify-or}%
+  | (oe: observeE) => r <- trigger oe;; ret (v, r)%\label{line:unify-observe}%
   end.
 
 Definition nondet_tester_http: itree ntE void :=
@@ -366,7 +448,7 @@ Definition nondet_tester_http: itree ntE void :=
 
 As shown in \autoref{fig:nondet-tester}, the unification algorithm evaluates the
 primitive symbolic events into a stateful checker program, which reflects the
-$\Prog$-based validator in \autoref{sec:dualize-prog}.  The interpretor
+$\Prog$-based validator in \autoref{sec:dualize-prog}.  The interpreter
 maintains a validation state \ilc V which stores the symbolic variables and the
 constraints over them.  The derivation rules are as follows:
 \begin{enumerate}
@@ -380,7 +462,7 @@ constraints over them.  The derivation rules are as follows:
 \begin{coq}
   Variable exceptE: Type -> Type :=
     Throw: forall {X}, string -> exceptE X.
-\end{coq}      
+\end{coq}
   \item The observer is a nondeterministic program with multiple execution
     paths, constructed by \ilc{Or} events in \autoref{line:unify-or}.  The
     tester accepts the observation if any of the branches does not throw an
@@ -389,10 +471,12 @@ constraints over them.  The derivation rules are as follows:
 \end{enumerate}
 
 Notice that the \ilc{unify} function interprets a symbolic observer's event
-\ilc{(oE R)} into a state monad transformer \ilc{(V -> itree tE (V * R))}.  It
-makes a step from pre-validation state \ilc{(v: V)} to post-validation state
-\ilc{(v': V)}, and yields the event's corresponding result \ilc{(r: R)}.  Such
-stateful interpretation process is handled by \ilc{interp_state}:
+\ilc{(oE R)} into a function of type \ilc{(V -> itree tE (V * R))}, which is
+also called a state monad transformer.  It takes a pre-validation state \ilc{(v:
+V)} and computes an ITree that yields the observer event's corresponding result
+\ilc{(r: R)} along with a post-validation state \ilc{(v': V)}.  This stateful
+interpretation process is implemented by a variant of \ilc{interp} called
+\ilc{interp_state}:
 \begin{coq}
   CoFixpoint interp_state {E F V R}
                           (handler: forall {X}, E X -> V -> itree F (V * X))
@@ -405,7 +489,7 @@ stateful interpretation process is handled by \ilc{interp_state}:
     end.
 \end{coq}
 
-So far I have interpreted the specification into a tester model that observes
+So far I have interpreted the symbolic model into a tester model that observes
 incoming and outgoing packets, nondeterministically branches, and in some cases
-throws exceptions.  The rest of this chapter will show how to execute this ITree
-program on a deterministic machine and interact with the SUT.
+throws exceptions.  Next I'll explain how to extend the symbolic model to
+address external nondeterminism.
