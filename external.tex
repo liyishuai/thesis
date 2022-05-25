@@ -42,7 +42,7 @@ must be the oldest in its connection.
 (* filter the oldest packet in each connection *)
 Context oldest_in_each_conn : list packet -> list packet.
 
-Fixpoint pick_one (l: list packet) : itree nondetE (option packet) :=
+Fixpoint pick_one (l: list packet) : itree nondetE (option packet) :=%\label{def:pick-one}%
   if l is p::l'
   then or (Ret (Some p)) (pick_one l')
   else ret None.
@@ -198,8 +198,9 @@ process defined in \autoref{line:step-net-def}.  This design is to avoid
 divergence of the derived tester program, which I'll further explain in
 \autoref{sec:backtrack}.
 
-So far I've shown how to specify systems that exhibit external nondeterminism.
-By specifying the environment and composing it with the implementation-side
-specification, we can describe the space of valid observations.  The rest of
-this chapter will show how to derive tester programs from the observer-side
-specification.
+By composing the server and network models, we get a symbolic model that may
+send and receive packets asynchronously, as opposed to the server model that
+processes one request at a time.  Dualizing this asynchronous symbolic model
+results in an asynchronous tester model that may send multiple requests
+simultaneously rather than waiting for previous responses.  Next I'll show how
+to execute the tester's ITree model against the SUT.

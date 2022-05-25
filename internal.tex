@@ -499,5 +499,12 @@ So far I have interpreted the symbolic model into a tester model that observes
 incoming and outgoing packets, nondeterministically branches, and in some cases
 throws exceptions.  In this section, I used the server model verbatim as the
 symbolic model, and the derived tester can handle internal nondeterminism by
-symbolic evaluation.  Next I'll explain how to extend the symbolic model and
-address external nondeterminism.
+symbolic evaluation.
+
+The server model's receive and send events are linear.  It doesn't receive new
+requests before responding to its previous request.  As a result, the tester
+dualized from the server model doesn't send new requests before it receives the
+response to the previous request, so it doesn't reveal the server's interaction
+with multiple clients simultaneously.  In the next section, I'll explain how to
+create a multi-client tester by extending the symbolic model, addressing
+external nondeterminism.
