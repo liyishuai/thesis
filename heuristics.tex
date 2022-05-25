@@ -1,5 +1,5 @@
 This section implements heuristics for generating test inputs.  I'll use the
-HTTP tester as an example to show how to make requests more interesting, by
+HTTP tester as an example to show how to make requests more interesting by
 parameterizing them over the model state (\autoref{sec:heuristic-state}) and the
 trace (\autoref{sec:heuristic-trace}).
 
@@ -18,11 +18,11 @@ it is to generate more paths that have corresponding resources on the server:
 
 Here I modify the server model's state type \ilc{sigma} from \ilc{(path ->
   resource)} in \autoref{fig:if-match-server} into \ilc{(list (path *
-  resource))}, which has the same expressiveness but allows the generator to
-access the list of all \ilc{paths} in the server state.  The generator chooses
-from these existent paths in 90\% of the cases, as assigned by the \ilc{freq}
-combinator.  The remaining 10\% are still generated randomly, to discover how
-the SUT handles nonexistent paths.
+  resource))}, which allows the generator to access the list of all \ilc{paths}
+  in the server state.  The generator chooses from these existing paths in 90\%
+  of the cases, as assigned by the \ilc{freq} combinator.  The remaining 10\%
+  are still generated randomly, to discover how the SUT handles nonexistent
+  paths.
 
 For the \ilc{gen_packet} generator in \autoref{fig:naive-generator}, replacing
 its \ilc{random_path} with the improved \ilc{gen_path} would generate more
@@ -31,15 +31,15 @@ server state to instantiate \ilc{gen_path}.
 
 As shown in \autoref{fig:backtrack}, the \ilc{GenPacket} generator is triggered
 when the tester wants to observe a packet from itself to the SUT.
-\ilc{fig:symbolic-observer} then shows that such \ilc{FromObserver} expectation
-happens when the symbolic model \ilc{Emit}s a packet.  Such \ilc{Emit} event
+\autoref{fig:symbolic-observer} then shows that such \ilc{FromObserver} expectation
+happens when the symbolic model \ilc{Send}s a packet.  Such a \ilc{Send} event
 only happens when the server wants to receive a packet in
 \autoref{fig:net-compose}.  The \ilc{Recv} events are triggered by the server
 model in \autoref{fig:if-match-server}, which iterates over the server state
 \ilc{sigma}.
 
-Therefore, I extend the server's \ilc{Recv} event type to include the server
-state:
+Therefore, I extend the symbolic server model's \ilc{Recv} event type on
+Page~\pageref{def:symbolic-qae} to include the server state:
 \begin{coq}
   Variant qaE: Type -> Type :=
     Recv : sigma      -> qaE packet
@@ -74,7 +74,7 @@ server state.
 \subsection{Trace-based heuristics}
 \label{sec:heuristic-trace}
 
-When the SUT makes internal choices {\it e.g.} generating ETags, the
+When the SUT makes internal choices, e.g., generating ETags, the
 specification represents them as symbolic variables.  These variables' concrete
 value are not stored in the specification state, but may be observed during
 execution.  For example, when an HTTP server responds to a GET request, it might
@@ -119,7 +119,7 @@ function in \autoref{fig:execute}, adding an accumulator as the recursion parame
 
 When the tester sends or receives a packet, the packet is appended to the
 runtime \ilc{trace}.  Then the \ilc{gen_packet} generator can take the trace
-accumulated so far, and feed it to the ETag generator:
+accumulated so far and feed it to the ETag generator:
 \begin{coq}
   Definition gen_packet (state: sigma) (trace: list concrete_packet) :=
     target <- gen_path state;;
@@ -131,3 +131,5 @@ Now I've shown how to generate interesting test inputs by implementing
 state-based and trace-based heuristics.  The next section explains how to shrink
 the test inputs while keeping them interesting, addressing inter-execution
 nondeterminism.
+
+\lys{Add a subset of \autoref{fig:shrink} here.}

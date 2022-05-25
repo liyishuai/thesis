@@ -1,13 +1,13 @@
 A tester consists of a validator and a test harness.  Chapters~\ref{chap:theory}
 and \ref{chap:practices} have explained the validator's theory and practices.
-This chapter presents a language-based design for test harnesses.  I'll show how
-to generate and shrink test inputs effectively, addressing inter-execution
+In this chapter, I present a language-based design for test harnesses, showing
+how to generate and shrink test inputs effectively and address inter-execution
 nondeterminism.
 
 \autoref{sec:harness-overview} provides a brief overview of how test harnesses
 work.  \autoref{sec:heuristics} explains how to write heuristics to generate
-interesting test inputs.  \autoref{sec:shrinking} then shows how to keep the
-test inputs interesting among different executions in the shrinking process.
+interesting test inputs.  \autoref{sec:shrinking} then shows a shrinking
+mechanism that keeps the test inputs interesting among different executions.
 
 \section{Overview}
 \label{sec:harness-overview}

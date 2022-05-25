@@ -264,7 +264,7 @@ defined as:
 \begin{coq}
   Definition symbolic_packet := packet request symbolic_response.%\label{def:symbolic-packet}%
 
-  Definition qaE := ioE symbolic_packet symbolic_packet.
+  Definition qaE := ioE symbolic_packet symbolic_packet.%\label{def:symbolic-qae}%
 
   Notation smE := (qaE +' nondetE +' choiceE +' branchE).
 \end{coq}
