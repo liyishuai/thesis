@@ -192,24 +192,30 @@ embedding language Coq, and takes a boolean value as condition;
 nondeterministically branches over a condition written as a symbolic expression
 of type bool:
 \begin{coq}
-  Variant branchE: Type -> Type :=
+  Variant branchE: Type -> Type := (* symbolic-conditional branch *)
     Decide: exp bool -> branchE bool.
 
   Notation "IFX condition THEN x ELSE y" :=
     (b <- trigger (Decide condition);;
      if b then x else y).
 \end{coq}
-\item The \ilc{or} operator in \autoref{line:etag-choice} takes two ITrees as
-possible branches and constructs an ITree that may nondeterministically take
-either branch:
+\item The \ilc{or} operator in \autoref{line:etag-choice} takes two ITrees
+\ilc x and \ilc y as possible branches and constructs a nondeterministic program
+that may behave as either \ilc x or \ilc y:
 \begin{coq}
-  Variant nondetE: Type -> Type :=
+  Variant nondetE: Type -> Type := (* nondeterministic branch *)
     Or: nondetE bool.
 
-  Definition or {E R} (x y: itree E R) : itree E R :=
+  Definition or {E R} `{nondetE -< E} (x y: itree E R) : itree E R :=
     b <- trigger Or;;
     if b then x else y.
 \end{coq}
+Here \ilc{nondetE} is a special case of \ilc{choiceE} with boolean space of
+choices, but they'll be handled differently during test derivation.  The type
+signature \ilc{\{E R\} `\{nondetE -< E\}} says the \ilc{(or)} combinator can
+apply to ITrees whose event \ilc E is a super-event of \ilc{nondetE}, and with
+arbitrary return type \ilc R.  For example, arguments \ilc x and \ilc y can be
+of type \ilc{(itree (qaE +' nondetE +' choiceE +' branchE) void)}.
 \end{enumerate}
 
 These three kinds of branch conditions play different roles in the
@@ -256,7 +262,7 @@ Now we can define the specification's event type \ilc{smE}.  The symbolic server
 model receives concrete requests and sends symbolic responses, so its event is
 defined as:
 \begin{coq}
-  Definition symbolic_packet := packet request symbolic_response.
+  Definition symbolic_packet := packet request symbolic_response.%\label{def:symbolic-packet}%
 
   Definition qaE := ioE symbolic_packet symbolic_packet.
 
@@ -471,8 +477,8 @@ constraints over them.  The derivation rules are as follows:
 \end{enumerate}
 
 Notice that the \ilc{unify} function interprets a symbolic observer's event
-\ilc{(oE R)} into a function of type \ilc{(V -> itree tE (V * R))}, which is
-also called a state monad transformer.  It takes a pre-validation state \ilc{(v:
+\ilc{(oE R)} into a function of type \ilc{(V -> itree tE (V * R))},
+called ``state monad transformer''.  It takes a pre-validation state \ilc{(v:
 V)} and computes an ITree that yields the observer event's corresponding result
 \ilc{(r: R)} along with a post-validation state \ilc{(v': V)}.  This stateful
 interpretation process is implemented by a variant of \ilc{interp} called
@@ -491,5 +497,7 @@ interpretation process is implemented by a variant of \ilc{interp} called
 
 So far I have interpreted the symbolic model into a tester model that observes
 incoming and outgoing packets, nondeterministically branches, and in some cases
-throws exceptions.  Next I'll explain how to extend the symbolic model to
+throws exceptions.  In this section, I used the server model verbatim as the
+symbolic model, and the derived tester can handle internal nondeterminism by
+symbolic evaluation.  Next I'll explain how to extend the symbolic model and
 address external nondeterminism.

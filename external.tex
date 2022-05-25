@@ -4,7 +4,7 @@ tester should take the environment into account when validating its
 observations.
 
 This section explains how to address external nondeterminism by specifying the
-environment, with the networked server example.  It corresponds to the
+environment, using the networked server example.  It corresponds to the
 ``Composition'' arrow in \autoref{fig:framework}.  \autoref{sec:net-tcp} defines
 a model for concurrent TCP connections.  \autoref{sec:net-compose} then composes
 the network model with the server specification, yielding a tester-side
@@ -13,38 +13,23 @@ specification that defines the space of valid observations.
 \subsection{Modelling the network}
 \label{sec:net-tcp}
 When testing servers over the network, request and response packets may be
-indefinitely delayed.  As a result, messages from one end might arrive at the
+delayed.  As a result, messages from one end might arrive at the
 other end in a different order from that they were sent.
 
 The space of network reorderings can be modelled by a {\em network model}, a
 conceptual program for the ``network wire''.  The wire can be viewed as a
-buffer, which absorbs packets and later emits them:
+buffer, which absorbs packets\footnote{In this section, ``packet'' is a
+shorthand for the ``symbolic packet'' defined on
+Page~\pageref{def:symbolic-packet}.} and later emits them:
 \begin{coq}
-  Variant netE: Type -> Type := (* network event type *)
-    Emit  : packet -> netE unit
-  | Absorb: netE packet.
+  Notation packet := symbolic_packet.
+
+  Definition netE: Type -> Type :=
+    ioE packet packet.
+
+  Notation Absorb := Recv.
+  Notation Emit   := Send.
 \end{coq}
-
-After absorbing a packet, the wire may emit it immediately or after
-absorbing/emitting other packets.  Such choices are modelled by nondeterministic
-\ilc{Or} branches:
-\begin{coq}
-  Variant nondetE: Type -> Type := (* nondeterministic branch *)
-    Or: nondetE bool.
-
-  Definition or {E R} `{nondetE -< E} (x y: itree E R) : itree E R :=
-    b <- trigger Or;;
-    if b then x else y.
-\end{coq}
-
-Here \ilc{(or x y)} creates a nondeterministic program that may behave as either
-\ilc x or \ilc y.  The \ilc{nondetE} here is a special case of \ilc{choiceE}
-defined in \autoref{sec:itree-lang} with boolean space of choices, but they'll
-be handled differently during test derivation.  The type signature \ilc{\{E R\}
-  `\{nondetE -< E\}} says the \ilc{(or)} combinator can apply to ITrees whose
-event \ilc E is a super-event of \ilc{nondetE}, and with arbitrary return type
-\ilc R.  For example, arguments \ilc x and \ilc y can be of type \ilc{(itree
-  (netE +' nondetE) void)}.
 
 For example, the network model for concurrent TCP connections is defined in
 \autoref{fig:tcp-model}.  The model captures TCP's feature of maintaining the
@@ -54,13 +39,13 @@ must be the oldest in its connection.
 
 \begin{figure}
 \begin{coq}
+(* filter the oldest packet in each connection *)
+Context oldest_in_each_conn : list packet -> list packet.
+
 Fixpoint pick_one (l: list packet) : itree nondetE (option packet) :=
   if l is p::l'
   then or (Ret (Some p)) (pick_one l')
   else ret None.
-
-Definition oldest_in_each_conn : list packet -> list packet := ...
-(* filter the oldest packet in each connection *)
 
 CoFixpoint tcp (buffer: list packet) : itree (netE +' nondetE) void :=
   let absorb := pkt <- trigger Absorb;;
@@ -89,7 +74,7 @@ packet into \ilc{buffer}.
 
 \begin{itemize}
 \item When the given list \ilc{pkts} is empty, \ilc{pick_one} always returns
-  \ilc{None}, becuase the wire has no packet in the \ilc{buffer}, and must
+  \ilc{None}, because the wire has no packet in the \ilc{buffer}, and must
   absorb some packet before emitting anything.
 \item Given a non-empty linked list \ilc{(p::l')}, with \ilc p as head and
   \ilc{l'} as tail, \ilc{pick_one} might return \ilc{(Some p)}, meaning the wire
@@ -110,9 +95,9 @@ the destination.
 
 To {\em compose} a server model with a network model is to pair the server's
 \ilc{Send} and \ilc{Recv} events with the network's \ilc{Absorb} and \ilc{Emit}
-events.  Since the network model is nondeterministic, it might not be ready to
-absorb packets sent by the server.  The network might also emit a packet before
-the server is ready to receive it.
+events.  Since the network model is nondeterministic, it might not be ready at
+some given moment to absorb packets sent by the server.  The network might also
+emit a packet before the server is ready to receive it.
 
 \begin{figure}
   \includegraphics[width=\textwidth]{figures/net-compose}
@@ -128,49 +113,49 @@ the packets sent by the server but not yet absorbed by the network.
 
 \begin{figure}
 \begin{lstlisting}[numbers=left]
-CoFixpoint compose {E} (srv: itree (qaE +' E) void)   (* server  model *)
+CoFixpoint compose {E} (srv: itree smE void)          (* server  model *)
            (net  : itree (netE +' nondetE) void)      (* network model *)
            (bi bo: list packet)       (* incoming and outgoing buffers *)
            : itree (netE +' nondetE +' E) void :=
   let step_net :=%\label{line:step-net-def}%
     match net with
-    | Impure (Absorb|) knet =>
+    | Impure Absorb knet =>
       match bo with
       | pkt::bo' => compose srv (knet pkt) bi bo'%\label{line:net-absorb}%
       | []       => pkt <- trigger Absorb;;%\label{line:client-send}%
                     compose srv (knet pkt) bi bo
       end
-    | Impure (Emit pkt|) knet =>
+    | Impure (Emit pkt) knet =>%\label{line:net-emit}%
       if toServer pkt
       then compose srv (knet tt) (bi++[pkt]) bo%\label{line:srv-incoming}%
-      else trigger (Emit pkt);;%\label{line:net-emit}%
+      else trigger (Emit pkt);;%\label{line:net-send}%
            compose srv (knet tt) bi bo
-    | Impure (|Or) knet => b <- trigger Or;;
-                        compose srv (knet b) bi bo
+    | Impure Or knet => b <- trigger Or;;
+                      compose srv (knet b) bi bo
     | Pure vd => match vd in void with end
     end
   in
   match srv with
-  | Impure (Recv|) ksrv =>
+  | Impure Recv ksrv =>%\label{line:srv-recv}%
     match bi with
     | pkt::bi' => compose (ksrv pkt) net bi' bo%\label{line:srv-consume}%
     | [] => step_net%\label{line:step-net}%
     end
-  | Impure (Send pkt|) ksrv =>%\label{line:srv-send}%
+  | Impure (Send pkt) ksrv =>%\label{line:srv-send}%
     compose (ksrv tt) net bi (bo++[pkt])
-  | Impure (|e) ksrv =>        (* other events performed by the server *)
+  | Impure e ksrv =>        (* other events performed by the server *)
     r <- trigger e;; compose (ksrv r) net bi bo
   | Pure vd => match vd in void with end
   end.
 \end{lstlisting}
 \caption[Network composition algorithm]{Network composition algorithm.  When the
   server wants to send a packet in \autoref{line:srv-send}, the packet is
-  appended to the outgoing buffer until absorbed by the network in
-  \autoref{line:net-absorb}, and eventually emitted to the client in
-  \autoref{line:net-emit}.  Conversely, packets sent by clients are absorbed by
-  the network in \autoref{line:client-send}, emitted to the server's incoming
-  buffer in \autoref{line:srv-incoming}, until the server consumes it in
-  \autoref{line:srv-consume}.}
+  appended to the outgoing buffer until absorbed by the network
+  in \autoref{line:net-absorb}, and eventually emitted to the client
+  in \autoref{line:net-send}.  Conversely, a packet sent by the client is
+  absorbed by the network in \autoref{line:client-send}, emitted to the server's
+  incoming buffer in \autoref{line:srv-incoming}, until the server consumes it
+  in \autoref{line:srv-consume}.}
 \label{fig:net-compose-code}
 \end{figure}
 
@@ -179,32 +164,37 @@ has routing fields that indicate its source and destination.  When the network
 emits a packet, we need to determine whether the packet is emitted to the
 server's incoming buffer or to the clients, by inspecting its destination:
 \begin{coq}
-  Record packet := {
-    Source      : connection;
-    Destination : connection;
-    Data        : data
-  }.
-
   Definition toServer (p: packet) : bool :=
     if p.(Destination) is server_conn then true else false.
 \end{coq}
 
 Now we can define the composition algorithm formally, as shown in
-\autoref{fig:net-compose-code}.  In this example, we reuse the \ilc{qaE}
-definition in \autoref{sec:itree-lang}, and let the \ilc Q and \ilc A both be
-the \ilc{packet} type.  The composed ITree takes the server and network models
-as parameters, and makes steps in the two ITrees in certain order.
+\autoref{fig:net-compose-code}.  The function takes the symbolic server model
+in \autoref{sec:symbolic-model} and the network model in \autoref{sec:net-tcp},
+and yields a symbolic model of the server's behavior observable from across the
+network.
 
-The composed model exhibits to the client three kinds of events: (i) Network
-operations (\ilc{netE}) where packets are emitted to or absorbed from clients,
-(ii) Nondetermistic branches (\ilc{nondetE}) made by the network model, and
-(iii) Other events \ilc{\{E\}} performed by the server model {\it e.g.} internal
-choices (\ilc{choiceE}) in \autoref{sec:itree-lang}.
+The composition function analyzes the server and the network's behavior:
+\begin{enumerate}
+\item When the server wants to send a packet in \autoref{line:srv-send}, the
+packet is appended to the outgoing buffer.
+\item When the network wants to absorb a packet in \autoref{line:net-absorb},
+it first checks whether the server has sent some packet to its outgoing buffer.
+If yes, then the network absorbs the oldest packet in the buffer.  Otherwise, it
+absorbs from the clients.
+\item After absorbing some packets, when the network wants to emit a packet in
+\autoref{line:net-emit}, the packet is either emitted to the client or appended
+to the server's incoming buffer, based on its destination.
+\item When the server wants to receive a packet in \autoref{line:srv-recv},
+it first checks whether the network has emitted some packet to the incoming
+buffer.  If yes, then the server takes the oldest packet in the buffer.
+Otherwise, it waits for the network model to emit one.
+\end{enumerate}
 
 Notice that this algorithm schedules the server at a higher priority than the
 network model.  The composed model only steps into the network model when the
 server is starved in \autoref{line:step-net}, by calling the \ilc{step_net}
-process defined in \autoref{line:step-net-def}.  Such design is to avoid
+process defined in \autoref{line:step-net-def}.  This design is to avoid
 divergence of the derived tester program, which I'll further explain in
 \autoref{sec:backtrack}.
 
