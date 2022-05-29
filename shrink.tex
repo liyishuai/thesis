@@ -1,8 +1,8 @@
 Suppose we have generated a test input that has caused invalid observations of
-the SUT.  The generated counterexample consists of (1) {\em signals} that are
-essential to triggering violations, and (2) {\em noises} that do not contribute
+the SUT.  The generated counterexample consists of (1) {\em signal} that is
+essential to triggering violations, and (2) {\em noise} that does not contribute
 to revealing such violations.  We need to shrink the counterexample by removing
-its noises and keeping its signals.
+the noise and keeping the signal.
 
 For interactive testing, the test input is a sequence of request messages.  An
 intuitive way of shrinking is to remove some requests from the original sequence
@@ -10,7 +10,7 @@ and rerun the test.  However, rerunning an interesting request might produce
 trivial results, due to inter-execution nondeterminism discussed in
 \autoref{sec:inter-execution}.
 
-To prevent turning signals into noises when rerunning the test, I shrink the
+To prevent turning signal into noise when rerunning the test, I shrink the
 heurestics instead of shrinking the generated test input.
 \autoref{sec:shrink-architecture} introduces the architecture for interactive
 shrinking, then \autoref{sec:shrink-ir} explains the language design beneath
@@ -21,25 +21,24 @@ that addresses inter-execution nondeterminism.
 
 I propose a generic framework for generating and shrinking interactive tests.
 The key idea is to introduce an abstract representation for test inputs that
-embed trace-based heuristics.  When shrinking the counterexample, the test
+embeds trace-based heuristics.  When shrinking the counterexample, the test
 harness picks a substructure of the abstract representation, and computes the
 corresponding test input using the new runtime trace.
 
-For example, when generating a timestamp, instead of producing concrete value
-{\it e.g.} ``\httpdate\today~\currenttime~GMT'', the generator returns an
-abstract representation that says ``use the timestamp observed in the last
-response''.  When rerunning the test, the timestamp is computed from the new
-trace {\it e.g.} ``\httpdate\DayAfter~\currenttime~GMT''.
+For example, when generating a timestamp, instead of producing concrete value,
+e.g., ``\httpdate\today~\currenttime~GMT'', the generator returns an abstract
+representation that says ``use the timestamp observed in the last response''.
+When rerunning the test, the timestamp is computed from the new trace, e.g.,
+``\httpdate\DayAfter~\currenttime~GMT''.
 
 \begin{figure}
   \includegraphics[width=.8\textwidth]{figures/shrink}
-  \caption{Test harness architecture.}
+  \caption{Complete architecture of the test harness.}
   \label{fig:shrink}
 \end{figure}
 
 The test generation and shrinking framework is shown in \autoref{fig:shrink}.
-It refines the test harness box in \autoref{fig:overview}, and involves four
-languages, from right to left:
+It involves four languages, from right to left:
 \begin{enumerate}
   \item Byte representation, in which the tester interacts with the environment.
     This can be network packets, file contents, or other serialized data
@@ -47,7 +46,7 @@ languages, from right to left:
   \item Intermediate representation (IR), a generic language that abstracts the
     byte representation as structured data.  The test harness {\em parses} byte
     observations and records its trace in terms of the IR, which allows
-    representing trace-based heuristics as a generic language {\it i.e.}
+    representing trace-based heuristics as a generic language, i.e.,
     J-expressions.
   \item J-expression (Jexp), a symbolic abstraction of the IR.  The IR
     corresponds to concrete inputs and outputs, whereas Jexp defines a
@@ -68,11 +67,12 @@ languages, from right to left:
 \end{enumerate}
 
 The testing framework implements protocol-independent mechanisms like recording
-the trace and shrinking counterexamples, based on the generic IR and Jexp
-languages.  It can be used for testing various protocols, provided
-application-specific translations from IR to AR and between IR and bytes.  The
-test developer needs to tune the generator that produces Jexps, encoding their
-domain knowledge as state-based and trace-based heuristics.
+the trace and shrinking counterexamples, which correspond to the blue solid
+arrows in \autoref{fig:shrink}.  It can be used for testing various protocols,
+provided application-specific translations from IR to AR and between IR and
+bytes, illustrated as red dotted arrows.  The test developer needs to tune the
+generator that produces Jexps, encoding their domain knowledge as state-based
+and trace-based heuristics.
 
 \subsection{Abstract representation languages}
 \label{sec:shrink-ir}
@@ -86,10 +86,10 @@ message data types in general.
 \mathsf{object^T}\triangleq&\nil\mid\mathsf{"string": JSON^T,object^T}\\
 \mathsf{array^T}\triangleq&\nil\mid\mathsf{JSON^T,array^T}\\
 \mathsf{IR}\triangleq&\mathsf{JSON^{IR}}\\
-\mathsf{Jexp}\triangleq&\mathsf{JSON^{\Jref{\mathit{label}}{\Jpath}{\mathit{function}}}}\\
-&\text{where }\mathit{label}\in\Nat,\mathit{function}\in\mathsf{IR}\to\mathsf{IR}\\
-\Jpath\triangleq&\This\mid\Jpath\Number\mathit{index}\mid\Jpath\At\mathit{field}\\
-&\text{where }\mathit{index}\in\Nat,\mathit{field}\in\mathsf{string}
+\mathsf{Jexp}\triangleq&\mathsf{JSON^{\Jref{\Label}{\Jpath}{\Function}}}\\
+&\text{where }\Label\in\Nat,\Function\in\mathsf{IR}\to\mathsf{IR}\\
+\Jpath\triangleq&\This\mid\Jpath\Number\Index\mid\Jpath\At\Field\\
+&\text{where }\Index\in\Nat,\Field\in\mathsf{string}
 \end{array}\]
 \caption{Intermediate representation and J-expression.}
 \label{fig:ir-jexp}
@@ -113,7 +113,7 @@ Example labelled_trace: traceT :=
 \end{figure}
 
 \begin{figure}
-  \begin{minipage}{.4\textwidth}
+  \begin{minipage}[t]{.4\textwidth}
 \begin{json}
   (* a2 = *)
   {
@@ -130,8 +130,9 @@ Example labelled_trace: traceT :=
     "exitCode": 0
   }
 \end{json}
-  \end{minipage}\begin{minipage}{.5\textwidth}
+  \end{minipage}\begin{minipage}[t]{.5\textwidth}
 \begin{coq}
+(* Jpath syntax defined in %\autoref{fig:ir-jexp}%. *)
 Example second_file_mode: jpath :=
   this @ "files" # 2 @ "mode".
 
@@ -142,22 +143,23 @@ Example mode_add_write (j: IR) : IR :=
   | _ => j
   end.
 
-Example id (j: IR) : IR := j.  
+Example id (j: IR) : IR := j.
 \end{coq}
   \end{minipage}
   \caption{IR, Jpath, and heuristics function example.}
   \label{fig:ir-jpath}
 \end{figure}
 
+\paragraph{Syntax}
 The J-expression is an extension of JSON that can encode trace-based heuristics.
 As shown in \autoref{fig:ir-jexp}, a Jexp may include syntax
-$(label.\Jpath.function)$ that represents trace-based heuristics, specified as:
+$(\Label.\Jpath.\Function)$ that represents trace-based heuristics, specified as:
 \begin{enumerate}
-\item The $label$ refers to an IR in the trace that the heuristics computes
-  with.  The test harness records the trace as a list of labelled messages,
-  where requests are labelled odd, and their responses are labelled as the next
-  even number.  Labelling messages allows locating them in the trace despite
-  shrinking and inter-execution nondeterminism.
+\item The test harness records the trace as a list of labelled messages, where
+  the requests are labelled odd, and their responses are labelled as the next
+  even number.  The $\Label$ in a Jexp locates the IR in the trace with which
+  the heuristics computes the input.  Labelling messages allows the reproducing
+  trace-based heuristics despite shrinking and inter-execution nondeterminism.
 
   For example, consider the trace in \autoref{fig:ir-trace}: If a trace-based
   heuristics is interested in \ilc{q2}'s response \ilc{a2}, then it can be
@@ -189,7 +191,7 @@ executions during the shrinking process.
   POSIX \inlinec{ls} command, and its response \ilc{a2} is encoded as the IR
   shown in \autoref{fig:ir-jpath}.  The response IR is a JSON object whose
   \inlinec{"files"} field is an array of objects, each has a \inlinec{"name"}
-  and a \inlinec{"mode"} field.  A heuristics can refer to the second file's
+  and a \inlinec{"mode"} field.  A heuristic can refer to the second file's
   mode bits by Jpath \ilj{(this@"files"#2@"mode")}, which will guide the test
   harness to locate its corresponding value:
 \begin{coq}
@@ -198,16 +200,17 @@ executions during the shrinking process.
   Compute get_jpath second_file_mode a2.
   (* = JSON_Number 500 : IR *)
 \end{coq}
-\item The $function$ has type $(\mathsf{IR}\to\mathsf{IR})$, and defines the
+\item The $\Function$ has type $(\mathsf{IR}\to\mathsf{IR})$, and defines the
   computation based on the sub-IR located by the Jpath.
 
-  Consider the mode bits located in the previous example: If the heuristics
+  Consider the mode bits located in the previous example: If the heuristic
   wants to add write permission to the mode bits, it can do so with the
   \ilc{mode_add_write} function in \autoref{fig:ir-jpath}, which produces mode
   700.  Some heuristics might use the sub-IR 500 as-is, using the identity
   function \ilc{id}.
 \end{enumerate}
 
+\paragraph{Semantics}
 J-expression provides a generic interface for test developers to implement
 trace-based heuristics.  For the aforementioned file system example, the tester
 can generate a request that changes the mode bits of an observed file, with the

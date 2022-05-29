@@ -97,7 +97,7 @@
 \usepackage{xspace}
 \usepackage{advdate}
 \usepackage[iso]{datetime}
-\newdateformat{httpdate}{\shortdayofweekname{\THEDAY}{\THEMONTH}{\THEYEAR},~\THEDAY~\shortmonthname[\THEMONTH]~\THEYEAR}
+\newdateformat{httpdate}{\shortdayofweekname{\THEDAY}{\THEMONTH}{\THEYEAR},\ \THEDAY\ \shortmonthname[\THEMONTH]\ \THEYEAR}
 
 \usepackage{draft} % local
 \newif\ifdraft\drafttrue
@@ -238,6 +238,10 @@
 \newcommand{\src}{\mathit{src}}
 \newcommand{\dst}{\mathit{dst}}
 \newcommand{\asgn}{\mathit{asgn}}
+\newcommand{\Label}{\mathit{label}}
+\newcommand{\Function}{\mathit{function}}
+\newcommand{\Index}{\mathit{index}}
+\newcommand{\Field}{\mathit{field}}
 \newcommand{\Var}{\mathsf{var}}
 \newcommand{\Reflects}[2]{#1\sim #2}
 \newcommand{\satisfy}[2]{#1\;\mathsf{satisfies}\;#2}

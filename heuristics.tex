@@ -66,10 +66,18 @@ parameters to the event types along the interpretation:
   Definition gen_packet: sigma -> IO concrete_packet.
 \end{coq}
 
+\begin{figure}
+\includegraphics[width=.6\linewidth]{figures/stategen}
+\caption{State-based heuristics.}
+\label{fig:stategen}
+\end{figure}
+
 As a result, when instantiating the \ilc{(GenPacket state)} event in
 \autoref{fig:execute}, we can feed the \ilc{gen_packet} function with argument
 \ilc{state}, so that \ilc{gen_path} can generate interesting paths based on the
-server state.
+server state.  \autoref{fig:stategen} illustrates this state-based heuristics.
+It refines the test harness box in \autoref{fig:overview}, and will be extended
+with trace-based heuristics in the next subsection.
 
 \subsection{Trace-based heuristics}
 \label{sec:heuristic-trace}
@@ -127,9 +135,13 @@ accumulated so far and feed it to the ETag generator:
     ... (* same as %\autoref{fig:naive-generator}% *)
 \end{coq}
 
-Now I've shown how to generate interesting test inputs by implementing
-state-based and trace-based heuristics.  The next section explains how to shrink
-the test inputs while keeping them interesting, addressing inter-execution
-nondeterminism.
+\begin{figure}
+\includegraphics[width=.7\linewidth]{figures/gen}
+\caption{Combining state-based and trace-based heuristics.}
+\label{fig:gen}
+\end{figure}
 
-\lys{Add a subset of \autoref{fig:shrink} here.}
+Now we can generate interesting test inputs by combining state-based and
+trace-based heuristics, as shown in \autoref{fig:gen}.  In the next section,
+I'll further extend this framework and shrink the test inputs while keeping them
+interesting, addressing inter-execution nondeterminism.
