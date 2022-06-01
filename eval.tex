@@ -4,20 +4,19 @@ test.
 
 I conduct the experiments on two kinds of systems, \http server
 (\autoref{sec:http}) and file synchronizer (\autoref{sec:sync}).  The research
-questions are: (1) Qualitative: Is the tester useful to finding invalid behavior
-in the SUT? and (2) Quantitative: Can the tester reveal those invalid behavior
-quickly?
+question is whether the tester can reveal the SUT's violation against the
+specification.
 
 \section{Testing Web Servers}
 \label{sec:http}
 
 This thesis is motivated by the Deep Specification project~\cite{deepspec},
-whose goal is to build systems with rigorous guarantee of functional
+whose goal is to build systems with rigorous guarantees of functional
 correctness, studying HTTP as an example.  I formalized a subset of \http
 specification, featuring WebDAV requests GET, PUT, and POST~\cite{rfc4918}, ETag
 preconditions~\cite{rfc7232}, and forward proxying~\cite{rfc7231}.
 
-From the protocol specification written as ITrees, I derived a tester client
+From the protocol specification written as ITrees, I derive a tester client
 that sends and receives network packets.  \autoref{sec:http-sut} explains the
 system under test and the experiment setup.  \autoref{sec:http-qual} and
 \autoref{sec:http-quant} then describe the evaluation results qualitatively and
@@ -28,7 +27,7 @@ quantitatively.
 I ran the derived tester against three server implementations:
 
 \begin{itemize}
-\item Apache HTTP Server~\cite{Apache}, which is among the most popular servers
+\item Apache HTTP Server~\cite{Apache}, one of the most popular servers
   on the World Wide Web~\cite{http-netcraft,http-stats}.  I used the latest
   release 2.4.46, and edited its configuration file to enable WebDAV and proxy
   modules.
@@ -37,31 +36,30 @@ I ran the derived tester against three server implementations:
   because Nginx doesn't fully support forward proxying like Apache does.
 \item DeepWeb server developed in collaboration with \citet{itp21}, supporting
   GET and POST requests.  The server's functional correctness was formally
-  verified, showing our methodology of specifying systems in testable and
-  verifiable ways.
+  verified in Coq.
 \end{itemize}
 
 The tests were performed on a laptop computer (with Intel Core i7 CPU at 3.1
 GHz, 16GB LPDDR3 memory at 2133MHz, and macOS 10.15.7).  The Apache and Nginx
 servers were deployed as Docker instances, using the same host machine as the
-tester runs on.  Our simple server was compiled into an executable binary, and
-also ran on localhost.
+tester runs on.  Our simple DeepWeb server was compiled into an executable
+binary, and also ran on localhost.
 
-The tester communicates with the server via POSIX system calls, in the same way
+The tester communicated with the server via POSIX system calls, in the same way
 as over Internet except using address \inlinec{127.0.0.1}.  The round-trip time
-(RTT) of local loopback is $0.08\pm0.04$ microsecond (at 90\% confidence).
+(RTT) of local loopback was $0.08\pm0.04$ microsecond (at 90\% confidence).
 
-\subsection{Qualitative Result}
+\subsection{Qualitative Results}
 \label{sec:http-qual}
 \paragraph{Apache}
-My tester rejected the Apache HTTP Server, which uses strong comparison for PUT
-requests conditioned over \inlinec{If-None-Match}, while RFC~7232 specified that
-\inlinec{If-None-Match} preconditions must be evaluated with weak comparison.
-\bcp{What are strong and weak comparison?  \lys{ETag jargons.}}  I reported this
-bug to the developers, and figured out that Apache was conforming with an
-obsoleted \http standard~\cite{rfc2616}.  The latest standard has changed the
-semantics of \inlinec{If-None-Match} preconditions, but Apache didn't update the
-logic correspondingly.
+My tester rejected the Apache HTTP Server, which uses strong comparison
+(Page \pageref{foot:etag}) for PUT requests conditioned
+over \inlinec{If-None-Match}, while RFC~7232 specified that
+\inlinec{If-None-Match} preconditions must be evaluated with weak comparison.  I
+reported this bug to the developers, and figured out that Apache was conforming
+with an obsoleted \http standard~\cite{rfc2616}.  The latest standard has
+changed the semantics of \inlinec{If-None-Match} preconditions, but Apache
+didn't update the logic correspondingly.
 
 To further evaluate the tester's performance in finding other violations, I
 fixed the precondition bug by deleting 13 lines of source code and recompiling
@@ -70,19 +68,38 @@ the container.
 The tester accepted the fixed implementation, which can be explained in two
 ways: (1) The server now complies with the specification, or (2) The server has
 a bug that the tester cannot detect.  To provide more confidence that (1) is the
-case, I ran the tester against servers with known bugs, created by mutating the
-Apache source code manually.\footnote{I didn't use automatic mutant generators
-  because (i) Existing tools could not mutate all modules I'm interested in; and
-  (ii) The automatically generated mutants could not cause semantic violations
-  against my protocol specification.}
+case, I ran the tester against servers that are known as buggy, and expected the
+tester to detect all the intentional bugs.
 
-The tester rejected all 20 bugs, located in various modules of the Apache
-server: \inlinec{core}, \inlinec{http}, \inlinec{dav}, and \inlinec{proxy}.
-They appear both in control flow ({\it e.g.}, early return of handler function,
-skipped precondition check) and in data values ({\it e.g.}, calling functions
-with wrong parameters, flipping bits in computations, accessing buffer off by
-one byte).  Some mutants took the tester longer time to reveal than others,
-which will be discussed in \autoref{sec:http-quant}.
+The buggy implementations were created by mutating the Apache source code
+manually\footnote{I didn't use automatic mutant generators because (i) Existing
+tools could not mutate all modules I'm interested in; and (ii) The automatically
+generated mutants could not cause semantic violations against my protocol
+specification.} and recompiling the server program.  I created 20 mutants whose
+bugs located in various modules of the Apache server: \inlinec{core},
+\inlinec{http}, \inlinec{dav}, and \inlinec{proxy}.  Some bugs appeared in the
+control flow, e.g., removing a return statement in the request handler (as shown
+in \autoref{fig:mutant-example}) or skipping the check of preconditions.  Others
+appeared in the data values, e.g., calling functions with wrong parameters,
+flipping bits in computations, accessing buffer off by one byte, etc.
+\begin{figure}
+\begin{cpp}
+static int default_handler(request_rec *r) {
+    ...
+        if (r->finfo.filetype == APR_NOFILE) {
+            ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r, APLOGNO(00128)
+                          "File does not exist: %s",
+                          apr_pstrcat(r->pool, r->filename, r->path_info, NULL));
+            // return HTTP_NOT_FOUND;
+        }
+    ...
+\end{cpp}
+\caption{Server mutant example, created by commenting out a line of code.}
+\label{fig:mutant-example}
+\end{figure}
+
+The tester rejected all the 20 mutants.  Some mutants took the tester longer
+time to reveal than others, which will be discussed in \autoref{sec:http-quant}.
 
 \paragraph{Nginx}
 When testing Nginx, I found that its WebDAV module did not check the
@@ -91,35 +108,32 @@ then browsed the Nginx bug tracker and found a ticket opened by
 \citet{nginx242}, reporting the same issue with \inlinec{If-Unmodified-Since}
 preconditions.
 
-This issue has been recognized by the developers in 2016 but never resolved.
-One possible reason is that the current architecture of Nginx makes it difficult
-for the WebDAV module to utilize the precondition checker in the HTTP core
-module.
-
-A fix to this bug would involve either restructuring the modules or copying
-source code from one module to another, unlike simply removing bad code in
-Apache, so I only tested mutants for the latter.
+This issue has been recognized by the developers in 2016 but never resolved.  To
+fix this bug, Nginx needs to redesign its core logic and evaluate the request's
+precondition {\em before}---instead of after---handling the request itself.  As
+a result, I only tested mutants for Apache, whose original violation was fixed
+by simply removing a few lines of bad code.
 
 \paragraph{DeepWeb}
 My test derivation framework was developed in parallel with the DeepWeb server.
 After my collaborators finished the formal proof of the server's functional
-correctness, I tested the server with my derived tester.  The tester has
+correctness, I tested the server with my derived tester.  The tester
 revealed a liveness issue---when a client pipelines more than one requests in a
 single connection, the server may hang without processing the latter requests.
 
 This liveness bug was out of scope for the server's functional correctness,
 which only requires the server not to send invalid messages.  Such partial
 correctness may be trivially satisfied by a silent implementation that never
-responds.  My experiments has shown this limitation in formal verification, and
-guided the debugging of the server implementation.
+responds.  The bug was revealed by manually observing the flow of network
+packets, where the tester kept sending requests while the server never
+responded.  My experiments have shown the complementarity between testing and
+verification for improving software quality.
 
 These results show that my tester is capable of finding different kinds of bugs
 in server implementations, within and beyond functional correctness.  Next I'll
 evaluate how long the tester takes to reveal bugs.
 
-\lys{Under construction:}
-
-\subsection{Quantitative Result}
+\subsection{Quantitative Results}
 \label{sec:http-quant}
 
 \begin{figure*}
@@ -140,12 +154,12 @@ evaluate how long the tester takes to reveal bugs.
   \label{fig:checker-performance}
 \end{figure*}
 
-To answer Research Question (2) at the beginning of this chapter, I measure the
-execution time and network interactions taken to reject vanilla Apache and its
-mutants, as shown in \autoref{fig:checker-performance}.  The 20 mutants are
-named after the module where I inserted the bug.  The tester rejected all the
-buggy implementations within 1 minute, and in most cases, within 1 second.  This
-does not include the time for shrinking the counterexample.
+To answer the research question at the beginning of this chapter quantitatively,
+I measured the execution time and network interactions taken to reject vanilla
+Apache and its mutants, as shown in \autoref{fig:checker-performance}.  The 20
+mutants are named after the module where I inserted the bug.  The tester
+rejected all the buggy implementations within 1 minute, and in most cases,
+within 1 second.  This does not include the time for shrinking counterexamples.
 
 Some bugs took longer time to find, and they usually required more interactions
 to reveal.  This may be caused by (1) The counter-example has a certain pattern
@@ -189,12 +203,13 @@ cause by analyzing the bugs and their counterexamples:
     Notice that (2) must be observed before (3), otherwise the tester will not
     reject the server, with a similar reason as \autoref{fig:put-bug}.
 
-  \item Mutant 5 causes the server to skip some code in the core module, and
-    send nonscence messages when it should respond with 404 Not Found.  The
-    counterexample can be as small as one GET request on a non-existential
-    target, followed by a non-404, non-200 response.  However, my tester
-    generates request targets within a small range, so the requests' targets are
-    likely to be created by the tester's previous PUT requests.
+  \item Mutant 5 is the one shown in \autoref{fig:mutant-example}.  It causes
+    the server to skip the return statement when the response should be 404 Not
+    Found.  The counterexample can be as small as one GET request on a
+    non-existential target, followed by an unexpected response like 403
+    Forbidden.  However, my tester generates request targets within a small
+    range, so the requests' targets are likely to be created by the tester's
+    previous PUT requests.
 
     Narrowing the range of test case generation might improve the performance in
     aforementioned Mutants 18--20, but Mutant 5 shows that it could also degrade
@@ -219,8 +234,8 @@ caused by the generators' heuristics.  Cases like Mutant 5 can be optimized by
 state-based heuristics in \autoref{sec:heuristic-state}; Proxy-related bugs can
 be more easily found by trace-based heuristics in \autoref{sec:heuristic-trace};
 For Mutants 18--20, the requests should be sent at specific time periods so that
-the resulting trace is unacceptable per specification, which is discussed in
-\autoref{chap:discussion}.
+the resulting trace is unacceptable per specification, possibly by integrating
+packet dynamics~\cite{pkt-dyn} in the test executor.
 
 \section{Testing file synchronizer}
 \label{sec:sync}
@@ -331,11 +346,11 @@ Testing the synchronizer as a nonblocking background process is discussed in
 
 \subsection{Experiment Results}
 \label{sec:file-result}
-The tester has revealed two features of the Unison file synchronizer, and I
-reported them to the developers.  By analyzing the program's behavior, the
-developers determined that Unison did not violate its specification, which
-allows a wider set of behavior than my specification defines.  The revealed
-features are as follows:
+The tester has rejected the Unison file synchronizer in two ways, and I reported
+the counterexample to the developers.  By analyzing the program's behavior, we
+determined that one rejection was a valid but defective feature, and the other
+rejection was a documented feature not included in my specification.  The
+revealed features are as follows:
 
 \paragraph{Synchronizing read-only directories}
 When the tester creates a directory in one replica with read and execution
@@ -379,19 +394,20 @@ model with the network model in \autoref{sec:external-nondet}.
 
 \paragraph{Detecting write-delete conflict}
 Suppose replicas \ilj A and \ilj B have a synchronized file \ilj{foo.txt}.  If
-the tester deletes \ilj{A/foo.txt} and writes to \ilj{B/foo.txt}, then according
-to the specification, the synchronizer should detect this conflict and halt with
-exit code 1.  During the tests, Unison did not notice that \ilj{B/foo.txt} was
-changed, and decided to propagate the deletion from replica \ilj A to replica
-\ilj B.
+the tester deletes \ilj{A/foo.txt} and writes to \ilj{B/foo.txt}, then there is
+a conflict between the two replicas.  My specification required Unison to
+indicate this conflict with exit code 1.  During the tests, Unison did not
+notice that \ilj{B/foo.txt} was changed, decided to propagate the deletion from
+replica \ilj A to replica \ilj B, and halted with exit code 2, representing
+``non-fatal failures occured during file transfer''.
 
 This behavior is caused by Unison's ``fastcheck'' feature that improves the
 performance at the risk of ignoring conflicts.  With fastcheck enabled by
 default on *nix systems, the synchronizer detects file modifications by checking
-if their timestamps have changed.  When the tester writes to the files with
-short intervals, the timestamps might remain unchanged, so the synchronizer
+if their timestamps have changed.  When the tester writes to the file within a
+short interval, the timestamps might remain unchanged, so the synchronizer
 treats the written file as unmodified.  Such behavior can be avoided by updating
-the file contents after a longer interval.
+the file contents after a longer interval or turning of the preference.
 
 Notice that although Unison decided to propagate the file deletion, it does
 check the file contents before deleting it.  As a result, the Unison process
@@ -402,12 +418,18 @@ comparing the file contents bit-by-bit.  It'll propagate no updates and leave
 the two replicas as-is, which results the same as enabling fastcheck but at
 lower performance.
 
-This experiment shows that the executor may affect the test result by
-interacting with the SUT slowly or quickly.  It is worth expanding the test
-harness to allow different configurations for executing the tests.
+To include the space of behaviors with fastcheck enabled or upon failing file
+transfers, I modified the synchronization semantics in two ways: (1) Instead of
+computing the set of all dirty paths and synchronizing all of them, allow
+choosing any subset of the dirty paths to synchronize.  (2) If there is a
+conflict in the chosen paths, allow halting the synchronizer with exit code 1
+(conflict detected) or 2 (propagation failed).  The loosened specification
+accepted all behavior it observed from Unison.
 
-So far I have demonstrated the effectiveness of my testing methodology, by
-deriving testers that can reveal violations and interesting caveats in
-real-world systems like web servers and file synchronizers.  In the following
-chapters, I'll discuss related works in specifying and testing interactive
-systems, as well as potential improvements that can be made.
+These experiments show that my testing methodology can effectively reject
+implementations that do not comply with the specification.  The incompliance
+indicates that either (i) the implementation does not conform with the protocol,
+e.g., Apache and Nginx violating RFC 7232, or (2) the specification is
+incorrect, e.g., my initial file synchronizer specification not modelling all
+features of Unison.  Automatically detecting the incompliances helps developers
+to correctly specify and implement systems in real-world practices.

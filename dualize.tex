@@ -1,12 +1,12 @@
 As discussed in \autoref{sec:internal-external-nondeterminism}, nondeterminism
 makes validators difficult to write.  To address this challenge, I construct
-validators {\em automatically} from the specification.  The key idea is to
+validators {\em automatically} from their specifications.  The key idea is to
 encode the specification with a programming language, and {\em dualize} the
 specification program into the validator.
 
 This chapter demonstrates the dualization technique with a programming language
 in the QAC family.  \autoref{sec:encode-spec} introduces the $\Prog$ language
-for encoding specifications.  Specification written in $\Prog$ are dualized into
+for encoding specifications.  Specifications written in $\Prog$ are dualized into
 validators in \autoref{sec:dualize-prog}, with correctness proven in
 \autoref{sec:proof}.
 
@@ -19,7 +19,7 @@ performing structural analysis.  This section introduces a programming language
 for encoding specifications.
 
 For readability, I demonstrate the dualization technique on a subset of QAC
-server models called integer machine model, featuring random-access memory (RAM)
+server models called integer machine models, featuring random-access memory (RAM)
 and arithmetic operations.  To test real-world systems like web servers, I'll
 employ a more complex specification language in \autoref{chap:practices}.
 
@@ -33,7 +33,8 @@ The initial server state has zero data in all addresses:
   &\textit{i.e. }\forall (k:\Nat), s_0!k=0
 \end{align*}
 Here syntax ``$s!k$'' is pronounced ``data stored in address $!k$ of memory
-$s$''.
+$s$''.  I use ``$!k$'' to indicate that the natural number $k$ is being thought
+of as an address.
 
 The server's query, response, and choices ($Q$, $A$, $C$) are of type integer.
 At the beginning of each server loop, the internal choice is written to address
@@ -165,9 +166,9 @@ along the program execution, so the expected responses are computed as {\em
   symbolic expressions} that might depend on those variables.  The validator
 then constrains that the symbolic response is equal to the concrete observation.
 
-To achieve this goal, the validator stores a symbolic variables for each address
+To achieve this goal, the validator stores a symbolic variable for each address
 of the server model.  It also remembers all the constraints added upon
-observation.  These information are called ``validation states'':
+observation.  This information is called a ``validation state'':
 \[(\Nat\to\Var)\times\Set\constraint\]
 Here the $\constraint$s are relations between validator expressions ($\Vexp$s)
 that may depend on symbolic $\Var$iables:
@@ -208,9 +209,9 @@ The validator's loop body is derived by dualzing the server model:
   value is equal to that of $\mathit{exp}$.  This rule also applies to writing the
   request to address $!1$ before executing the program.
 \item \label{rule:branch} When the server makes a nondeterministic branch $\If
-  e_1\le e_2\Then p_1\Else p_2$, consider both cases: (a) If $p_1$ was taken,
-  then the validator should add a constraint $e_1\le e_2$; or (b) If $p_2$ was
-  taken, then the validator should add constraint $e_2<e_1$.
+  e_1\le e_2\Then p_1\Else p_2$, the validator considers both cases: (a) If
+  $p_1$ was taken, then the validator should add a constraint $e_1\le e_2$; or
+  (b) If $p_2$ was taken, then the validator should add constraint $e_2<e_1$.
 \item \label{rule:choice} Before executing the program, the server writes the internal
     choice $c$ to address $!0$.  Accordingly, the validator creates a fresh
     variable to represent the new value stored in address $!0$, without adding
@@ -221,7 +222,7 @@ The validator's loop body is derived by dualzing the server model:
   observed response.
 \item \label{rule:unsat} When the constraints of a validation state become
   unsatisfiable, it indicates that the server model cannot explain the
-  observation.  This is because either (i) the observation is invalid {\it i.e.}
+  observation.  This is because either (i) the observation is invalid, i.e.,
   not producible by the server model, or (ii) the observation is valid, but was
   produced by a different execution path of the server model.
 \item \label{rule:reject} The validator accepts the trace if it can be produced
@@ -285,8 +286,8 @@ $\vs$, by replacing its addresses with the corresponding variables:
 \end{cases}\]
 
 The validator assumes a constraint solver that can determine whether a set of
-constraints is satisfiable, {\it i.e.} whether there exists an {\em assignment}
-of variables $(\Var\to\Int)$ that satisfy all the constraints:
+constraints is satisfiable, i.e., whether there exists an {\em assignment}
+of variables $(\Var\to\Int)$ that satisfies all the constraints:
 \begin{gather*}
   \forall \cs,\solvable \cs\iff\exists (\asgn:\Var\to\Int),\satisfy{\asgn}\cs\\
   \begin{array}{r@{\;}l}

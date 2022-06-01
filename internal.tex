@@ -132,7 +132,7 @@ e.g.} \iletag{W/"foo"}) to match any ETag including itself.  For GET requests
 conditioned over \inlinec{If-None-Match}, the server may evaluate with ``weak
 comparison'' where a weak validator like \iletag{W/"bar"} matches itself and
 also matches strong validator \iletag{"bar"}, but doesn't match \iletag{W/"foo"}
-or \iletag{"foo"}.} specified by \ilc{cmp}.  The constant ETag is provided by
+or \iletag{"foo"}.\label{foot:etag}} specified by \ilc{cmp}.  The constant ETag is provided by
 the request, and the symbolic one comes from the server state.
 
 \begin{figure}

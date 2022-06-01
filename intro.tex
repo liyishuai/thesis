@@ -5,8 +5,9 @@ compliant implementations from violating ones.
 
 This thesis studies the testing of interactive systems' semantics: The system
 under test (SUT) interacts with the tester by sending and receiving messages,
-and the tester determines whether the messages sent by the SUT are valid
-with respect to the protocol specification.
+and the tester determines whether the messages sent by the SUT are valid with
+respect to the protocol specification.  This kind of testing is applicable in
+many scenarios, including web servers, distributed file systems, {\it etc}.
 
 This chapter provides a brief view of interactive testing
 (\autoref{sec:interactive-testing}), explains why nondeterminism makes this
@@ -36,7 +37,7 @@ to \ilc{(data k')}.}
     | PUT k v => send  Done   ;; server (data [k |-> v])
     end.
 \end{coq}
-Here the \ilc{server} function iterates over a parameter called \ilc{data},
+Here the \ilc{server} function iterates with a parameter called \ilc{data},
 which is a key-value store.  In each iteration, the server receives a request
 and computes its response.  It then sends back the response and recurses with
 the updated data.
@@ -274,18 +275,20 @@ the knowledge gained in previous interactions.
 
 Even simple nondeterminism like ETags requires such careful design of the
 validator, based on thorough comprehension of the specification.  We need to
-construct the validator in a scalable way for more complex protocols.
+construct such validators in a scalable way for more complex protocols.  This is
+one challence posed by internal nondeterminism.
 
 \subsection{External nondeterminism}
 \label{sec:intro-external-nondet}
-To discuss the nondeterminism caused by the environment, we need to define the
-environment concept in testing scenario.
+To discuss the nondeterminism caused by the environment, we need to more
+precisely define the environment concept as it pertains to this testing
+scenario.
 \begin{definition}[Environment, input, output, and observations]
 \label{def:environment}
-  {\em Environment} is the substance that the tester and the SUT interact with.
-  {\em Input} is the subset of the environment that the tester can manipulate.
-  {\em Output} is the subset of the environment that the SUT can alter.  {\em
-    Observation} is the tester's view of the environment.
+  The {\em environment} is the substance that the tester and the SUT interact
+  with.  The {\em input} is the subset of the environment that the tester can
+  manipulate.  The {\em output} is the subset of the environment that the SUT
+  can alter.  An {\em observation} is the tester's view of the environment.
 \end{definition}
 When testing servers, the environment is the network stack between the client
 and the server.  The input is the sequence of requests sent by the client, and
@@ -418,12 +421,12 @@ The test harness consists of generator, shrinker, and executor.  This thesis
 studies the generator and the shrinker that produce the test input.
 
 Interesting test inputs are those that are more likely to reveal invalid
-observations.  Such subset is usually sparse and cannot be enumerated within
-reasonable budget {\it e.g.} in \autoref{sec:internal-nondeterminism}, request
-ETags that match the target resources'.  The tester needs to manipulate the
-inputs' distribution, by implementing {\em heuristics} that emphasize certain
-input patterns, which is challenged by another form of nondeterminism discussed
-as follows.
+observations.  Such a subset is usually sparse and cannot be enumerated within a
+reasonable budget, e.g., in \autoref{sec:internal-nondeterminism}, it would be
+infeasible to enumerate request ETags to match the target resources'.  The
+tester needs to manipulate the inputs' distribution, by implementing {\em
+heuristics} that emphasize certain input patterns, which is challenged by
+another form of nondeterminism discussed as follows.
 
 \subsection{Inter-execution nondeterminism}
 \label{sec:inter-execution}
@@ -452,9 +455,9 @@ previous response.  To emphasize this request pattern, the tester needs to
 implement heuristics that generate test inputs based on previous observations.
 
 In case the tester has revealed invalid observations from the server, it needs
-to rerun the test with shrunk input.  The timestamps on the server might be
-different from the previous execution, so an interesting timestamp in a previous
-run might become trivial in this run.
+to rerun the test with shrunk input.  The problem is that the timestamps on the
+server might be different from the previous execution, so an interesting
+timestamp in a previous run might become meaningless in this run.
 
 The uncertainty that a system may perform differently among executions is called
 {\em inter-execution nondeterminism}.  Such nondeterminism poses challenges to
@@ -515,10 +518,11 @@ indefinitely delayed by the environment.
 
 \section{Contribution}
 \label{sec:contribution}
-This thesis addresses the challenges in testing caused by various forms of
+This thesis presents ``testing by dualization'' (TBD), a technique that
+addresses the challenges in asynchronous testing caused by various forms of
 nondeterminism.  I introduce symbolic languages for specifying the protocol and
-representing test input, and {\em dualize} the specification into the tester's
-(1) validator, (2) generator, and (3) shrinker:
+representing test input, and dualize the specification into the tester's (1)
+validator, (2) generator, and (3) shrinker:
 
 \begin{enumerate}
 \item The specification is written as a reference implementation---a
@@ -558,12 +562,12 @@ representing test input, and {\em dualize} the specification into the tester's
 \end{enumerate}
 
 \paragraph{Thesis claim}
-Symbolic abstract representation can address challenges in testing interactive
-systems with uncertain behavior.  Specifying protocols with symbolic reference
+Testing by dualization can address challenges in testing interactive systems
+with uncertain behavior.  Specifying protocols with symbolic reference
 implementation enables validating observations of systems with internal and
 external nondeterminism.  Representing test input and observations symbolically
 allows generating and shrinking interesting test cases despite inter-execution
-nondeterminism.  Combining these methods result in a rigorous tester that can
+nondeterminism.  Combining these methods results in a rigorous tester that can
 capture protocol violations effectively.
 
 This claim is supported by the following publications:

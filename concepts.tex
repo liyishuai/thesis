@@ -9,7 +9,7 @@ notations in interactive testing.
   t$''.
 \end{definition}
 
-This chapter focuses on synchronous testing that assumes no external
+This chapter focuses on synchronous testing and assumes no external
 nondeterminism.  Here the tester's observation is identical to the
 implementation's output, so the tester-side trace is the same as that on the
 implementation side.  Asynchronous testing will be discussed in
@@ -34,7 +34,7 @@ implementation side.  Asynchronous testing will be discussed in
   various inputs.
 
   A tester is {\em correct} if its acceptances and rejections are sound and
-  complete.  A tester is {\em rejection-sound} if it only rejects non-compliant
+  complete.  A tester is {\em rejection-sound} if it rejects only non-compliant
   implementations; it is {\em rejection-complete} if it can reject all
   non-compliant implementations, provided sufficient time of
   execution.\footnote{The semantics of ``soundness'' and ``completeness'' vary

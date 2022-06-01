@@ -6,9 +6,9 @@ specifications:
 \forall p:\Prog,&\letin{s}{\serverOf(p)}\\
 &\letin{v}{\validatorOf(p)}\\
 &\rejSound v s\wedge\rejComplete v s\\
-&\text{\it i.e. }\forall t:\List(Q\times A),\\
+&\text{i.e., }\forall t:\List(Q\times A),\\
 &\qquad\valid s t\iff\accepts v t\\
-&\qquad\text{\it i.e. }\exists s',\behaves s t s'\iff\exists v',\behaves v t v'
+&\qquad\text{i.e., }\exists s',\behaves s t s'\iff\exists v',\behaves v t v'
 \end{array}\]
 
 To apply the proof techniques in \autoref{sec:correctness}, I design the loop
@@ -16,7 +16,7 @@ invariant in \autoref{sec:proof-invariant}.  I then use the invariant to prove
 the hypotheses for soundness and completeness in \autoref{sec:proof-sound}
 and \autoref{sec:proof-complete}, respectively.
 
-\subsection{Designing loop invariant}
+\subsection{Designing the loop invariant}
 \label{sec:proof-invariant}
 Let $\beta=\Set((\Nat\to\Var)\times\Set\constraint)$ be the validator state
 type, and $\sigma=\Nat\to\Int$ be the server state type, then the loop invariant
@@ -72,15 +72,15 @@ Since $(\vs,\cs)$ is the only element in the validator state, we only need to sh
 that:
 \[\exists(\asgn:\Var\to\Int),\quad\satisfy{\asgn} \cs\;\wedge\;\vs^{\asgn}=s\]
 
-By constructing the assignment as: \[\asgn=(\_\mapsto0)\]
+By constructing the assignment as: \(\asgn=(\_\mapsto0)\)
 
-We have: \[\#0^{\asgn}=0\]
+We have: \(\#0^{\asgn}=0\)
 
-Thus: \[\satisfy{\asgn} \cs\]
+Thus: \(\satisfy{\asgn} \cs\)
 
-We also know that: \[\forall k, \asgn!(\vs!k)=0=(s!k)\]
+We also know that: \[\forall k, \quad\asgn!(\vs!k)=0=(s!k)\]
 
-Thus: \[\vs^{\asgn}=s\qedhere\]
+Therefore: \(\vs^{\asgn}=s\)
 \end{proof}
 
 \begin{lemma}[\ref{eq:rs2}]
@@ -102,7 +102,7 @@ post-step server state $s'$:
 The server's internal choice $c$ was provided, so we know the server's entire
 execution path.  By induction on the $\Prog$ syntax, we can choose the right
 post-validation state $(\vs',\cs')$ by computing each branch condition, and
-deduct the satisfying assignment $\asgn'$ by computing each write operation's
+deduce the satisfying assignment $\asgn'$ by computing each write operation's
 source value and destination variable.
 \end{proof}
 \end{lemma}
@@ -123,12 +123,12 @@ that:
 \[\exists \asgn,\quad\satisfy{\asgn}cs'\]
 
 Let:
-\[s'=\vs'^{~\asgn}\]
+\(s'=\vs'^{~\asgn}\)
 
 Then we have:
 \begin{align*}
-&(\vs',\cs')\in v'\wedge \satisfy{\asgn}{\cs'}\wedge \vs'^{~\asgn}=s'\\
-&\textit{i.e. }\Reflects{v'}{s'}\tag*{\qedhere}
+&(\vs',\cs')\in v'\quad\wedge\quad\satisfy{\asgn}{\cs'}\quad\wedge\quad\vs'^{~\asgn}=s'\\
+&\text{i.e., }\Reflects{v'}{s'}\tag*{\qedhere}
 \end{align*}
 \end{proof}
 \end{lemma}
@@ -153,16 +153,16 @@ From the definition of $\vstep_p$, we know that:
 Since $\vstep'_p$ monotonically increases the set of constraints, we have
 $\cs\subseteq \cs'$.  Therefore: \[\satisfy{\asgn}{\cs}\]
 
-Let: \[s=\vs^{\asgn}\]
+Let: \(s=\vs^{\asgn}\)
 
 Then we have:
 \begin{align*}
 &(\vs,\cs)\in v\quad\wedge\quad\satisfy{\asgn}{\cs}\quad\wedge\quad \vs^{\asgn}=s\\
-&\textit{i.e. }\Reflects{v}{s}
+&\text{i.e., }\Reflects{v}{s}
 \end{align*}
 
 From the definition of $\vstep'_p$, the validator first creates a fresh variable
-to represent the server's internal choice, so we can deduct the internal choice
+to represent the server's internal choice, so we can deduce the internal choice
 from the assignment:
 \[x_c=\Fresh(\vs,\cs)\qquad c=\asgn!x_c\]
 
@@ -182,7 +182,7 @@ $s'$.
 \end{proof}
 
 The core of this proof is to find the internal choice $c$ for server step
-$\triggers sc{(q,a)}s'$.  The choice was computed with the assignment deducted
+$\triggers sc{(q,a)}s'$.  The choice was computed with the assignment deduced
 from the loop invariant.  The assignment contains the value of all symbolic
 variables, which includes all choices made by the server, past and future.  The
 loop invariant requires the assignment to explain the past choices, but cannot
@@ -203,7 +203,7 @@ The requirement for $s$ says:
 \[\exists \asgn:\Var\to\Int,\quad\satisfy{\asgn}{\cs}\quad\wedge\quad \vs^{\asgn}=s\]
 
 The constraint satisfaction tells us that:
-\[\asgn!0=0\]
+\(\asgn!0=0\)
 
 We then have:
 \[\forall k:\Nat,\quad s!k=\asgn!(vs!k)=\asgn!0=0=s_0!k\]
@@ -217,3 +217,4 @@ defined in \autoref{sec:qac-soundness}--\ref{sec:qac-completeness}, and we can
 conclude that the validators constructed by dualization are sound and complete.
 Next I'll show how to apply this dualization technique to test real-world
 programs.
+\lys{Flag 1: Revised per Steve's comments above.}

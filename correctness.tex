@@ -19,7 +19,7 @@ Both the specification and the validator are infinite loops.  To show that the
 validator consumes the same space of traces as the specification produces, we
 need to show the correspondence between each server and validator step.  This is
 done by introducing some loop invariant between the server and validator states,
-and show that it is preserved by the server's and the validator's loop body.
+and showing that it is preserved by the server's and the validator's loop body.
 
 This section shows how to prove that validator $\existT{V}{\beta}{(\vstep,v_0)}$
 is sound and complete with respect to the server model
