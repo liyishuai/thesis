@@ -1,34 +1,46 @@
-This thesis presents a systematic technique for testing interactive systems with
-uncertain behavior.  I propose a theory of dualizing protocol specification into
-validators, with formal guarantee of soundness and completeness
-(\autoref{chap:theory}).  To test systems in real-world practices, I applied the
-dualization theory to the interaction tree specification language, and derived
-specifications into interactive testing programs (\autoref{chap:practices}).  I
-then presented a test harness design to generate and shrink interactive test
-inputs effectively (\autoref{chap:harness}).  The entire methodology is
-evaluated by revealing programs' incompliant behavior with derived testers
-(\autoref{chap:eval}).
+This thesis presented a systematic technique for testing interactive systems
+with uncertain behavior.  I proposed a theory of dualizing protocol
+specification into validators, with formal guarantee of soundness and
+completeness (\autoref{chap:theory}).  To test systems in real-world practice, I
+applied the dualization theory to the interaction tree specification language,
+and derived specifications into interactive testing programs
+(\autoref{chap:practices}).  I then presented a test harness design to generate
+and shrink interactive test inputs effectively (\autoref{chap:harness}).  The
+entire methodology was evaluated by detecting programs' incompliance with the
+specification using automatically derived testers (\autoref{chap:eval}).
 
 To address challenges posed by internal, external, and inter-execution
-nondeterminisms, I introduced various flavors of symbolic abstract
+nondeterminism, I introduced various flavors of symbolic abstract
 interpretation: Systems' internal choices are represented as symbolic variables
-and unified against the tester's observations (\autoref{sec:dualization},
+and unified against the tester's observations (\autoref{sec:dualize-prog},
 \autoref{sec:internal-nondet}); Possible impacts made by the environment are
-represented as nondeterministic branches (\autoref{sec:external-nondet}), and
+represented as nondeterministic branches (\autoref{sec:external-nondet}) and
 determined by backtrack searching (\autoref{sec:backtrack}); The test inputs are
 generated as symbolic intermediate representations that can adapt to different
 traces during runtime (\autoref{sec:shrinking}).
 
-The technique in this thesis can be expanded in scenario and by combination:
-\begin{enumerate}
-\item Specifying and testing other kinds of SUTs in various setups {\it e.g.}
-  background monitoring processes, distributed locks, cyber-physical systems
-  {\it etc}.  These attempts might expose the limitations of my methodology or
-  introduce new challenges in testing.
+The techniques in this thesis can be expanded in several dimensions:
+\paragraph{Specifying and testing in various scenarios}
+The Unison file synchronizer in \autoref{sec:sync} was specified and tested as a
+command line tool that is manually triggered.  Whereas, Unison can run as a
+background process that monitors the file system and automatically propagates
+the updates, just like Dropbox.  Running in background introduces more
+nondeterminism, e.g., whether the tester's modification has been buffered or
+propagated to the file system, whether the operating system has scheduled the
+synchronizer process to check the file system's updates, whether the
+synchronizer has finished propagating the changes to the other replica, {\it
+etc}.  Migrating testing scenarios might expose the limitations of my
+methodology or introduce new challenges in testing.
 
-\item Integrating other testing techniques to the framework {\it e.g.} tuning
-  the executor to capture time-related violations~\cite{pkt-dyn}, find bugs with
-  fewer tests by enumerating within a small input space~\cite{judge-cover}, {\it
-    etc}.  This may enhance my testers' effectiveness or reveal potential
-  improvements that existing techniques can make.
-\end{enumerate}
+\paragraph{Integrating other testing techniques to the framework}
+The experiments with Apache and Unison have shown that some bugs are
+time-related, e.g., only revealed by specific request and response orders, or
+require conflicting modifications to occur within the same millisecond.  My
+current test harness doesn't tune the timing of execution, and might benefit
+from integrating packet dynamics by \citet{pkt-dyn}.
+
+The randomized generator in my framework produced large number of inputs with
+guidance of heuristics based on domain-specific knowledges.  To find bugs with
+fewer tests, \citet{judge-cover} applied ideas from combinatorial testing to tune
+the generators' distributions for better coverage.  Measuring and improving
+coverage of asynchronous tests is yet to be studied.

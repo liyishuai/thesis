@@ -1,8 +1,7 @@
-The area of automated testing is well-studied, diverse, and difficult to
-navigate~\cite{anand2013orchestrated}.  This chapter explores methodologies in
-specifying and testing interactive systems.  I focus on techniques that have
-been practised in testing real-world programs.  \autoref{sec:related-validate}
-compares different specification techniques and their derived validators.
+This chapter explores methodologies in specifying and automatically testing
+interactive systems.
+\autoref{sec:related-validate} compares different specification
+techniques for testing purposes.
 \autoref{sec:related-harness} then discusses practices in developing test
 harnesses.
 
@@ -28,7 +27,7 @@ the observations, as shown in the \ilc{validate} function in
 conditional requests, I implemented the ad hoc validator by manually translating
 the trace into tester-side knowledge, as shown in \autoref{fig:etag-tester}.
 
-The complexity in describing ``what behavior is valid'' motivates me to rephrase
+The complexity in describing ``what behavior is valid'' motivated me to rephrase
 the specification.  I applied the idea of model-based
 testing~\cite{broy2005model}, and specified the protocol in terms of ``how to
 produce valid behavior''.  My specification represented internal nondeterminism
@@ -54,12 +53,16 @@ searches for a server-side trace that (i) can be reasonably scrambled into trace
 \ilc T, and (ii) complies with the protocol specification.
 
 My network model design in \autoref{sec:external-nondet} was inspired by these
-idea of conjecturing the environment's behavior.  Instead of inserting
+ideas of conjecturing the environment's behavior.  Instead of inserting
 conjectured communication events or reordering the trace, I specified the
 network as an independent module and composed it with the server specification.
-This provides more flexibility in specifying the environment {\it e.g.} limiting
-the buffer size or the number of concurrent connections, and allows reusing the
-network models for specifying other protocols on top of it.
+This provides more flexibility in specifying asynchronous systems: (i) To adjust
+the network configurations, e.g., limiting the buffer size or the number of
+concurrent connections, we only need to adjust the network model without
+modifying the server's events.  (ii) Instead of carefully defining the space of
+valid scrambled traces for each network configuration, we can derive it from the
+network model by dualization.  (iii) The network model is reusable and allows
+specifying various protocols on top of it.
 
 \subsection{Process algebra: LOTOS and TorXakis}
 Language of Termporal Ordering Specification (LOTOS)~\cite{lotos} is the ISO
@@ -70,7 +73,7 @@ generation tool called TorXakis, and used it for testing Dropbox.
 
 TorXakis supports internal nondeterminism by defining a process for each
 possible value.  This requires the space of invisible values to be finite.  In
-comparison, I represented invisible values as symbolic variables, and employed
+comparison, I represented invisible values as symbolic variables and employed
 constraint solving that can handle inifitite space of data like strings and
 integers.
 
@@ -85,10 +88,10 @@ Using labelled transition systems (LTS), \citet{netsem} have developed rigorous
 specification for TCP, UDP, and the Sockets API.  To handle internal
 nondeterminism in real-world implementations, they symbolized the model states,
 which is then evaluated with a special-purpose model symbolic model checker.
-They focused on developing a post-hoc specification that matches mainstream
-systems like FreeBSD, Linux, and WinXP, while I aim at finding bugs in rapidly
-evolving implementations, and borrowed the idea of symbolic evaluation in
-validating observations.
+The tester helped revealing their post-hoc specifications' mismatch with
+mainstream systems like FreeBSD, Linux, and WinXP.  I borrowed the idea of
+symbolic evaluation in validating observations, and used it for detecting
+mainstream servers' violations against the formalized RFC specification.
 
 \citet{modbat} have generated test cases for Java network API, which involves
 blocking and non-blocking communications.  Their abstract model was based on
@@ -96,15 +99,15 @@ extended finite state machines (EFSM), and could capture bugs in the network
 library \verb|java.nio|.  Their validator rejects the SUT upon unexpected
 exceptions or observations that fail its {\em encoded} assertions.  In
 comparison, assertions in my validator are {\em derived} from the abstract
-model, which covers full functional correctness of the SUT.
+model, which covers full functional correctness of the SUT modulo external
+nondeterminism.
 
 \section{Test Harnesses}
 \label{sec:related-harness}
 This section explores techniques of generating and shrinking test inputs.
 \autoref{sec:related-gen} compares different heuristics used by test generators;
 \autoref{sec:related-shrink} explains existing shrinking techniques for
-interactive testing scenarios.  The executor of test harnesses is beyond the
-scope of this thesis, and will be discussed in \autoref{chap:discussion}.
+interactive testing scenarios.
 
 \subsection{Generator Heuristics}
 \label{sec:related-gen}
@@ -126,11 +129,14 @@ QuickChick testing framework in Coq~\cite{quickchick}, representing constraints
 as inductive relations.  The relations are compiled into efficient generators
 that produce satisfying data.
 
-The narrowing generator in QuickChick has been used during my preliminary
+The narrow-based generator in QuickChick has been used during my preliminary
 experiment with \http, where I defined a well-formed relation for HTTP requests
-to guide the generator.  This constraint-based heuristics can be integrated to
-my testing framework by interpreting QuickChick's \ilc{Gen} (generator) monad
-into the \ilc{IO} monad used by the test harness.
+to guide the generator.  However, the QuickChick implementation was unstable and
+failed to derive generators as my type definition becomes more and more complex.
+This constraint-based heuristics may be integrated to my current testing
+framework by interpreting QuickChick's \ilc{Gen} (generator) monad into
+the \ilc{IO} monad used by the test harness, provided the generator derivation
+failure gets resolved.
 
 \paragraph{Coverage-based heuristics}
 Another strategy to increase the chance of revealing invalid behavior is to
@@ -148,11 +154,12 @@ To track the program's execution paths, coverage-based heuristics need to
 instrument the SUT during compilation, making it inapplicable for black-box
 testing.  When fuzzing interactive systems like web servers, the SUT is run in a
 simulator where the requests are provided as files instead of network packets.
-The responses are ignored in fuzz testing, which does not check functional
-correctness.  To produce a trace for validation, the SUT needs to be carefully
-modified to record its send and receive events.  Addressing these challenges
-would enable coverage-based heuristics to be integrated in interactive testing
-of systems' functional correctness.
+The responses are ignored by the comtemporary fuzzing tools, which only checks
+whether the SUT crashes or hangs and does not care about functional correctness
+like the responses' contents.  To produce a trace for validation, the SUT needs
+to be carefully modified to record its send and receive events.  Addressing
+these challenges would enable coverage-based heuristics to be integrated in
+interactive testing of systems' functional correctness.
 
 \subsection{Shrinking Interactive Tests}
 \label{sec:related-shrink}
@@ -180,10 +187,12 @@ and extends it in two dimensions:
 
 \item QuickCheck requires the test developer to specify a runtime state to guide
   the generator, and define the state transition rules for each interaction.
+  The heuristics are implemented based on the tester's point of view.
 
-  In comparison, I proposed trace-based and state-based heuristics as separate
-  concepts.  Generators in my testing framework are based on (i) traces recorded
-  automatically during runtime, and (ii) model states exposed by the underlying
-  specifications.  The generic intermediate representation of traces lifts the
-  requirement of specifying transitions for test generation purposes.
+  In comparison, my framework replaced these requirements with state- and
+  trace-based heuristics, where the model state was exposed by the underlying
+  specification, and the trace was automatically recorded by the test harness.
+  This allows test developers to design heuristics based on the implementation's
+  point of view, instead of reasoning on the implementation's internal and
+  external nondeterminism based on its observations.
 \end{enumerate}
