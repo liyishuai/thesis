@@ -21,8 +21,8 @@ nondeterminism are inspired by practices in QuickCheck.
 \paragraph{Internal nondeterminism}
 My \http specification was initially written as a QuickCheck property.  Before
 handling preconditions like \inlinec{If-Match} and \inlinec{If-None-Match}, the
-validator implements a deterministic server model and compares its behavior with
-the observations, as shown in the \ilc{validate} function in
+validator implemented a deterministic server model and compares its behavior
+with the observations, as shown in the \ilc{validate} function in
 \autoref{sec:interactive-testing}.  When expanding the specification to cover
 conditional requests, I implemented the ad hoc validator by manually translating
 the trace into tester-side knowledge, as shown in \autoref{fig:etag-tester}.
@@ -65,7 +65,7 @@ network model by dualization.  (iii) The network model is reusable and allows
 specifying various protocols on top of it.
 
 \subsection{Process algebra: LOTOS and TorXakis}
-Language of Termporal Ordering Specification (LOTOS)~\cite{lotos} is the ISO
+Language of termporal ordering specification (LOTOS)~\cite{lotos} is the ISO
 standard for specifying OSI protocols.  It defines distributed concurrent
 systems as {\em processes} that interact via {\em channels}.  Using a formal
 language strongly inspired by LOTOS, \citet{torxakis-dropbox} implemented a test
@@ -86,12 +86,12 @@ infinitely many clients.
 \subsection{Transition systems: NetSem and Modbat}
 Using labelled transition systems (LTS), \citet{netsem} have developed rigorous
 specification for TCP, UDP, and the Sockets API.  To handle internal
-nondeterminism in real-world implementations, they symbolized the model states,
-which is then evaluated with a special-purpose model symbolic model checker.
-The tester helped revealing their post-hoc specifications' mismatch with
-mainstream systems like FreeBSD, Linux, and WinXP.  I borrowed the idea of
-symbolic evaluation in validating observations, and used it for detecting
-mainstream servers' violations against the formalized RFC specification.
+nondeterminism in real-world implementations, they used symbolic the model
+states, which are then evaluated with a special-purpose symbolic model checker.
+The tester helped reveal their post-hoc specifications' mismatch with mainstream
+systems like FreeBSD, Linux, and WinXP.  I borrowed the idea of symbolic
+evaluation in validating observations, and used it for detecting mainstream
+servers' violations against the formalized RFC specification.
 
 \citet{modbat} have generated test cases for Java network API, which involves
 blocking and non-blocking communications.  Their abstract model was based on
@@ -119,7 +119,7 @@ inputs for various testing scenarios.
 \paragraph{Constraint-based heuristics}
 The reason for introducing heuristics is to increase the chance of triggering
 invalid behavior.  I specified the heuristics as ``how to produce interesting
-input'', while in some cases, it's more convenient to specify ``what inputs are
+input'', while, in some cases, it's more convenient to specify ``what inputs are
 interesting''.  For example, well-typed lambda expressions can be easily defined
 in terms of typing rules, but are less intuitive to enumerate by a generator.
 
@@ -129,8 +129,8 @@ QuickChick testing framework in Coq~\cite{quickchick}, representing constraints
 as inductive relations.  The relations are compiled into efficient generators
 that produce satisfying data.
 
-The narrow-based generator in QuickChick has been used during my preliminary
-experiment with \http, where I defined a well-formed relation for HTTP requests
+The narrowing-based generator in QuickChick was used during my preliminary
+experiments with \http, where I defined a well-formed relation for HTTP requests
 to guide the generator.  However, the QuickChick implementation was unstable and
 failed to derive generators as my type definition becomes more and more complex.
 This constraint-based heuristics may be integrated to my current testing
@@ -186,8 +186,9 @@ and extends it in two dimensions:
   observation from the environment.
 
 \item QuickCheck requires the test developer to specify a runtime state to guide
-  the generator, and define the state transition rules for each interaction.
-  The heuristics are implemented based on the tester's point of view.
+  the generator, which requires them to define the state transition rules for
+  each interaction.  The heuristics are implemented based on the tester's point
+  of view.
 
   In comparison, my framework replaced these requirements with state- and
   trace-based heuristics, where the model state was exposed by the underlying

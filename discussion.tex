@@ -1,4 +1,4 @@
-This thesis presented a systematic technique for testing interactive systems
+This dissertation presented a systematic technique for testing interactive systems
 with uncertain behavior.  I proposed a theory of dualizing protocol
 specification into validators, with formal guarantee of soundness and
 completeness (\autoref{chap:theory}).  To test systems in real-world practice, I
@@ -11,20 +11,20 @@ specification using automatically derived testers (\autoref{chap:eval}).
 
 To address challenges posed by internal, external, and inter-execution
 nondeterminism, I introduced various flavors of symbolic abstract
-interpretation: Systems' internal choices are represented as symbolic variables
+interpretation.  Systems' internal choices are represented as symbolic variables
 and unified against the tester's observations (\autoref{sec:dualize-prog},
-\autoref{sec:internal-nondet}); Possible impacts made by the environment are
+\autoref{sec:internal-nondet}).  Possible impacts made by the environment are
 represented as nondeterministic branches (\autoref{sec:external-nondet}) and
-determined by backtrack searching (\autoref{sec:backtrack}); The test inputs are
-generated as symbolic intermediate representations that can adapt to different
-traces during runtime (\autoref{sec:shrinking}).
+determined by backtrack searching (\autoref{sec:backtrack}).  The test inputs
+are generated as symbolic intermediate representations that can adapt to
+different traces during runtime (\autoref{sec:shrinking}).
 
 The techniques in this thesis can be expanded in several dimensions:
 \paragraph{Specifying and testing in various scenarios}
 The Unison file synchronizer in \autoref{sec:sync} was specified and tested as a
 command line tool that is manually triggered.  Whereas, Unison can run as a
 background process that monitors the file system and automatically propagates
-the updates, just like Dropbox.  Running in background introduces more
+the updates, just like Dropbox.  Running in the background introduces more
 nondeterminism, e.g., whether the tester's modification has been buffered or
 propagated to the file system, whether the operating system has scheduled the
 synchronizer process to check the file system's updates, whether the
@@ -36,11 +36,11 @@ methodology or introduce new challenges in testing.
 The experiments with Apache and Unison have shown that some bugs are
 time-related, e.g., only revealed by specific request and response orders, or
 require conflicting modifications to occur within the same millisecond.  My
-current test harness doesn't tune the timing of execution, and might benefit
+current test harness doesn't tune the timing of executions, and might benefit
 from integrating packet dynamics by \citet{pkt-dyn}.
 
-The randomized generator in my framework produced large number of inputs with
+The randomized generator in my framework produced a large number of inputs with
 guidance of heuristics based on domain-specific knowledges.  To find bugs with
-fewer tests, \citet{judge-cover} applied ideas from combinatorial testing to tune
-the generators' distributions for better coverage.  Measuring and improving
+fewer tests, \citet{judge-cover} applied ideas from combinatorial testing to
+tune the generators' distributions for better coverage.  Measuring and improving
 coverage of asynchronous tests is yet to be studied.
