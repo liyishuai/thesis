@@ -42,8 +42,8 @@ CoFixpoint backtrack (current:      itree ntE void)
                       | other::ot' => backtrack other ot'
                       | []         => trigger (Throw msg)
                       end
-    | FromObserver => q <- trigger GenPacket;;
-                      trigger (ClientSend q);;%\label{line:backtrack-send}%
+    | FromObserver => q <- trigger GenPacket;;%\label{line:backtrack-send}%
+                      trigger (ClientSend q);;
                       let others' := expect FromObserver q others in
                       backtrack (k q) others'
     | ToObserver   =>
@@ -113,26 +113,25 @@ Definition expect {R} (e: observeE R) (r: R)
 
 The execution rule is defined as follows:
 \begin{enumerate}
-\item When the tester nondeterministically branches
-  in \autoref{line:backtrack-or}, randomly pick a branch \ilc{(k b)} to
-  evaluate, and push the other branch \ilc{(k (negb b))} to the list of other
-  possible cases.
+\item When the tester nondeterministically branches, in
+\autoref{line:backtrack-or}, randomly pick a branch \ilc{(k b)} to evaluate, and
+push the other branch \ilc{(k (negb b))} to the list of other possible cases.
 
-\item When the \ilc{current} tester throws an exception in
-  \autoref{line:backtrack-throw}, it indicates that the current execution path
-  rejects the observations.  The tester should try to explain its observations
-  with other branches of the tester model.  If the \ilc{others} list is empty,
-  it indicates that the observation is beyond the specification's producible
-  behavior, so the tester should reject the SUT.
+\item When the \ilc{current} tester throws an exception, in
+\autoref{line:backtrack-throw}, it indicates that the current execution path
+rejects the observations.  The tester should try to explain its observations
+with other branches of the tester model.  If the \ilc{others} list is empty, it
+indicates that the observation is beyond the specification's producible
+behavior, so the tester should reject the SUT.
 
 \item When the tester wants to observe a packet {\em from} itself, it generates
-  a packet and sends it to the SUT in \autoref{line:backtrack-send}.
+a packet and sends it to the SUT in \autoref{line:backtrack-send}.
 
-  Notice that if the current branch is rejected and the tester backtracks to
-  other branches, the sent packet cannot be recalled from the environment.
-  Therefore, all other branches should recognize this sent packet and check
-  whether future interactions are valid follow-ups of it.  This is done by
-  matching the branches against the send event, using the \ilc{expect} function.
+Note that if the current branch is rejected and the tester backtracks to other
+branches, the sent packet cannot be recalled from the environment.  Therefore,
+all other branches should recognize this sent packet and check whether future
+interactions are valid follow-ups of it.  This is done by matching the branches
+against the send event, using the \ilc{expect} function.
 
   As shown in \autoref{fig:match-observe}, \ilc{(expect e r l)} matches every
   tester in list \ilc l against the observation \ilc e that has return
@@ -178,8 +177,7 @@ generating and sending another packet to the SUT (dualized from the network
 model's absorbtion event).  Evaluating the network model lazily prevents the
 composed symbolic model from having infinitely many absorbing branches.  This
 allows the derived tester to converge to rejection upon violation, instead of
-continuously sending request packets.  \lys{This part is not critical.  I can
-imagine other scheduler design to do the same job.}
+continuously sending request packets.
 
 Now we have derived the specification into a deterministic tester model in
 ITree.  The tester's events reflect actual computations of a client program.  In
@@ -251,3 +249,5 @@ So far I have answered ``how to tell compliant implementations from violating
 ones''.  The next chapter will answer ``how to generate and shrink test inputs
 that reveal violations effectively'', and unveil the techniques behind
 \ilc{gen_packet} in \autoref{line:execute-gen} of \autoref{fig:execute}.
+
+\lys{Flag 1: Revised per Steve's comments above.}

@@ -1,5 +1,5 @@
 To write specifications for protocols' rich semantics, I employed ``interaction
-tree'' (ITree), a generic data structure for representing interactive programs
+trees'' (ITrees), a generic data structure for representing interactive programs
 in the Coq programming language, introduced by \citet{itree}.  I provide a brief
 introduction to the ITree specification language in \autoref{sec:itree-lang}.
 
@@ -17,8 +17,8 @@ ITrees.
 \subsection{Language definition}
 \label{sec:itree-lang}
 Consider an echo program, which keeps reading some data and writing it out
-verbatim, until reaching EOF.  We can represent the program in Coq, with a
-reference in C as:
+verbatim, until reaching EOF.  We can represent the program in Coq using the
+ITrees datatype (left), with a reference in C (right) as:
 \begin{multicols}{2}
 \begin{coq}
   CoFixpoint echo :=
@@ -42,7 +42,8 @@ reference in C as:
 \end{cpp}
 \end{multicols}
 Here the behavior after \ilc{getchar} depends on the value actually read.  The
-monadic computation in Coq can be desugared into:
+monadic computation in Coq can be desugared into the following code, which uses
+the \ilc{Bind} constructor to represent sequential composition of programs:
 \begin{coq}
   CoFixpoint echo :=
     Bind getchar
@@ -52,9 +53,12 @@ monadic computation in Coq can be desugared into:
                            (fun _ => echo)
          ).
 \end{coq}
-Such continuation-passing style can be represented as a tree of interactions.
-To help readers better understand the interaction tree language, I first provide
-a modified version of it that better shows its tree structure, and then explain
+Here, the first argument of \ilc{Bind} is program that returns some value and
+the second argument is a {\em continuation} that represents the subsequent
+computation that depends on the value returned by the first argument.  Such
+continuation-passing style can be represented as a tree of interactions.  To
+help readers better understand the interaction tree language, I first provide a
+simplified version of it that better shows its tree structure, and then explain
 the actual type definition used in practice.
 
 \begin{figure}
@@ -115,6 +119,12 @@ way, the \ilc{Ret} and \ilc{Trigger} nodes are connected into a tree
 structure.
 \end{itemize}
 
+The \ilc{CoInductive} keyword indicates that type \ilc{itreeM} can represent
+infinite data.  For example, the aforementioned \ilc{echo} program (also
+illustrated in \autoref{fig:echo-itree}) is an instance of \ilc{(itreeM stdioE
+Z)} defined with keyword \ilc{CoFixpoint}, where \ilc Z indicates that the
+program's result value (if it ever returns by \ilc{EXIT}) is of type integer.
+
 The mock interaction tree provides an intuitive continuation-passing structure
 for representing impure programs.  However, to implement dualization
 effectively, we need to revise the language definition of monadic binding.
@@ -131,15 +141,15 @@ effectively, we need to revise the language definition of monadic binding.
 \label{fig:itrees}
 \end{figure}
 
-Instead of binding a program to a continuation, ITree binds a single impure
-event, as shown in \autoref{fig:itrees}.  I use \ilc{(Impure e k)} to
-replace \ilc{(Bind (Trigger e) k)} representations in \ilc{itreeM}.
-A \ilc{Pure} computation cannot be bound to a continuation, and must be the leaf
-of an ITree.\footnote{For readability, the ``practical'' ITree definition is a
-simplified version from \citet{itree}.  Here \ilc{Pure} and \ilc{Impure}
-correspond to the \ilc{Ret} and \ilc{Vis} constructors.  I dropped the \ilc{(Tau
-: itree E R -> itree E R)} constructor, which carries no semantics and is used
-for satisfying Coq's guardedness condition.}
+Instead of binding a program---which might have many events---to a continuation,
+ITree binds a single impure event, as shown in \autoref{fig:itrees}.  I
+use \ilc{(Impure e k)} to replace \ilc{(Bind (Trigger e) k)} representations
+in \ilc{itreeM}.  A \ilc{Pure} computation cannot be bound to a continuation,
+and must be the leaf of an ITree.\footnote{For readability, the ``practical''
+ITree definition is a simplified version from \citet{itree}.  Here \ilc{Pure}
+and \ilc{Impure} correspond to the \ilc{Ret} and \ilc{Vis} constructors.  I
+dropped the \ilc{(Tau : itree E R -> itree E R)} constructor, which carries no
+semantics and is used for satisfying Coq's guardedness condition.}
 
 The \ilc{Ret}, \ilc{Trigger}, and \ilc{Bind} constructors introduced in
 \ilc{itreeM} have equivalent representations in \ilc{itree}, so we can still
@@ -225,7 +235,7 @@ Such server models can be derived into tester programs by interpretation.
 
 \subsection{Interpreting interaction trees}
 \label{sec:interp}
-To interpret an ITree is to specify the operational semantics of its events.
+To interpret an ITree is to specify the semantics of its events.
 For example, the \ilc{tester} program in \autoref{sec:interactive-testing} can
 be constructed by interpreting a deterministic server model in
 \autoref{sec:qac-itree}.
@@ -271,10 +281,12 @@ the tester's received response differs from that specified by the server model,
 then the tester throws an exception to indicate a violation it detected.
 
 \paragraph{Applying event handlers}
-The \ilc{dualize} function is also called a handler.  It produces an ITree that
-has the same result type as its argument event.  Therefore, we can construct the
-tester by substituting the server's events with the operations defined by the
-handler function:
+The \ilc{dualize} function is also called a {\em handler}.  It produces an ITree
+that has the same result type as its argument event.  Therefore, we can
+construct the tester by substituting the server's events with the operations
+defined by the handler function.  This process of substituting events with the
+results of handling them is called {\em interpretation}, and it is implemented
+as shown below:
 \begin{coq}
   CoFixpoint interp {E F T} (handler: forall {R}, E R -> itree F R) (m: itree E T)
              : itree F T :=

@@ -29,15 +29,16 @@ representations.
 \subsection{Symbolic server model}
 \label{sec:symbolic-model}
 The server specification is an ITree program that exhibits all valid behavior of
-the protocol.  I combine the $\Prog$ language in \autoref{sec:prog-lang} with the
-simplistic ITree example in \autoref{sec:qac-itree}.
+the protocol.  I combine the $\Prog$ language in \autoref{sec:prog-lang} with
+the simple ITree \ilc{ioE} events for sends and receives as we saw in
+\autoref{sec:qac-itree}.
 
 \paragraph{Network packet type}
 Instead of receiving requests and sending responses, the server receives and
-sends {\em packets} that carry routing information.  This allows us to specify
-the server's interaction against concurrent clients in
-\autoref{sec:external-nondet}.  A packet consists of headers that indicate its
-source and destination, and a payload of either a request or a response:
+sends {\em packets} that carry routing information.  This will allow us to
+specify the server's interaction against concurrent clients.  A packet consists
+of headers that indicate its source and destination, and a payload of either a
+request or a response:
 \begin{coq}
   Notation connection := N. (* N for natural number *)
 
@@ -52,7 +53,8 @@ Q and \ilc A types that represent its request and response.  Its \ilc{Source}
 and \ilc{Destination} fields each records an \ilc{endpoint} represented as a
 natural number.  Its \ilc{Payload} type is the sum of request and response.
 
-Here's an example trace of network packets:
+Here's an example trace of network packets that represents a simple HTTP
+exchange:
 \begin{coq}
   Context get: string -> request.
   Context ok : string -> response.
@@ -74,7 +76,7 @@ This trace encodes a transaction between client 1 and the server (represented as
 endpoint 0).  The client sends a GET request to fetch the resource in path
 \ilc{"/index.html"}, and the server responds with 200 OK and content
 \ilc{"<p>Hello!</p>"}.  The \ilc{inl} and \ilc{inr} are constructors for sum
-types:
+types that here are used to distinguish requests from responses:
 \begin{coq}
   Context inl: forall {X Y}, X -> X + Y.
   Context inr: forall {X Y}, Y -> X + Y.
@@ -127,13 +129,13 @@ potentially better performance).  Weak validators have prefix \iletag{W/} while
 strong validators do not.  When handling compare-and-swap operations such as PUT
 requests conditioned over \inlinec{If-Match} in
 \autoref{sec:internal-nondeterminism}, the server should evaluate its
-precondition with ``strong comparison'' that doesn't allow weak validators ({\it
-e.g.} \iletag{W/"foo"}) to match any ETag including itself.  For GET requests
+precondition with ``strong comparison'' that doesn't allow weak validators,
+e.g., \iletag{W/"foo"}) to match any ETag including itself.  For GET requests
 conditioned over \inlinec{If-None-Match}, the server may evaluate with ``weak
 comparison'' where a weak validator like \iletag{W/"bar"} matches itself and
 also matches strong validator \iletag{"bar"}, but doesn't match \iletag{W/"foo"}
-or \iletag{"foo"}.\label{foot:etag}} specified by \ilc{cmp}.  The constant ETag is provided by
-the request, and the symbolic one comes from the server state.
+or \iletag{"foo"}.\label{foot:etag}} specified by \ilc{cmp}.  The constant ETag
+is provided by the request, and the symbolic one comes from the server state.
 
 \begin{figure}
 \begin{lstlisting}[numbers=left]
@@ -175,16 +177,15 @@ the request, and the symbolic one comes from the server state.
 \end{figure}
 
 \autoref{fig:if-match-server} shows an ITree model for If-Match requests 
-(\autoref{sec:internal-nondeterminism}).  The server state \ilc{sigma} \lys{I
-used \ilc{sigma} to represent the server state in QAC, so keeping this
-notation.}  maps each path to its corresponding ``resource''---file content and
-metadata like ETag.  The server first evaluates the request's \inlinec{If-Match}
-condition by ``strong comparison'' as required by HTTP.  If the request's ETag
-matches its target's, then the server updates the target's contents with the
-request payload.  The target's new ETag \ilc{tx'} is permitted to be any value,
-so the model represents it as \ilc{Choice} event.
+(\autoref{sec:internal-nondeterminism}).  The server state type \ilc{sigma} maps
+each path to its corresponding ``resource''---file content and metadata like
+ETag.  The server first evaluates the request's \inlinec{If-Match} condition by
+``strong comparison'' as required by HTTP.  If the request's ETag matches its
+target's, then the server updates the target's contents with the request
+payload.  The target's new ETag \ilc{tx'} is permitted to be any value, so the
+model represents it as \ilc{Choice} event.
 
-Notice that the server model exhibits three kinds of branches:
+Note that the server model exhibits three kinds of branches:
 \begin{enumerate}
 \item The \ilc{if} branch in \autoref{line:etag-pure-if} is provided by ITree's
 embedding language Coq, and takes a boolean value as condition;
@@ -226,7 +227,7 @@ specification, and will be handled differently during testing:
   request''---a request that doesn't involve symbolic variables, as opposed to
   ``symbolic'' ones---generated by the client and sent to the server, so its
   method is known by the tester and needn't be symbolically evaluated.
-\item The ``symbolic'' \ilc{IFX} condition here plays a similar rule as the
+\item The ``symbolic'' \ilc{IFX} condition here plays a similar role as the
   $\mathsf{if}$ branches in the $\Prog$ language: Which branch to take depends
   on the server's internal choices, so the tester needs to consider both cases.
 \item The \ilc{or} branch defines multiple control flows the server may take.
@@ -329,11 +330,10 @@ responses are symbolic.
   | ToObserver     : observeE concrete_packet.
 \end{coq}
 
-Notice that the observer's send and receive events both return the packet sent
-or received, unlike the server model whose \ilc{Send} event takes the sent
-packet as argument.  This is because the tester needs to generate the request
-packet to send, and the event's result value represents that generated and sent
-packet.
+Note that the observer's send and receive events both return the packet sent or
+received, unlike the server model whose \ilc{Send} event takes the sent packet
+as argument.  This is because the tester needs to generate the request packet to
+send, and the event's result value represents that generated and sent packet.
 
 As discussed in \autoref{sec:dualize-prog}, when the server sends a symbolic
 response or branches over a symbolic condition, the tester needs to create
@@ -353,23 +353,27 @@ solved in \autoref{sec:symbolic-eval}.
 
 The dualization algorithm in \autoref{fig:symbolic-observer} does the follows:
 \begin{enumerate}
-  \item When the symbolic model absorbs a packet in
-    \autoref{line:observe-absorb}, the observer generates a request packet;
-  \item When the symbolic model emits a symbolic packet \ilc{px} in
-    \autoref{line:observe-emit}, the observer receives a concrete packet \ilc p,
-    and adds a constraint that restricts the symbolic and concrete packets to
-    match each other.
-  \item When the symbolic model branches on a symbolic condition \ilc{bx} in
-    \autoref{line:observe-branch}, the tester accepts the observation if it can
-    be explained by any branch.  This is done by constructing the observer as a
-    nondeterministic program that has both branches, using the \ilc{or}
-    combinator.  For each branch, the observer adds a constraint that the
-    symbolic condition matches the chosen branch.
-  \item Nondeterministic branches in \autoref{line:observe-or} are preserved in
-    this interpretation phase, and will be resolved in \autoref{sec:backtrack}.
-  \item Internal choices in \autoref{line:observe-choice} are addressed by the
-    next phase in \autoref{sec:symbolic-eval}, along with the constraints
-    created in this phase.
+\item When the symbolic model receives a packet, in
+\autoref{line:observe-absorb}, the observer generates a request packet;
+
+\item When the symbolic model sends a symbolic packet \ilc{px}, in
+\autoref{line:observe-emit}, the observer receives a concrete packet \ilc p, and
+adds a \ilc{Guard} constraint that restricts the symbolic and concrete packets
+to match each other.
+
+\item When the symbolic model branches on a symbolic condition \ilc{bx},
+in \autoref{line:observe-branch}, the tester accepts the observation if it can
+be explained by any branch.  This is done by constructing the observer as a
+nondeterministic program that has both branches, using the \ilc{or} combinator.
+For each branch, the observer adds a \ilc{Unify} constraint that the symbolic
+condition matches the chosen branch.
+
+\item Nondeterministic branches in \autoref{line:observe-or} are preserved in
+this interpretation phase, and will be resolved in \autoref{sec:backtrack}.
+
+\item Internal choices in \autoref{line:observe-choice} are addressed by the
+next phase in \autoref{sec:symbolic-eval}, along with the constraints created in
+this phase.
 \end{enumerate}
 
 The result of dualization is a symbolic observer that models tester behaviors
@@ -378,10 +382,13 @@ nondeterministic program with primitives events like making choices and adding
 constraints over the choices.
 
 For example, dualizing \autoref{line:etag-ifx}--\ref{line:etag-end} in
-\autoref{fig:if-match-server} results in an observer program as shown in
-\autoref{fig:observer-example}.  The next subsection interprets the observer's
-primitive \ilc{Guard} and \ilc{Unify} events into pure computations of symbolic
-evaluation.
+\autoref{fig:if-match-server} results in an observer program that is equivalent
+to \autoref{fig:observer-example}.  Dualization transforms the \ilc{sm_http}
+specification into the \ilc{observer_http} program in
+\autoref{fig:symbolic-observer} automatically, and includes more details than
+the hand-written \ilc{observer_body} example.  The next subsection interprets
+the observer's primitive \ilc{Guard} and \ilc{Unify} events into pure
+computations of symbolic evaluation.
 
 \begin{figure}
 \begin{coq}
@@ -476,10 +483,10 @@ constraints over them.  The derivation rules are as follows:
     the observer's send/receive interactions in \autoref{line:unify-observe}.
 \end{enumerate}
 
-Notice that the \ilc{unify} function interprets a symbolic observer's event
-\ilc{(oE R)} into a function of type \ilc{(V -> itree tE (V * R))},
-called ``state monad transformer''.  It takes a pre-validation state \ilc{(v:
-V)} and computes an ITree that yields the observer event's corresponding result
+Note that the \ilc{unify} function interprets a symbolic observer's event
+\ilc{(oE R)} into a function of type \ilc{(V -> itree tE (V * R))}, a so-called
+``state monad transformer''.  It takes a pre-validation state \ilc{(v: V)} and
+computes an ITree that yields the observer event's corresponding result
 \ilc{(r: R)} along with a post-validation state \ilc{(v': V)}.  This stateful
 interpretation process is implemented by a variant of \ilc{interp} called
 \ilc{interp_state}:

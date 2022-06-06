@@ -77,12 +77,13 @@ packet into \ilc{buffer}.
   \ilc{None}, because the wire has no packet in the \ilc{buffer}, and must
   absorb some packet before emitting anything.
 \item Given a non-empty linked list \ilc{(p::l')}, with \ilc p as head and
-  \ilc{l'} as tail, \ilc{pick_one} might return \ilc{(Some p)}, meaning the wire
-  can emit that packet; or it might return \ilc{None}, meaning the wire can
-  still absorb packets into the buffer.
+  \ilc{l'} as tail, \ilc{pick_one} might return \ilc{(Some p)} by choosing the
+  left branch.  In this case, the wire can emit packet \ilc p.  Or the function
+  might choose the right branch and recursing on \ilc{l'}, meaning that the wire
+  can emit some packet in \ilc{l'} or absorb some packet into the buffer.
 \end{itemize}
 
-Such network model reflects the TCP environment, where messages are never lost
+This network model reflects the TCP environment, where messages are never lost
 but might be indefinitely delayed.  In the next subsection, I'll demonstrate how
 to compose the server and network models into a client-side observation model.
 
@@ -191,7 +192,7 @@ buffer.  If yes, then the server takes the oldest packet in the buffer.
 Otherwise, it waits for the network model to emit one.
 \end{enumerate}
 
-Notice that this algorithm schedules the server at a higher priority than the
+Note that this algorithm schedules the server at a higher priority than the
 network model.  The composed model only steps into the network model when the
 server is starved in \autoref{line:step-net}, by calling the \ilc{step_net}
 process defined in \autoref{line:step-net-def}.  This design is to avoid

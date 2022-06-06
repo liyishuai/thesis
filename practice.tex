@@ -14,12 +14,14 @@ in \autoref{def:trace-validity}, and the state monad in the QAC language family
 becomes insufficient for defining the space of asynchronous interactions.
 
 This chapter applies the idea of dualization to testing asynchronous systems.  I
-transition from the QAC language family to the ITree specification language,
-which allows modelling asynchronous interactions.  The ITree-based
-specifications are derived into tester programs that can interact with the SUT
-and reveal potential defects.
+transition from the QAC language family to the ITree specification language, a
+data structure for modelling programs' asynchronous interactions in the Coq
+proof assistant.  ITree provides more expressiveness than QAC, and allows
+specifying the external nondeterminism caused by the network environment.  The
+ITree-based specifications are derived into tester programs that can interact
+with the SUT and reveal potential defects.
 
-\begin{figure}
+\begin{figure}[t]
   \includegraphics[width=\linewidth]{figures/framework}
   \caption{Deriving tester program from specification}
   \label{fig:framework}
