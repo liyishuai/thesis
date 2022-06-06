@@ -1,11 +1,10 @@
 @inproceedings{Quviq2006,
 author = {Arts, Thomas and Hughes, John and Johansson, Joakim and Wiger, Ulf},
-title = {Testing Telecoms Software with Quviq QuickCheck},
+title = {Testing Telecoms Software with {Quviq} {QuickCheck}},
 year = {2006},
 isbn = {1595934901},
 publisher = {Association for Computing Machinery},
 address = {New York, NY, USA},
-url = {https://doi.org/10.1145/1159789.1159792},
 doi = {10.1145/1159789.1159792},
 abstract = {We present a case study in which a novel testing tool, Quviq QuickCheck, is used to
 test an industrial implementation of the Megaco protocol. We considered positive and
@@ -38,9 +37,8 @@ series = {ERLANG '06}
   year      = {2007},
 }
 
-@inbook{Hughes2016,
+@inproceedings{Hughes2016,
   abstract  = {This is not a typical scientific paper. It does not present a new method, with careful experiments to evaluate it, and detailed references to related work. Rather, it recounts some of my experiences over the last 15 years, working with QuickCheck, and its purpose is as much to entertain as to inform.},
-  address   = {Cham},
   author    = {Hughes, John},
   booktitle = {A List of Successes That Can Change the World: Essays Dedicated to Philip Wadler on the Occasion of His 60th Birthday},
   doi       = {10.1007/978-3-319-30936-1_9},
@@ -51,18 +49,37 @@ and Sannella, Don},
   isbn      = {978-3-319-30936-1},
   pages     = {169--186},
   publisher = {Springer International Publishing},
-  title     = {Experiences with QuickCheck: Testing the Hard Stuff and Staying Sane},
-  url       = {https://doi.org/10.1007/978-3-319-30936-1_9},
+  title     = {Experiences with {QuickCheck}: Testing the Hard Stuff and Staying Sane},
   year      = {2016},
 }
 
 @inproceedings{issta21,
-      title={Model-Based Testing of Networked Applications},
-      author={Yishuai Li and Benjamin C. Pierce and Steve Zdancewic},
-      year={2021},
-      booktitle={ACM SIGSOFT International Symposium on Software Testing and Analysis}
+author = {Li, Yishuai and Pierce, Benjamin C. and Zdancewic, Steve},
+title = {Model-Based Testing of Networked Applications},
+year = {2021},
+isbn = {9781450384599},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+doi = {10.1145/3460319.3464798},
+abstract = {We present a principled automatic testing framework for application-layer protocols.
+The key innovation is a domain-specific embedded language for writing nondeterministic
+models of the behavior of networked servers. These models are defined within the Coq
+interactive theorem prover, supporting a smooth transition from testing to formal
+verification.  Given a server model, we show how to automatically derive a tester
+that probes the server for unexpected behaviors. We address the uncertainties caused
+by both the server's internal choices and the network delaying messages nondeterministically.
+The derived tester accepts server implementations whose possible behaviors are a subset
+of those allowed by the nondeterministic model.  We demonstrate the effectiveness
+of this framework by using it to specify and test a fragment of the HTTP/1.1 protocol,
+showing that the automatically derived tester can capture RFC violations in buggy
+server implementations, including the latest versions of Apache and Nginx.},
+booktitle = {Proceedings of the 30th ACM SIGSOFT International Symposium on Software Testing and Analysis},
+pages = {529--539},
+numpages = {11},
+keywords = {HTTP, nondeterminism, Coq, Model-based testing, network refinement, interaction trees},
+location = {Virtual, Denmark},
+series = {ISSTA 2021}
 }
-
 
 @book{quickchick,
   title = {QuickChick: Property-Based Testing in Coq},
@@ -84,7 +101,6 @@ and Sannella, Don},
  location = {Cascais, Portugal},
  pages = {234--248},
  numpages = {15},
- url = {http://doi.acm.org/10.1145/3293880.3294106},
  doi = {10.1145/3293880.3294106},
  acmid = {3294106},
  publisher = {ACM},
@@ -94,18 +110,16 @@ and Sannella, Don},
 
 @article{itree,
  author = {Xia, Li-yao and Zakowski, Yannick and He, Paul and Hur, Chung-Kil and Malecha, Gregory and Pierce, Benjamin C. and Zdancewic, Steve},
- title = {Interaction Trees: Representing Recursive and Impure Programs in Coq},
- journal = {Proc. ACM Program. Lang.},
+ title = {Interaction Trees: Representing Recursive and Impure Programs in {Coq}},
+ journal = {Proceedings of the ACM on Programming Languages (POPL)},
  issue_date = {January 2020},
  volume = {4},
- number = {POPL},
  month = dec,
  year = {2019},
  issn = {2475-1421},
  pages = {51:1--51:32},
  articleno = {51},
  numpages = {32},
- url = {http://doi.acm.org/10.1145/3371119},
  doi = {10.1145/3371119},
  acmid = {3371119},
  publisher = {ACM},
@@ -133,9 +147,8 @@ and Sannella, Don},
 	howpublished =	{RFC 2616},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC2616},
-	url =		{https://www.rfc-editor.org/info/rfc2616},
         author =	{Fielding, Roy T. and Gettys, Jim and Mogul, Jeffrey C. and Frystyk, Henrik and Masinter, Larry and Leach,  Paul and Berners-Lee, Tim},
-	title =		{{Hypertext Transfer Protocol -- HTTP/1.1}},
+	title =		{Hypertext Transfer Protocol---{HTTP/1.1}},
 	pagetotal =	176,
 	year =		1999,
 	month =		jun,
@@ -148,9 +161,8 @@ and Sannella, Don},
 	howpublished =	{RFC 4918},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC4918},
-	url =		{https://www.rfc-editor.org/info/rfc4918},
         author =	{Lisa M. Dusseault},
-	title =		{{HTTP Extensions for Web Distributed Authoring and Versioning (WebDAV)}},
+	title =		{{HTTP} Extensions for Web Distributed Authoring and Versioning ({WebDAV})}},
 	pagetotal =	127,
 	year =		2007,
 	month =		jun,
@@ -165,7 +177,7 @@ and Sannella, Don},
 	doi =		{10.17487/RFC7230},
 	url =		{https://www.rfc-editor.org/info/rfc7230},
         author =	{Roy T. Fielding and Julian Reschke},
-	title =		{{Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing}},
+	title =		{Hypertext Transfer Protocol ({HTTP}/1.1): Message Syntax and Routing},
 	pagetotal =	89,
 	year =		2014,
 	month =		jun,
@@ -178,9 +190,8 @@ and Sannella, Don},
 	howpublished =	{RFC 7231},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC7231},
-	url =		{https://www.rfc-editor.org/info/rfc7231},
         author =	{Roy T. Fielding and Julian Reschke},
-	title =		{{Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content}},
+	title =		{Hypertext Transfer Protocol ({HTTP}/1.1): Semantics and Content},
 	pagetotal =	101,
 	year =		2014,
 	month =		jun,
@@ -193,9 +204,8 @@ and Sannella, Don},
 	howpublished =	{RFC 7232},
 	publisher =	{RFC Editor},
 	doi =		{10.17487/RFC7232},
-	url =		{https://www.rfc-editor.org/info/rfc7232},
         author =	{Roy T. Fielding and Julian Reschke},
-	title =		{{Hypertext Transfer Protocol (HTTP/1.1): Conditional Requests}},
+	title =		{Hypertext Transfer Protocol ({HTTP}/1.1): Conditional Requests},
 	pagetotal =	28,
 	year =		2014,
 	month =		jun,
@@ -223,13 +233,16 @@ abstract = "Test case generation is among the most labour-intensive tasks in sof
                Benjamin C. Pierce and
                Thomas Arts and
                Ulf Norell},
-  title     = {Mysteries of DropBox: Property-Based Testing of a Distributed Synchronization
+  title     = {Mysteries of {DropBox}: Property-Based Testing of a Distributed Synchronization
                Service},
   booktitle = {2016 {IEEE} International Conference on Software Testing, Verification
-               and Validation, {ICST} 2016, Chicago, IL, USA, April 11-15, 2016},
+               and Validation},
+  series    = {ICST 2016},
   pages     = {135--145},
+  address   = {Chicago, IL, USA},
+  date      = {11--15},
+  month     = apr,
   year      = {2016},
-  url       = {https://doi.org/10.1109/ICST.2016.37},
   doi       = {10.1109/ICST.2016.37},
   timestamp = {Wed, 24 May 2017 08:30:36 +0200},
   biburl    = {https://dblp.org/rec/bib/conf/icst/HughesPAN16},
@@ -246,10 +259,9 @@ address = {New York, NY, USA},
 volume = {22},
 number = {4},
 issn = {0163-5948},
-url = {https://doi.org/10.1145/263244.263267},
 doi = {10.1145/263244.263267},
 abstract = {The goal of software testing analysis is to validate that an implementation satisfies its specifications. Many errors in software are caused by generalizable flaws in the source code. Property-based testing assures that a given program is free of specified generic flaws. Property-based testing uses property specifications and a data-flow analysis of the program to guide evaluation of test executions for correctness and completeness.},
-journal = {SIGSOFT Softw. Eng. Notes},
+journal = {SIGSOFT Software Engineering Notes},
 month = jul,
 pages = {74–80},
 numpages = {7}
@@ -297,12 +309,11 @@ isbn="978-3-030-34968-4"
 
 @inproceedings{qc,
 author = {Claessen, Koen and Hughes, John},
-title = {QuickCheck: A Lightweight Tool for Random Testing of Haskell Programs},
+title = {{QuickCheck}: A Lightweight Tool for Random Testing of {Haskell} Programs},
 year = {2000},
 isbn = {1581132026},
 publisher = {Association for Computing Machinery},
 address = {New York, NY, USA},
-url = {https://doi.org/10.1145/351240.351266},
 doi = {10.1145/351240.351266},
 abstract = {Quick Check is a tool which aids the Haskell programmer in formulating and testing properties of programs. Properties are described as Haskell functions, and can be automatically tested on random input, but it is also possible to define custom test data generators. We present a number of case studies, in which the tool was successfully used, and also point out some pitfalls to avoid. Random testing is especially suitable for functional programs because properties can be stated at a fine grain. When a function is built from separately tested components, then random testing suffices to obtain good coverage of the definition under test.},
 booktitle = {Proceedings of the Fifth ACM SIGPLAN International Conference on Functional Programming},
@@ -332,12 +343,10 @@ title = "Conformance testing with labelled transition systems: Implementation re
 journal = "Computer Networks and ISDN Systems",
 volume = "29",
 number = "1",
-pages = "49 - 79",
+pages = "49--79",
 year = "1996",
-note = "Protocol Testing",
 issn = "0169-7552",
-doi = "https://doi.org/10.1016/S0169-7552(96)00017-7",
-url = "http://www.sciencedirect.com/science/article/pii/S0169755296000177",
+doi = "10.1016/S0169-7552(96)00017-7",
 author = "Jan Tretmans",
 keywords = "Communication protocols, Formal description techniques, Transition systems, Conformance, Conformance testing, Test case generation",
 abstract = "This paper studies testing based on labelled transition systems, presenting two test generation algorithms with their corresponding implementation relations. The first algorithm assumes that implementations communicate with their environment via symmetric, synchronous interactions. It is based on the theory of testing equivalence and preorder, as is most of the testing theory for labelled transition systems, and it is found in the literature in some slightly different variations. The second algorithm is based on the assumption that implementations communicate with their environment via inputs and outputs. Such implementations are formalized by restricting the class of labelled transition systems to those systems that can always accept input actions. For these implementations a testing theory is developed, analogous to the theory of testing equivalence and preorder. It consists of implementation relations formalizing the notion of conformance of these implementations with respect to labelled transition system specifications, test cases and test suites, test execution, the notion of passing a test suite, and the test generation algorithm, which is proved to produce sound test suites for one of the implementation relations."
@@ -379,10 +388,12 @@ url="https://doi.org/10.1007/3-540-45510-8_9"
 
 
 @inproceedings{torxakis-dropbox,
-  title={Model-Based Testing with TorXakis: The Mysteries of Dropbox Revisited},
+  title={Model-Based Testing with {TorXakis}: The Mysteries of {Dropbox} Revisited},
   author={Tretmans, Jan and van de Laar, Pi\"erre},
-  booktitle={Strahonja, V.(ed.), CECIIS: 30th Central European Conference on Information and Intelligent Systems, October 2-4, 2019, Varazdin, Croatia. Proceedings},
+  booktitle={Proceedings of the 30th Central European Conference on Information and Intelligent Systems},
+  series={CECIIS},
   pages={247--258},
+  month=oct,
   year={2019},
   organization={Zagreb: Faculty of Organization and Informatics, University of Zagreb}
 }
@@ -454,7 +465,7 @@ year = {2018}
 
 @article{netsem,
 author = {Bishop, Steve and Fairbairn, Matthew and Mehnert, Hannes and Norrish, Michael and Ridge, Tom and Sewell, Peter and Smith, Michael and Wansbrough, Keith},
-title = {Engineering with Logic: Rigorous Test-Oracle Specification and Validation for TCP/IP and the Sockets API},
+title = {Engineering with Logic: Rigorous Test-Oracle Specification and Validation for {TCP/IP} and the Sockets {API}},
 year = {2018},
 issue_date = {January 2019},
 publisher = {Association for Computing Machinery},
@@ -462,7 +473,6 @@ address = {New York, NY, USA},
 volume = {66},
 number = {1},
 issn = {0004-5411},
-url = {https://doi.org/10.1145/3243650},
 doi = {10.1145/3243650},
 journal = {J. ACM},
 month = dec,
@@ -479,12 +489,11 @@ file = {::},
 issn = {1364-503X},
 journal = {Philosophical Transactions of the Royal Society A: Mathematical, Physical and Engineering Sciences},
 keywords = {Formal methods,Programming languages,Proof assistants},
-month = {oct},
+month = oct,
 number = {2104},
 pages = {20160331},
 publisher = {Royal Society Publishing},
 title = {{Position paper: the science of deep specification}},
-url = {https://royalsocietypublishing.org/doi/10.1098/rsta.2016.0331},
 volume = {375},
 year = {2017}
 }
@@ -504,12 +513,12 @@ keywords = "Estelle, Formal Description Technique, FDT, Distributed Systems, Spe
 abstract = "Estelle is a Formal Description Technique, defined within ISO (International Organization for Standardization) for specification of distributed, concurrent information processing systems. In particular, Estelle can be used to describe the services and protocols of the layers of Open Systems Interconnection (OSI) architecture defined by ISO. Its present ISO status is Draft International Standard (DIS 9074). The article outlines syntactic and semantic aspects of this description technique."
 }
 
-@inproceedings{broy2005model,
-  title={Model-based testing of reactive systems},
-  author={Broy, Manfred and Jonsson, Bengt and Katoen, J-P and Leucker, Martin and Pretschner, Alexander},
-  booktitle={Volume 3472 of Springer LNCS},
-  year={2005},
-  organization={Springer}
+@book{broy2005model,
+  doi = {10.1007/b137241},
+  year = {2005},
+  publisher = {Springer Berlin Heidelberg},
+  editor = {Manfred Broy and Bengt Jonsson and Joost-Pieter Katoen and Martin Leucker and Alexander Pretschner},
+  title = {Model-Based Testing of Reactive Systems}
 }
 
 @misc{hartman2006model,
@@ -600,7 +609,6 @@ year = {2017},
 isbn = {9781450350761},
 publisher = {Association for Computing Machinery},
 address = {New York, NY, USA},
-url = {https://doi.org/10.1145/3092703.3092706},
 doi = {10.1145/3092703.3092706},
 abstract = { The majority of Internet traffic is transferred by transport protocols. The correctness of these transport protocol implementations is hard to validate as their behaviors depend not only on their protocols but also on their network environments that can introduce dynamic packet delay and loss. Random testing, widely used in industry due to its simplicity and low cost, struggles to detect packet delay related faults which occur with low probability. Symbolic execution based testing is promising at detecting such low probability faults, but it requires large testing budgets as it attempts to cover a prohibitively large input space of packet dynamics. To improve its cost-effectiveness, we propose two domain-specific heuristic techniques, called packet retransmission based priority and network state based priority, which are motivated by two common transport protocol properties. In our experiments using the Linux TFTP programs, our techniques improve the cost-effectiveness of symbolic execution based testing for transport protocols, detecting three times as many faults when the budget is in the range of minutes and hours. },
 booktitle = {Proceedings of the 26th ACM SIGSOFT International Symposium on Software Testing and Analysis},
@@ -614,7 +622,7 @@ series = {ISSTA 2017}
 @ARTICLE{Apache,
   author={Fielding, Roy T. and Kaiser, Gail},
   journal={IEEE Internet Computing},
-  title={The Apache HTTP Server Project},
+  title={The {Apache} {HTTP} Server Project},
   year={1997},
   volume={1},
   number={4},
@@ -632,11 +640,11 @@ author={Sysoev, Igor}
 }
 
 @url{nginx242,
-   title={DAV module does not respect if-unmodified-since},
+   title={{DAV} module does not respect if-unmodified-since},
    url={https://trac.nginx.org/nginx/ticket/242},
    author={Haverbeke, Marijn},
    year={2012},
-   month={Nov}}
+   month=Nov}
 
 @INPROCEEDINGS{Artho2013,
   author={Artho, Cyrille and Hagiya, Masami and Potter, Richard and Tanabe, Yoshinori and Weitl, Franz and Yamamoto, Mitsuharu},
@@ -653,16 +661,15 @@ author={Sysoev, Igor}
   month={Nov},}
 
 @article{Modbat,
-   title={Model-based Testing of the Java Network API},
+   title={Model-based Testing of the {Java} Network {API}},
    volume={245},
    ISSN={2075-2180},
-   url={http://dx.doi.org/10.4204/EPTCS.245.4},
    DOI={10.4204/eptcs.245.4},
    journal={Electronic Proceedings in Theoretical Computer Science},
    publisher={Open Publishing Association},
    author={Artho, Cyrille and Rousset, Guillaume},
    year={2017},
-   month={Mar},
+   month=Mar,
    pages={46–51}
 }
 
@@ -729,7 +736,7 @@ series = {OOPSLA 2015}
 
 @InProceedings{itp21,
   author =	{Zhang, Hengchu and Honor\'{e}, Wolf and Koh, Nicolas and Li, Yao and Li, Yishuai and Xia, Li-Yao and Beringer, Lennart and Mansky, William and Pierce, Benjamin and Zdancewic, Steve},
-  title =	{{Verifying an HTTP Key-Value Server with Interaction Trees and VST}},
+  title =	{Verifying an {HTTP} Key-Value Server with Interaction Trees and {VST}},
   booktitle =	{12th International Conference on Interactive Theorem Proving (ITP 2021)},
   pages =	{32:1--32:19},
   series =	{Leibniz International Proceedings in Informatics (LIPIcs)},
@@ -740,7 +747,6 @@ series = {OOPSLA 2015}
   editor =	{Cohen, Liron and Kaliszyk, Cezary},
   publisher =	{Schloss Dagstuhl -- Leibniz-Zentrum f{\"u}r Informatik},
   address =	{Dagstuhl, Germany},
-  URL =		{https://drops.dagstuhl.de/opus/volltexte/2021/13927},
   URN =		{urn:nbn:de:0030-drops-139273},
   doi =		{10.4230/LIPIcs.ITP.2021.32},
   annote =	{Keywords: formal verification, Coq, HTTP, deep specification}
@@ -763,12 +769,10 @@ issue_date = {January 2018},
 publisher = {Association for Computing Machinery},
 address = {New York, NY, USA},
 volume = {2},
-number = {POPL},
-url = {https://doi.org/10.1145/3158133},
 doi = {10.1145/3158133},
 abstract = {Property-based random testing (PBRT) is widely used in the functional programming and verification communities. For testing simple properties, PBRT tools such as QuickCheck can automatically generate random inputs of a given type. But for more complex properties, effective testing often demands generators for random inputs that belong to a given type and satisfy some logical condition. QuickCheck provides a library of combinators for building such generators by hand, but this can be tedious for simple conditions and error prone for more complex ones. Fortunately, the process can often be automated. The most prominent method, narrowing, works by traversing the structure of the condition, lazily instantiating parts of the data structure as constraints involving them are met.  We show how to use ideas from narrowing to compile a large subclass of Coq's inductive relations into efficient generators, avoiding the interpretive overhead of previous implementations. More importantly, the same compilation technique allows us to produce proof terms certifying that each derived generator is good---i.e., sound and complete with respect to the inductive relation it was derived from. We implement our algorithm as an extension of QuickChick, an existing tool for property-based testing in Coq. We evaluate our method by automatically deriving good generators for the majority of the specifications in Software Foundations, a formalized textbook on programming language foundations.},
-journal = {Proc. ACM Program. Lang.},
-month = {dec},
+journal = {Proceedings of the ACM on Programming Languages (POPL)},
+month = dec,
 articleno = {45},
 numpages = {30},
 keywords = {Coq, Narrowing, Property-based Testing, QuickCheck, QuickChick, Random Testing}
@@ -797,8 +801,8 @@ keywords = {Coq, Narrowing, Property-based Testing, QuickCheck, QuickChick, Rand
   url={https://news.netcraft.com/archives/category/web-server-survey/},
   author={Netcraft},
   year={2022},
-  month={Mar},
-  date={29}
+  month=May,
+  date={30}
 }
 
 @InProceedings{unison,
@@ -823,7 +827,6 @@ year = {1998},
 isbn = {158113035X},
 publisher = {Association for Computing Machinery},
 address = {New York, NY, USA},
-url = {https://doi.org/10.1145/288235.288261},
 doi = {10.1145/288235.288261},
 booktitle = {Proceedings of the 4th Annual ACM/IEEE International Conference on Mobile Computing and Networking},
 pages = {98–108},
@@ -833,30 +836,20 @@ series = {MobiCom '98}
 }
 
 @Misc{posix,
-  author =       "{IEEE}",
-  title =        "{IEEE Std 1003.1-2017: POSIX.1a}",
-  howpublished = "Web document",
-  year =         "2017",
-  bibdate =      "Fri Sep 10 13:34:10 2021",
-  bibsource =    "http://www.math.utah.edu/pub/tex/bib/ieeestd.bib",
-  note =         "POSIX.1-2017 is a revision of IEEE Std 1003.1-2008,
-                 and replaces previous versions of 2008, 2013, and 2016.
-                 Also issued as The Open Group Technical Standard Base
-                 Specifications, Issue 7.",
-  URL =          "https://pubs.opengroup.org/onlinepubs/9699919799/",
-  acknowledgement = ack-nhfb,
+  author =       "{IEEE Computer Society}",
+  title =        "{IEEE} Standard for Information Technology---Portable Operating System Interface ({POSIX}) Base Specifications",
+  year =         "2017"
 }
 
 @article{lotos,
-title = "Introduction to the ISO specification language LOTOS",
+title = "Introduction to the {ISO} specification language {LOTOS}",
 journal = "Computer Networks and ISDN Systems",
 volume = "14",
 number = "1",
-pages = "25 - 59",
+pages = "25--59",
 year = "1987",
 issn = "0169-7552",
-doi = "https://doi.org/10.1016/0169-7552(87)90085-7",
-url = "http://www.sciencedirect.com/science/article/pii/0169755287900857",
+doi = "10.1016/0169-7552(87)90085-7",
 author = "Tommaso Bolognesi and Ed Brinksma",
 keywords = "Concurrent languages, Formal Description Techniques, Open Systems Interconnection, Protocol Specification, Specification Languages",
 abstract = "LOTOS is a specification language that has been specifically developed for the formal description of the OSI (Open Systems Interconnection) architecture, although it is applicable to distributed, concurrent systems in general. In LOTOS a system is seen as a set of processes which interact and exchange data with each other and with their environment. LOTOS is expected to become an ISO international standard by 1988."
@@ -870,12 +863,10 @@ issue_date = {October 2019},
 publisher = {Association for Computing Machinery},
 address = {New York, NY, USA},
 volume = {3},
-number = {OOPSLA},
-url = {https://doi.org/10.1145/3360607},
 doi = {10.1145/3360607},
 abstract = {Property-based random testing, exemplified by frameworks such as Haskell's QuickCheck, works by testing an executable predicate (a property) on a stream of randomly generated inputs. Property testing works very well in many cases, but not always. Some properties are conditioned on the input satisfying demanding semantic invariants that are not consequences of its syntactic structure---e.g., that an input list must be sorted or have no duplicates. Most randomly generated inputs fail to satisfy properties with such sparse preconditions, and so are simply discarded. As a result, much of the target system may go untested.  We address this issue with a novel technique called coverage guided, property based testing (CGPT). Our approach is inspired by the related area of coverage guided fuzzing, exemplified by tools like AFL. Rather than just generating a fresh random input at each iteration, CGPT can also produce new inputs by mutating previous ones using type-aware, generic mutator operators. The target program is instrumented to track which control flow branches are executed during a run and inputs whose runs expand control-flow coverage are retained for future mutations. This means that, when sparse conditions in the target are satisfied and new coverage is observed, the input that triggered them will be retained and used as a springboard to go further.  We have implemented CGPT as an extension to the QuickChick property testing tool for Coq programs; we call our implementation FuzzChick. We evaluate FuzzChick on two Coq developments for abstract machines that aim to enforce flavors of noninterference, which has a (very) sparse precondition. We systematically inject bugs in the machines' checking rules and use FuzzChick to look for counterexamples to the claim that they satisfy a standard noninterference property. We find that vanilla QuickChick almost always fails to find any bugs after a long period of time, as does an earlier proposal for combining property testing and fuzzing. In contrast, FuzzChick often finds them within seconds to minutes. Moreover, FuzzChick is almost fully automatic; although highly tuned, hand-written generators can find the bugs faster, they require substantial amounts of insight and manual effort.},
-journal = {Proc. ACM Program. Lang.},
-month = {oct},
+journal = {Proceedings of the ACM on Programming Languages (OOPSLA)},
+month = oct,
 articleno = {181},
 numpages = {29},
 keywords = {random testing, FuzzChick, AFL, fuzz testing, property-based testing, coverage, QuickChick}
@@ -884,12 +875,13 @@ keywords = {random testing, FuzzChick, AFL, fuzz testing, property-based testing
 @misc{afl,
   title={American fuzzy lop},
   author={Zalewski, Michal},
-  year={2017}
+  year={2017},
+  url={https://lcamtuf.coredump.cx/afl/}
 }
 
 @article{fuzz,
 author = {Miller, Barton P. and Fredriksen, Louis and So, Bryan},
-title = {An Empirical Study of the Reliability of UNIX Utilities},
+title = {An Empirical Study of the Reliability of {UNIX} Utilities},
 year = {1990},
 issue_date = {Dec. 1990},
 publisher = {Association for Computing Machinery},
@@ -897,11 +889,10 @@ address = {New York, NY, USA},
 volume = {33},
 number = {12},
 issn = {0001-0782},
-url = {https://doi.org/10.1145/96267.96279},
 doi = {10.1145/96267.96279},
 abstract = {The following section describes the tools we built to test the utilities. These tools include the fuzz (random character) generator, ptyjig (to test interactive utilities), and scripts to automate the testing process. Next, we will describe the tests we performed, giving the types of input we presented to the utilities. Results from the tests will follow along with an analysis of the results, including identification and classification of the program bugs that caused the crashes. The final section presents concluding remarks, including suggestions for avoiding the types of problems detected by our study and some commentary on the bugs we found. We include an Appendix with the user manual pages for fuzz and ptyjig.},
-journal = {Commun. ACM},
-month = {dec},
+journal = {Communications of the ACM},
+month = dec,
 pages = {32–44},
 numpages = {13}
 }
@@ -922,11 +913,10 @@ address = {New York, NY, USA},
 volume = {47},
 number = {4},
 issn = {0004-5411},
-url = {https://doi.org/10.1145/347476.347484},
 doi = {10.1145/347476.347484},
 abstract = {The narrowing relation over terms constitutes the basis of the most important operational semantics of languages that integrate functional and logic programming paradigms. It also plays an important role in the definition of some algorithms of unification modulo equational theories that are defined by confluent term rewriting systems. Due to the inefficiency of simple narrowing, many refined narrowing strategies have been proposed in the last decade. This paper presents a new narrowing strategy that is optimal in several respects. For this purpose, we propose a notion of a needed narrowing step that, for inductively sequential rewrite systems, extends the Huet and L\'{e}vy notion of a needed reduction step. We define a strategy, based on this notion, that computes only needed  narrowing steps. Our strategy is sound and complete for a large class of rewrite systems, is optimal with respect to the cost measure that counts the number of distinct steps of a derivation, computes only incomparable and disjoint unifiers, and is efficiently implemented by unification.},
 journal = {J. ACM},
-month = {jul},
+month = jul,
 pages = {776–822},
 numpages = {47},
 keywords = {rewrite systems, narrowing strategies, call-by-need, functional logic programming languages}
@@ -942,7 +932,6 @@ title="Do Judge a Test by its Cover",
 booktitle="Programming Languages and Systems",
 year="2021",
 publisher="Springer International Publishing",
-address="Cham",
 pages="264--291",
 abstract="Property-based testing uses randomly generated inputs to validate high-level program specifications. It can be shockingly effective at finding bugs, but it often requires generating a very large number of inputs to do so. In this paper, we apply ideas from combinatorial testing, a powerful and widely studied testing methodology, to modify the distributions of our random generators so as to find bugs with fewer tests. The key concept is combinatorial coverage, which measures the degree to which a given set of tests exercises every possible choice of values for every small combination of input features.",
 isbn="978-3-030-72019-3"
@@ -954,7 +943,7 @@ url={https://www.statista.com/statistics/500641/worldwide-qa-budget-allocation-a
 journal={Statista},
 author={Vailshery, Lionel Sujay},
 year={2022},
-month={Feb}
+month=Feb
 }
 
 @software{SimpleIO,
