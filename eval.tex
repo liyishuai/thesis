@@ -46,8 +46,8 @@ tester runs on.  Our simple DeepWeb server was compiled into an executable
 binary, and also ran on localhost.
 
 The tester communicated with the server via POSIX system calls, in the same way
-as over Internet except using address \inlinec{127.0.0.1}.  The round-trip time
-(RTT) of local loopback was $0.08\pm0.04$ microsecond (at 90\% confidence).
+as over the Internet except using address \inlinec{127.0.0.1}.  The round-trip
+time (RTT) of local loopback was $0.08\pm0.04$ microsecond (at 90\% confidence).
 
 \subsection{Qualitative Results}
 \label{sec:http-qual}
@@ -76,7 +76,7 @@ manually\footnote{I didn't use automatic mutant generators because (i) Existing
 tools could not mutate all modules I'm interested in; and (ii) The automatically
 generated mutants could not cause semantic violations against my protocol
 specification.} and recompiling the server program.  I created 20 mutants whose
-bugs located in various modules of the Apache server: \inlinec{core},
+bugs were located in various modules of the Apache server: \inlinec{core},
 \inlinec{http}, \inlinec{dav}, and \inlinec{proxy}.  Some bugs appeared in the
 control flow, \eg, removing a return statement in the request handler (as shown
 in \autoref{fig:mutant-example}) or skipping the check of preconditions.  Others
@@ -98,8 +98,9 @@ static int default_handler(request_rec *r) {
 \label{fig:mutant-example}
 \end{figure}
 
-The tester rejected all the 20 mutants.  Some mutants took the tester longer
-time to reveal than others, which will be discussed in \autoref{sec:http-quant}.
+The tester rejected all of the 20 mutants.  Some mutants took the tester a
+longer time to reveal than others, which will be discussed in
+\autoref{sec:http-quant}.
 
 \paragraph{Nginx}
 When testing Nginx, I found that its WebDAV module did not check the
@@ -110,9 +111,9 @@ preconditions.
 
 This issue has been recognized by the developers in 2016 but never resolved.  To
 fix this bug, Nginx needs to redesign its core logic and evaluate the request's
-precondition {\em before}---instead of after---handling the request itself.  As
-a result, I only tested mutants for Apache, whose original violation was fixed
-by simply removing a few lines of bad code.
+precondition {\em before}---instead of {\em after}---handling the request
+itself.  As a result, I tested mutants only for Apache, whose original violation
+was fixed by simply removing a few lines of bad code.
 
 \paragraph{DeepWeb}
 My test derivation framework was developed in parallel with the DeepWeb server.
@@ -157,7 +158,7 @@ evaluate how long the tester takes to reveal bugs.
 To answer the research question at the beginning of this chapter quantitatively,
 I measured the execution time and network interactions taken to reject vanilla
 Apache and its mutants, as shown in \autoref{fig:checker-performance}.  The 20
-mutants are named after the module where I inserted the bug.  The tester
+mutants are named after the modules where I inserted the bugs.  The tester
 rejected all the buggy implementations within 1 minute, and in most cases,
 within 1 second.  This does not include the time for shrinking counterexamples.
 
@@ -192,7 +193,7 @@ cause by analyzing the bugs and their counterexamples:
 
   \item Mutant 18 is similar to the bug in vanilla Apache: the server should
     have responded with 304 Not Modified, but sent back 200 OK instead.  To
-    reveal such violation, a minimal counterexample consists of 4 messages:
+    reveal such a violation, a minimal counterexample consists of 4 messages:
     \begin{enumerate}
     \item GET request,
     \item 200 OK response with some ETag \inlinec{"x"},
@@ -201,12 +202,12 @@ cause by analyzing the bugs and their counterexamples:
       itself.
     \end{enumerate}
     Notice that (2) must be observed before (3), otherwise the tester will not
-    reject the server, with a similar reason as \autoref{fig:put-bug}.
+    reject the server, with a similar reason as in \autoref{fig:put-bug}.
 
   \item Mutant 5 is the one shown in \autoref{fig:mutant-example}.  It causes
     the server to skip the return statement when the response should be 404 Not
     Found.  The counterexample can be as small as one GET request on a
-    non-existential target, followed by an unexpected response like 403
+    non-existent target, followed by an unexpected response like 403
     Forbidden.  However, my tester generates request targets within a small
     range, so the requests' targets are likely to be created by the tester's
     previous PUT requests.
@@ -215,8 +216,8 @@ cause by analyzing the bugs and their counterexamples:
     aforementioned Mutants 18--20, but Mutant 5 shows that it could also degrade
     the performance of finding some bugs.
 
-  \item The mutants in proxy module caused the server to forward wrong requests
-    or responses.
+  \item The mutants in the proxy module caused the server to forward wrong
+    requests or responses.
 
     To test servers' forward proxying functionality, the tester consists of
     clients and origin servers, both derived by dualization.  When the origin
@@ -237,11 +238,11 @@ For Mutants 18--20, the requests should be sent at specific time periods so that
 the resulting trace is unacceptable per specification, possibly by integrating
 packet dynamics~\cite{pkt-dyn} in the test executor.
 
-\section{Testing file synchronizer}
+\section{Testing a File Synchronizer}
 \label{sec:sync}
 
 To demonstrate the generality of my specification-based testing methodology, I
-applied it to file synchronizers.  \autoref{sec:file-sut} introduces my
+also applied it to file synchronizers.  \autoref{sec:file-sut} introduces my
 specification of the file system and synchronization semantics.  From these
 specifications, I derived a tester program for the Unison file
 synchronizer~\cite{unison}, with results shown in \autoref{sec:file-result}.
@@ -277,7 +278,7 @@ My specification consists of two parts:
     ignoring metadata and file permissions.  Specifying more aspects of the file
     system is discussed in \autoref{chap:discussion}.
 
-    Based on the file system model, I specified five basic file operations
+    Based on the file system model, I specified five basic file operations that
     the tester may perform: (i) reading contents from a file, (ii) writing
     contents to a file, (iii) creating a new directory, (iv) listing entries
     under a directory, and (v) removing a file or directory recursively.
@@ -292,7 +293,7 @@ My specification consists of two parts:
       
   Context reconcile: sigma -> sigma.
 \end{coq}
-Notice that the \ilc{reconcile} function manipulates three replicas.  This is
+Note that the \ilc{reconcile} function manipulates three replicas.  This is
 because the synchronizations might be partial: Upon write-write and write-delete
 conflicts, the synchronizer does not propagate the conflicting updates, and
 leaves the dirty files untouched in both replicas.
@@ -346,7 +347,7 @@ Testing the synchronizer as a nonblocking background process is discussed in
 
 \subsection{Experiment Results}
 \label{sec:file-result}
-The tester has rejected the Unison file synchronizer in two ways, and I reported
+The tester rejected the Unison file synchronizer in two ways, and I reported
 the counterexample to the developers.  By analyzing the program's behavior, we
 determined that one rejection was a valid but defective feature, and the other
 rejection was a documented feature not included in my specification.  The
@@ -409,12 +410,12 @@ short interval, the timestamps might remain unchanged, so the synchronizer
 treats the written file as unmodified.  Such behavior can be avoided by updating
 the file contents after a longer interval or turning of the preference.
 
-Notice that although Unison decided to propagate the file deletion, it does
+Note that although Unison decided to propagate the file deletion, it does
 check the file contents before deleting it.  As a result, the Unison process
 crashed and complained that \ilj{B/foo.txt} was modified during synchronization.
 
 If the fastcheck feature was disabled, then Unison can detect the conflict by
-comparing the file contents bit-by-bit.  It'll propagate no updates and leave
+comparing the file contents bit-by-bit.  It will propagate no updates and leave
 the two replicas as-is, which results the same as enabling fastcheck but at
 lower performance.
 
@@ -433,3 +434,5 @@ indicates that either (i) the implementation does not conform with the protocol,
 incorrect, \eg, my initial file synchronizer specification not modelling all
 features of Unison.  Automatically detecting the incompliances helps developers
 to correctly specify and implement systems in real-world practices.
+
+\lys{Flag 1: Revised per Steve's comments above.}
