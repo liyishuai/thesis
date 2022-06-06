@@ -30,7 +30,7 @@ The initial server state has zero data in all addresses:
 \begin{align*}
   &s_0:\Nat\to\Int\\
   &s_0=(\_\mapsto0)\\
-  &\textit{i.e. }\forall (k:\Nat), s_0!k=0
+  &\ie\text{, }\forall (k:\Nat), s_0!k=0
 \end{align*}
 Here syntax ``$s!k$'' is pronounced ``data stored in address $!k$ of memory
 $s$''.  I use ``$!k$'' to indicate that the natural number $k$ is being thought
@@ -180,7 +180,7 @@ that may depend on symbolic $\Var$iables:
 \end{array}\]
 The $\Vexp$ type replaces $\Sexp$'s address constructor $!\src$ with variable
 constructor $\#x$.  This allows the validator to constrain the values of the
-same address at different times {\it e.g.} the internal choice stored in $!0$ in
+same address at different times \eg the internal choice stored in $!0$ in
 different iterations.  The validation state maps each address to its current
 representing variable $(\Nat\to\Var)$, which updates as the validator
 symbolically executes the server program.
@@ -222,7 +222,7 @@ The validator's loop body is derived by dualzing the server model:
   observed response.
 \item \label{rule:unsat} When the constraints of a validation state become
   unsatisfiable, it indicates that the server model cannot explain the
-  observation.  This is because either (i) the observation is invalid, i.e.,
+  observation.  This is because either (i) the observation is invalid, \ie,
   not producible by the server model, or (ii) the observation is valid, but was
   produced by a different execution path of the server model.
 \item \label{rule:reject} The validator accepts the trace if it can be produced
@@ -286,7 +286,7 @@ $\vs$, by replacing its addresses with the corresponding variables:
 \end{cases}\]
 
 The validator assumes a constraint solver that can determine whether a set of
-constraints is satisfiable, i.e., whether there exists an {\em assignment}
+constraints is satisfiable, \ie, whether there exists an {\em assignment}
 of variables $(\Var\to\Int)$ that satisfies all the constraints:
 \begin{gather*}
   \forall \cs,\solvable \cs\iff\exists (\asgn:\Var\to\Int),\satisfy{\asgn}\cs\\

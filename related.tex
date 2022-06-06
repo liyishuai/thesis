@@ -14,8 +14,8 @@ languages used for developing the specifications.
 
 \subsection{State machine specification: Quviq QuickCheck}
 Property-based testing with QuickCheck has been well adopted in industrial
-contexts~\cite{Hughes2016}.  The specification is a boolean function over traces
-{\it i.e.} the validator.  My solutions to addressing internal and external
+contexts~\cite{Hughes2016}.  The specification is a boolean function over traces,
+\ie, the validator.  My solutions to addressing internal and external
 nondeterminism are inspired by practices in QuickCheck.
 
 \paragraph{Internal nondeterminism}
@@ -57,7 +57,7 @@ ideas of conjecturing the environment's behavior.  Instead of inserting
 conjectured communication events or reordering the trace, I specified the
 network as an independent module and composed it with the server specification.
 This provides more flexibility in specifying asynchronous systems: (i) To adjust
-the network configurations, e.g., limiting the buffer size or the number of
+the network configurations, \eg, limiting the buffer size or the number of
 concurrent connections, we only need to adjust the network model without
 modifying the server's events.  (ii) Instead of carefully defining the space of
 valid scrambled traces for each network configuration, we can derive it from the
@@ -175,7 +175,7 @@ and extends it in two dimensions:
 \begin{enumerate}
 \item The QuickCheck framework assumes synchronous interactions, where the
   requests are function calls that immediately return.  When testing
-  asynchronous systems {\it e.g.} networked servers, the responses might be
+  asynchronous systems, \eg, networked servers, the responses might be
   indefinitely delayed by the environment, which would block the QuickCheck
   tester's state transition.
   

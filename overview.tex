@@ -1,4 +1,4 @@
-\begin{figure}
+\begin{figure}[t]
   \centering
   \includegraphics[width=.9\textwidth]{figures/harness-outline}
   \caption{Tester architecture outline.}
@@ -45,12 +45,12 @@ Definition gen_packet: IO concrete_packet :=
 A generator is a randomized program that produces test inputs.  One example is
 the \ilc{gen_packet} function in \autoref{fig:execute}.  The HTTP packet
 generator can be na\"ively implementation as shown in
-\autoref{fig:naive-generator}.  It fills in the request's fields with arbitrary
-values, and has limited coverage of the SUT's behavior.  This is because the
-request target and ETags are both generated randomly, but a request is
-interesting only if its ETag matches its target's corresponding resource stored
-on the server.  A randomly generated request would result in 404 Not Found and
-412 Precondition Failed in almost all cases.
+\autoref{fig:naive-generator}.  This version fills in the request's fields with
+arbitrary values, and has limited coverage of the SUT's behavior.  This is
+because the request target and ETags are both generated randomly, but a request
+is interesting only if its ETag matches its target's corresponding resource
+stored on the server.  A randomly generated request would result in 404 Not
+Found and 412 Precondition Failed in almost all cases.
 
 To reveal more interesting behavior from the SUT, we should tune the generator's
 distribution to emphasize certain patterns of the test input.  For example, if

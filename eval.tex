@@ -78,9 +78,9 @@ generated mutants could not cause semantic violations against my protocol
 specification.} and recompiling the server program.  I created 20 mutants whose
 bugs located in various modules of the Apache server: \inlinec{core},
 \inlinec{http}, \inlinec{dav}, and \inlinec{proxy}.  Some bugs appeared in the
-control flow, e.g., removing a return statement in the request handler (as shown
+control flow, \eg, removing a return statement in the request handler (as shown
 in \autoref{fig:mutant-example}) or skipping the check of preconditions.  Others
-appeared in the data values, e.g., calling functions with wrong parameters,
+appeared in the data values, \eg, calling functions with wrong parameters,
 flipping bits in computations, accessing buffer off by one byte, etc.
 \begin{figure}
 \begin{cpp}
@@ -282,7 +282,7 @@ My specification consists of two parts:
     contents to a file, (iii) creating a new directory, (iv) listing entries
     under a directory, and (v) removing a file or directory recursively.
 
-    Some file operations may fail {\it e.g.} when reading from a path that
+    Some file operations may fail, \eg, when reading from a path that
     refers to a directory.  These failures are represented as return value
     \ilc{(None: option _)} in the node functions.
   \item A file synchronizer model that syncs updates between two replicas,
@@ -429,7 +429,7 @@ accepted all behavior it observed from Unison.
 These experiments show that my testing methodology can effectively reject
 implementations that do not comply with the specification.  The incompliance
 indicates that either (i) the implementation does not conform with the protocol,
-e.g., Apache and Nginx violating RFC 7232, or (2) the specification is
-incorrect, e.g., my initial file synchronizer specification not modelling all
+\eg, Apache and Nginx violating RFC 7232, or (2) the specification is
+incorrect, \eg, my initial file synchronizer specification not modelling all
 features of Unison.  Automatically detecting the incompliances helps developers
 to correctly specify and implement systems in real-world practices.

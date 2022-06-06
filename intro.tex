@@ -208,7 +208,7 @@ operation, and should reject with code 412:
 \end{multicols}
 Whether a server's response should be judged {\em valid} or not depends on the
 ETag it generated when creating the resource.  If the tester doesn't know the
-server's internal state ({\it e.g.}, before receiving any 200 response that
+server's internal state (\eg, before receiving any 200 response that
 includes an ETag), and cannot enumerate all of them (as ETags can be arbitrary
 strings), then it needs to maintain a space of all possible values, and narrow
 the space upon further interactions with the server.  For example, ``If the
@@ -422,7 +422,7 @@ studies the generator and the shrinker that produce the test input.
 
 Interesting test inputs are those that are more likely to reveal invalid
 observations.  Such a subset is usually sparse and cannot be enumerated within a
-reasonable budget, e.g., in \autoref{sec:internal-nondeterminism}, it would be
+reasonable budget, \eg, in \autoref{sec:internal-nondeterminism}, it would be
 infeasible to enumerate request ETags to match the target resources'.  The
 tester needs to manipulate the inputs' distribution, by implementing {\em
 heuristics} that emphasize certain input patterns, which is challenged by
@@ -505,7 +505,7 @@ difficult to write, as discussed
 in \autoref{sec:internal-external-nondeterminism}.  TorXakis provides limited
 support for internal nondeterminism, allowing the specification to enumerate all
 possible values of internal choices.  This works for scenarios where the space
-of choices is small {\it e.g.} within a dozen.  When testing ETags
+of choices is small, \eg, within a dozen.  When testing ETags
 in \autoref{sec:internal-nondeterminism}, it's infeasible to include a list of
 all strings in the specification.
 

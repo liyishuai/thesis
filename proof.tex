@@ -6,9 +6,9 @@ specifications:
 \forall p:\Prog,&\letin{s}{\serverOf(p)}\\
 &\letin{v}{\validatorOf(p)}\\
 &\rejSound v s\wedge\rejComplete v s\\
-&\text{i.e., }\forall t:\List(Q\times A),\\
+&\ie\text{, }\forall t:\List(Q\times A),\\
 &\qquad\valid s t\iff\accepts v t\\
-&\qquad\text{i.e., }\exists s',\behaves s t s'\iff\exists v',\behaves v t v'
+&\qquad\ie\text{, }\exists s',\behaves s t s'\iff\exists v',\behaves v t v'
 \end{array}\]
 
 To apply the proof techniques in \autoref{sec:correctness}, I design the loop
@@ -128,7 +128,7 @@ Let:
 Then we have:
 \begin{align*}
 &(\vs',\cs')\in v'\quad\wedge\quad\satisfy{\asgn}{\cs'}\quad\wedge\quad\vs'^{~\asgn}=s'\\
-&\text{i.e., }\Reflects{v'}{s'}\tag*{\qedhere}
+&\ie\text{, }\Reflects{v'}{s'}\tag*{\qedhere}
 \end{align*}
 \end{proof}
 \end{lemma}
@@ -158,7 +158,7 @@ Let: \(s=\vs^{\asgn}\)
 Then we have:
 \begin{align*}
 &(\vs,\cs)\in v\quad\wedge\quad\satisfy{\asgn}{\cs}\quad\wedge\quad \vs^{\asgn}=s\\
-&\text{i.e., }\Reflects{v}{s}
+&\ie\text{, }\Reflects{v}{s}
 \end{align*}
 
 From the definition of $\vstep'_p$, the validator first creates a fresh variable

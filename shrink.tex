@@ -11,7 +11,7 @@ trivial results, due to inter-execution nondeterminism discussed in
 \autoref{sec:inter-execution}.
 
 To prevent turning signal into noise when rerunning the test, I shrink the
-heurestics instead of shrinking the generated test input.
+heuristics instead of shrinking the generated test input.
 \autoref{sec:shrink-architecture} introduces the architecture for interactive
 shrinking, then \autoref{sec:shrink-ir} explains the language design beneath
 that addresses inter-execution nondeterminism.
@@ -25,11 +25,11 @@ embeds trace-based heuristics.  When shrinking the counterexample, the test
 harness picks a substructure of the abstract representation, and computes the
 corresponding test input using the new runtime trace.
 
-For example, when generating a timestamp, instead of producing concrete value,
-e.g., ``\httpdate\today~\currenttime~GMT'', the generator returns an abstract
-representation that says ``use the timestamp observed in the last response''.
-When rerunning the test, the timestamp is computed from the new trace, e.g.,
-``\httpdate\DayAfter~\currenttime~GMT''.
+For example, when generating a timestamp, instead of producing the concrete
+value, \eg, ``\httpdate\today~\currenttime~GMT'', the generator returns an
+abstract representation that says ``use the timestamp observed in the last
+response''.  When rerunning the test, the timestamp is computed from the new
+trace, \eg, ``\httpdate\DayAfter~\currenttime~GMT''.
 
 \begin{figure}
   \includegraphics[width=.8\textwidth]{figures/shrink}
@@ -43,11 +43,13 @@ It involves four languages, from right to left:
   \item Byte representation, in which the tester interacts with the environment.
     This can be network packets, file contents, or other serialized data
     produced and observed by the tester.
+
   \item Intermediate representation (IR), a generic language that abstracts the
     byte representation as structured data.  The test harness {\em parses} byte
     observations and records its trace in terms of the IR, which allows
-    representing trace-based heuristics as a generic language, i.e.,
+    representing trace-based heuristics as a generic language, \ie,
     J-expressions.
+
   \item J-expression (Jexp), a symbolic abstraction of the IR.  The IR
     corresponds to concrete inputs and outputs, whereas Jexp defines a
     computation from trace to IR.  The generator provides test inputs in terms
@@ -59,6 +61,7 @@ It involves four languages, from right to left:
 
     The intermediate representation and J-expression will be further explained
     in \autoref{sec:shrink-ir}.
+
   \item Application representation (AR), including the request (\ilc Q),
     response (\ilc A), and state (\ilc S) types used for specifying the
     protocol.  Specification writers can choose the type interface at their
@@ -83,7 +86,7 @@ message data types in general.
 \begin{figure}
 \[\begin{array}{r@{\;}l}
 \mathsf{JSON^T}\triangleq&\mathsf T\mid\{\mathsf{object^T}\}\mid[\mathsf{array^T}]\mid\mathsf{string}\mid\Int\mid\Bool\mid\mathsf{null}\\
-\mathsf{object^T}\triangleq&\nil\mid\mathsf{"string": JSON^T,object^T}\\
+\mathsf{object^T}\triangleq&\nil\mid\mathsf{``string": JSON^T,object^T}\\
 \mathsf{array^T}\triangleq&\nil\mid\mathsf{JSON^T,array^T}\\
 \mathsf{IR}\triangleq&\mathsf{JSON^{IR}}\\
 \mathsf{Jexp}\triangleq&\mathsf{JSON^{\Jref{\Label}{\Jpath}{\Function}}}\\

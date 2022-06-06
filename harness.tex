@@ -1,8 +1,8 @@
 A tester consists of a validator and a test harness.  Chapters~\ref{chap:theory}
 and \ref{chap:practices} have explained the validator's theory and practices.
-In this chapter, I present a language-based design for test harnesses, showing
-how to generate and shrink test inputs effectively and address inter-execution
-nondeterminism.
+In this chapter, I present a language-based design for the test harnesses,
+showing how to generate and shrink test inputs effectively and address
+inter-execution nondeterminism.
 
 \autoref{sec:harness-overview} provides a brief overview of how test harnesses
 work.  \autoref{sec:heuristics} explains how to write heuristics to generate
@@ -20,3 +20,5 @@ mechanism that keeps the test inputs interesting among different executions.
 \section{Shrinking Interactive Tests}
 \label{sec:shrinking}
 \input{shrink}
+
+\lys{Flag 1: Revised per Steve's comments above.}

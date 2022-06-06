@@ -6,7 +6,7 @@ using \http entity tags introduced in \autoref{sec:internal-nondeterminism} as
 an example.
 
 As discussed in \autoref{sec:encode-spec}, dualization requires refining the
-representation of the server's computation {\it e.g.} encoding its branches over
+representation of the server's computation, \eg, encoding its branches over
 symbolic conditions.  This is done by designing ITrees' event types in
 \autoref{sec:symbolic-model} and specifying the server's behavior with a
 symbolic model.
@@ -130,7 +130,7 @@ strong validators do not.  When handling compare-and-swap operations such as PUT
 requests conditioned over \inlinec{If-Match} in
 \autoref{sec:internal-nondeterminism}, the server should evaluate its
 precondition with ``strong comparison'' that doesn't allow weak validators,
-e.g., \iletag{W/"foo"}) to match any ETag including itself.  For GET requests
+\eg, \iletag{W/"foo"}) to match any ETag including itself.  For GET requests
 conditioned over \inlinec{If-None-Match}, the server may evaluate with ``weak
 comparison'' where a weak validator like \iletag{W/"bar"} matches itself and
 also matches strong validator \iletag{"bar"}, but doesn't match \iletag{W/"foo"}
