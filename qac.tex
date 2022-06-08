@@ -1,6 +1,8 @@
 In this section, I introduce the ``query-answer-choice'' (QAC) language family
 for writing specifications and validators for network protocols that involve
-internal nondeterminism.
+internal nondeterminism.  Languages in the QAC family can specify protocols of
+various message types, server states, and internal choices, by instantiating the
+specification language with different type arguments.
 
 \subsection{Specifying protocols with server models}
 \label{sec:qac-model}
@@ -11,10 +13,10 @@ queries and compute the responses.  Here I model the server programs with a data
 structure called state monad.
 
 \begin{definition}[State monad]
-  Let $S$ be the state type, $A$ be the result type, then type $(S\to A\times
-  S)$ represents a computation that, given a pre state, yields a result and the
-  post state.  This computation is pronounced a ``state monad with state type
-  $S$ and result type $A$''.
+  Let $S$ be the state type, and $A$ be the result type.  Then type $(S\to
+  A\times S)$ represents a computation that, given a pre state, yields a result
+  and the post state.  This computation is pronounced a ``state monad with state
+  type $S$ and result type $A$''.
 
   For example, let the state be a key-value mapping $(K\to V)$, then we can
   define \ilc{get} and \ilc{put} computations as follows:
@@ -85,10 +87,9 @@ Such a server can be modelled as:
   \existT{S}{\Int}{(&\lam{(q)(n)}{\begin{cases}
         (0,s)&q\le n\\
         (1,q)&\mathrm{otherwise}
-    \end{cases}},\\
-    &0)}
+    \end{cases}}\\
+    ,&\;0)}
 \end{align*}
-
 In general, servers' responses and transitions might depend on choices that are
 invisible to the testers, so called internal nondeterminism, as discussed in
 \autoref{sec:internal-nondeterminism}.  I represent the space of nondeterminstic
@@ -121,8 +122,8 @@ Its corresponding server model can be written as:
         (0,n)& q\le n\\
         (1,c)&\mathrm{otherwise}
       \end{cases}
-    },\\
-    &0)}
+    }\\
+    ,&\;0)}
 \end{align*}
 This model represents the space of uncertain behavior with the internal choice
 parameter of type integer.  For any value $(c:\Int)$, the server is allowed to
@@ -138,7 +139,6 @@ operational semantics.
   Upon request $q$ and choice $c$, server model $s$ can step to $s'$ yielding
   response $a$ (written ``$\triggers sc{(q,a)}s'$~'') if and only if the
   response and the post model can be computed by the $\stepServer$ function:
-
 \begin{align*}
   &\triggers sc{(q,a)}s'\quad\triangleq\quad\stepServer(q,c)(s)=(a,s')\\
   &\stepServer:Q\times C \to \Server \to A\times \Server \\
@@ -147,14 +147,13 @@ operational semantics.
   &\qquad\letin{(a,state')}{\sstep(q,c)(state)} \\
   &\qquad(a, \existT{S}{\sigma}{(\sstep, state')})
 \end{align*}
-
 The $\stepServer$ function takes a query and a choice and computes a state monad
 with state type $\Server$ and result type $A$, by pattern matching on argument
-$(s:\Server)$.  Let $\sigma$ be the server state type of $s$, $\sstep$ be the
-loop body, and $(state:\sigma)$ be the current state of $s$, then
-$\stepServer(q,c)(s)$ computes the result $(a:A)$ and the post state
-$(state':\sigma)$ using the $\sstep$ function, and substitutes the server's
-pre-step $state$ with the post-step $state'$.
+$(s:\Server)$.  Let $\sigma$ be the server state type of $s$, $\sstep$ the loop
+body, and $(state:\sigma)$ the current state of $s$.  Then $\stepServer(q,c)(s)$
+computes the result $(a:A)$ and the post state $(state':\sigma)$ using the
+$\sstep$ function, and substitutes the server's pre-step $state$ with the
+post-step $state'$.
 \end{definition}
 
 \begin{definition}[Trace validity in QAC]
@@ -170,7 +169,7 @@ pre-step $state$ with the post-step $state'$.
   \item A server model can produce an empty trace and step to itself:
     \[\behaves s \nil s\]
   \item A server model can produce a non-empty trace if it can produce the head
-    of the trace, and step to some server model that produces the tail of the
+    of the trace and step to some server model that produces the tail of the
     trace:
     \[\behaves s {t+(q,a)} s_2\quad\triangleq\quad\exists s_1,c,\behaves s t s_1\wedge\triggers {s_1}c{(q,a)}s_2\]
   \end{enumerate}
@@ -225,18 +224,21 @@ semantics.
   \None & \vstep(q,a,state)=\None
   \end{cases}
 \end{align*}
+
 The $\stepValidator$ function takes a query and a response, and computes the
 validator transition by pattern matching on argument $(v:\Validator)$.  Let
-$\beta$ be the validator state type of $v$, $\vstep$ be the loop body, and
-$(state:\beta)$ be the current state of $v$, then $\stepValidator(q,a)(v)$ calls
+$\beta$ be the validator state type of $v$, $\vstep$ be the loop body and
+$(state:\beta)$ the current state of $v$.  Then $\stepValidator(q,a)(v)$ calls
 the $\vstep$ function to validate the $Q\times A$ pair.  If the pair is valid,
 then $\vstep$ returns a post-validation $state'$, which replaces the validator's
 current $state$.  Otherwise, the validator halts with $\None$.
 \end{definition}
 
 \begin{definition}[Trace acceptance in QAC]
-A validator accepts a trace if it cosumes the entire trace:
+Validator $v$ accepts trace $t$ if and only if it {\em cosumes} the trace and
+steps to some validator $v'$, written as ``$\behaves vtv'~$'':
 \[\accepts v t\quad\triangleq\quad\exists v',\behaves v t v'\]
+Here the consumability relation is defined as follows:
 \begin{enumerate}
 \item A validator can consume an empty trace and step to itself:
   \[\behaves v\nil v\]

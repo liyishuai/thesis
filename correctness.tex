@@ -1,13 +1,13 @@
 We can now phrase the correctness properties in \autoref{sec:concepts} in terms
 of the QAC language family:
 \begin{enumerate}
-  \item A rejection-sound (\ie, acceptance-complete) validator consumes
+  \item A rejection-sound validator consumes
     all traces that are producible by the protocol specification:
     \[\begin{array}{lrl}
       \rejSound v s&\triangleq&\forall t,\rejects v t\implies\invalid s t\\
       &\triangleq&\forall t,(\exists s',\behaves s t s')\implies\exists v',\behaves v t v'
     \end{array}\]
-  \item A rejection-complete (\ie, acceptance-sound) validator only
+  \item A rejection-complete validator only
     consumes traces that are producible by the protocol specification:
     \[\begin{array}{lrl}
       \rejComplete v s&\triangleq&\forall t,\invalid s t\implies\rejects v t\\
@@ -18,7 +18,7 @@ of the QAC language family:
 Both the specification and the validator are infinite loops.  To show that the
 validator consumes the same space of traces as the specification produces, we
 need to show the correspondence between each server and validator step.  This is
-done by introducing some loop invariant between the server and validator states,
+done by introducing some loop invariant between the server and validator states
 and showing that it is preserved by the server's and the validator's loop body.
 
 This section shows how to prove that validator $\existT{V}{\beta}{(\vstep,v_0)}$
@@ -31,7 +31,7 @@ $v$ simulates server state $s$''.
 \subsection{Proving rejection soundness}
 \label{sec:qac-soundness}
 To prove that any trace producible by the server is consumable by the validator,
-I perform forward induction on the server's execution path, and show that every
+I perform forward induction on the server's execution path and show that every
 step has a corresponding validator step:
 
 \begin{itemize}
@@ -111,7 +111,7 @@ vtv'$:
 Rejection soundness is proven by forward induction, while rejection completeness
 is proven by backward induction.  This is because the choice $C$ is known from
 the server step, but unknown from the validator step: Given a validator step, we
-cannot predict ``what choices the server will make in the future'', but can
+cannot predict ``what choices the server will make in the future'', but we can
 analyze ``what choices the server might have made in the past''.  This proof
 strategy is formalized in the Coq proof assistant, and will be demonstrated with
 an example in \autoref{sec:proof}.

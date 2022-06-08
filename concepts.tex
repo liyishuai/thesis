@@ -1,6 +1,6 @@
 Testers are programs that determine whether implementations are compliant or
-not, based on its observations.  This section defines the basic concepts and
-notations in interactive testing.
+not, based on observations.  This section defines basic concepts and notations
+in interactive testing.
 
 \begin{definition}[Implementations and Traces]
   {\em Implementations} are programs that can interact with their environment.
@@ -33,15 +33,14 @@ implementation side.  Asynchronous testing will be discussed in
   (ii) a {\em test harness} that triggers different traces with
   various inputs.
 
-  A tester is {\em correct} if its acceptances and rejections are sound and
-  complete.  A tester is {\em rejection-sound} if it rejects only non-compliant
+  A tester is {\em rejection-sound} if it rejects only non-compliant
   implementations; it is {\em rejection-complete} if it can reject all
-  non-compliant implementations, provided sufficient time of
-  execution.\footnote{The semantics of ``soundness'' and ``completeness'' vary
-    among contexts.  This thesis inherits terminologies from existing
-    literature~\cite{Tretmans}, but explicitly uses ``rejection-'' prefix for
-    clarity.  ``Rejection soundness'' is equivalent to ``acceptance
-    completeness'', and vice versa.}
+  non-compliant implementations, provided sufficient time of execution.  A
+  tester is {\em correct} if is rejection-sound and -complete.\footnote{The
+    semantics of ``soundness'' and ``completeness'' vary among contexts.  This
+    thesis inherits terminologies from existing literature~\cite{Tretmans}, but
+    explicitly uses ``rejection-'' prefix for clarity.  ``Rejection soundness''
+    is equivalent to ``acceptance completeness'', and vice versa.}
 \end{definition}
 
 The tester's correctness is based on its components' properties: A

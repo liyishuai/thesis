@@ -64,15 +64,15 @@
 %%%% ABSTRACT
 \abstract{Software engineering requires rigorous testing to guarantee the
   product's quality.  Semantic testing of functional correctness is challenged
-  by nondeterminism in systems' behavior, which makes testers difficult to write
+  by nondeterminism in behavior, which makes testers difficult to write
   and reason about.
 
   This thesis presents a language-based technique for testing interactive
-  systems.  I propose a theory for specifying and validating systems'
+  systems.  I propose a theory for specifying and validating
   nondeterministic behaviors, with guaranteed soundness and correctness.  I then
   apply the theory to testing practices, and show how to derive specifications
   into interactive tester programs.  I also introduce a language design for
-  producing test inputs that can effectively detect and reproduce systems'
+  producing test inputs that can effectively detect and reproduce
   invalid behaviors.
 
   I evaluate the methodology by specifying and testing real-world systems such
@@ -158,7 +158,7 @@
 \lstnewenvironment{coq}{\lstset{style=customcoq}\linespread{1}}{}
 \lstnewenvironment{cpp}{\lstset{style=customc}\linespread{1}}{}
 \lstnewenvironment{json}{\lstset{style=json}\linespread{1}}{}
-\lstset{escapechar=\%,style=customcoq,belowskip=0em}
+\lstset{escapechar=\%,style=customcoq,belowskip=-1em,aboveskip=1em}
 
 \usepackage{multicol}
 \setlength\multicolsep{0pt}
@@ -176,6 +176,14 @@
 %% }{}{%
 %%   \typeout{Patching of \string\lstinline\space failed!}%
 %% }
+\makeatletter
+\g@addto@macro\normalsize{%
+  \setlength{\abovedisplayskip}{.5em minus .5em}
+  \setlength{\belowdisplayskip}{.5em minus .5em}
+  \setlength{\abovedisplayshortskip}{0em minus .5em}
+  \setlength{\belowdisplayshortskip}{0em minus .5em}
+}
+\makeatother
 
 \newcommand{\complies}[2]{\mathsf{comply}_{#1}~{#2}}
 \newcommand{\ncomplies}[2]{\neg(\complies{#1}{#2})}
@@ -254,9 +262,9 @@
 \newcommand{\At}{@}
 \newcommand{\Write}{\mathsf{write}}
 \newcommand{\Havoc}{\mathsf{havoc}}
-\newcommand{\ie}{\textit{i.e.}}
-\newcommand{\eg}{\textit{e.g.}}
-\newcommand{\etc}{\textit{etc.}}
+\newcommand{\ie}{\text{i.e.}}
+\newcommand{\eg}{\text{e.g.}}
+\newcommand{\etc}{\text{etc.}}
 
 %% ASZ: `amsbook` didn't style `\paragraph`s appropriately
 %% \patchcmd{\paragraph}{\normalfont}{\itshape}
@@ -342,7 +350,7 @@
 %-------------------------------------------
 
 %%%% OPTIONAL ACKNOWLEDGEMENT PAGE
-\makeacknowledgement % If not applicable, comment out this line to hide the optional acknowledgment page. If you do, you will also need to edit line 59.
+%\makeacknowledgement % If not applicable, comment out this line to hide the optional acknowledgment page. If you do, you will also need to edit line 59.
 %-------------------------------------------
 
 \makeabstract
