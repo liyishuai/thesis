@@ -6,17 +6,18 @@ specification program to derive a validator.
 
 This chapter demonstrates the dualization technique with a programming language
 in the QAC family.  \autoref{sec:encode-spec} introduces the $\Prog$ language
-for encoding specifications.  Specifications written in $\Prog$ are dualized into
-validators in \autoref{sec:dualize-prog}, with correctness proven in
-\autoref{sec:proof}.
+for encoding specifications.  Specifications written in $\Prog$ are dualized
+into validators in \autoref{sec:dualize-prog}, with correctness proven in Coq
+in \autoref{sec:proof}.
 
 \section{Encoding Specifications}
 \label{sec:encode-spec}
 Constructing the validator automatically requires analyzing the computations of
 the specification program.  The QAC language family in \autoref{sec:qac} only
-provides a state monad interface for server models, which is insufficient for
-performing structural analysis.  This section introduces a programming language
-for encoding specifications.
+exposes a state monad interface for server models, which is a function that
+cannot be destructed within the meta language to perform program analysis.  This
+section introduces a programming language for encoding specifications whose
+structures can be analyzed.
 
 For readability, I demonstrate the dualization technique on a subset of QAC
 server models called integer machine models, featuring random-access memory (RAM)
@@ -36,7 +37,7 @@ Here syntax ``$s!k$'' is pronounced ``data stored in address $!k$ of memory
 $s$''.  I use ``$!k$'' to indicate that the natural number $k$ is being thought
 of as an address.
 
-The server's query, response, and choices ($Q$, $A$, $C$) are of type integer.
+The server's queries, responses, and choices ($Q$, $A$, $C$) are of type integer.
 At the beginning of each server loop, the internal choice is written to address
 $!0$, and the query is written to address $!1$.  The server then performs some
 computation $f:(\Nat\to\Int)\to(\Nat\to\Int)$ that manipulates the memory, and
@@ -148,17 +149,17 @@ server produces the trace in \autoref{def:trace-validity}.
 
 The idea is similar to the \ilc{tester} in \autoref{sec:interactive-testing},
 which \ilc{validate}s the trace by executing the \ilc{serverSpec}, and comparing
-the expected response against the tester's observation.
+the expected response against the tester's observations.
 
 However, executing a nondeterministic specification does not produce a specific
-expectation of response, but a space of responses parameterized over the
-internal choices.  Therefore, upon observing a response $A$, the validator
-should determine whthere there exists a choice $C$ that leads the specification
-to produce this response.
+expectation of response, but a nondeterministic response that depends on the
+internal choice.  Therefore, upon observing a response $A$, the validator should
+determine whether there is a choice $C$ that leads the specification to produce
+this response.
 
 This reduces the trace validation problem to constraint solving.  The validator
-maintains a set of constraints that unify the responses produced by the
-specification against the responses observed from the implementation.
+maintains a set of constraints that require the responses observed from the
+implementation to be explainable by the specification.
 
 More specifically, the validator executes the $\Prog$ model and represents
 internal choices with {\em symbolic variables}.  These variables are carried
@@ -167,8 +168,9 @@ along the program execution, so the expected responses are computed as {\em
 then constrains that the symbolic response is equal to the concrete observation.
 
 To achieve this goal, the validator stores a symbolic variable for each address
-of the server model.  It also remembers all the constraints added upon
-observation.  This information is called a ``validation state'':
+of the server model.  It also remembers all the constraints added as
+observations are made during testing.  This information is called a ``validation
+state'':
 \[(\Nat\to\Var)\times\Set\constraint\]
 Here the $\constraint$s are relations between validator expressions ($\Vexp$s)
 that may depend on symbolic $\Var$iables:
@@ -200,18 +202,26 @@ Here the initial validation state says ``all addresses are mapped to variable
 $\#0$, and the value of variable $\#0$ is constrained to be zero''.  This
 reflects the initial server state that maps all addresses to zero value.
 
-The validator's loop body is derived by dualzing the server model:
+The validator's loop body is derived by analyzing the computations of the server
+model.
 
 \begin{enumerate}
 \item \label{rule:write} When the server performs a write operation
-  $!\dst\coloneqq \mathit{exp}$, the validator creates a fresh variable $x$ to represent
-  the new value stored in address $!\dst$, and adds a constraint that says $x$'s
-  value is equal to that of $\mathit{exp}$.  This rule also applies to writing the
-  request to address $!1$ before executing the program.
+  $!\dst\coloneqq \mathit{exp}$, the validator creates a fresh variable $x$ to
+  represent the new value stored in address $!\dst$, and adds a constraint that
+  says $x$'s value is equal to that of $\mathit{exp}$.  This rule also applies
+  to writing the request to address $!1$ before executing the program.
+
+  For example, if the server performs $!2\gets!0$, then the validator should
+  step from $(\vs,\cs)$ to $(\update{\vs}{2}{x},\cs\cup\{\#x=\#(\vs!0)\})$,
+  where $\#x$ is a fresh variable.  The new validation state says the value
+  stored in address $!2$ is represented by variable $\#x$.  It also constraints
+  that $\#x$ should be equal to $\#(\vs!0)$, the variable that represents
+  address $!0$ in the pre-validation state $\vs$.
 \item \label{rule:branch} When the server makes a nondeterministic branch $\If
-  e_1\le e_2\Then p_1\Else p_2$, the validator considers both cases: (a) If
+  e_1\le e_2\Then p_1\Else p_2$, the validator considers both cases: (a) if
   $p_1$ was taken, then the validator should add a constraint $e_1\le e_2$; or
-  (b) If $p_2$ was taken, then the validator should add constraint $e_2<e_1$.
+  (b) if $p_2$ was taken, then the validator should add constraint $e_2<e_1$.
 \item \label{rule:choice} Before executing the program, the server writes the internal
     choice $c$ to address $!0$.  Accordingly, the validator creates a fresh
     variable to represent the new value stored in address $!0$, without adding
@@ -225,12 +235,10 @@ The validator's loop body is derived by dualzing the server model:
   observation.  This is because either (i) the observation is invalid, \ie,
   not producible by the server model, or (ii) the observation is valid, but was
   produced by a different execution path of the server model.
-\item \label{rule:reject} The validator accepts the trace if it can be produced
-  by any execution path of the server model.  Since each execution path
-  corresponds to a validation state, the validator only needs to remove the
-  unsatisfiable state from the set of states.  If the set of validation states
-  becomes empty, it indicates that the observation cannot be explained by any
-  execution path of the specification, so the validator should reject the trace.
+
+\item \label{rule:reject} If the set of validation states becomes empty, it
+  indicates that the observation cannot be explained by any execution path of
+  the specification, so the validator should reject the trace.
 \end{enumerate}
 
 \begin{figure}
@@ -354,7 +362,7 @@ For example, to construct a validator for the CMP-RST protocol in
 \begin{align*}
   &\If!1\le!2\\
   &\tthen!1\gets0;\Return\\
-  &\eelse!1\gets0;!2\gets!0;\Return
+  &\eelse!1\gets1;!2\gets!0;\Return
 \end{align*}
 This program stores the data $n$ in address $!2$.  If the request is less than
 or equal to $n$, then the program writes response $0$ to address $!1$, and

@@ -14,22 +14,23 @@ specifications:
 To apply the proof techniques in \autoref{sec:correctness}, I design the loop
 invariant in \autoref{sec:proof-invariant}.  I then use the invariant to prove
 the hypotheses for soundness and completeness in \autoref{sec:proof-sound}
-and \autoref{sec:proof-complete}, respectively.
+and \autoref{sec:proof-complete}, respectively.  The entire proof is formalized
+in the Coq proof assistant.
 
 \subsection{Designing the loop invariant}
 \label{sec:proof-invariant}
-Let $\beta=\Set((\Nat\to\Var)\times\Set\constraint)$ be the validator state
-type, and $\sigma=\Nat\to\Int$ be the server state type, then the loop invariant
+Let $\beta=\Set((\Nat\to\Var)\times\Set\constraint)$ be the validator state type
+and $\sigma=\Nat\to\Int$ the server state type.  Then the loop invariant
 $\Reflects{(v:\beta)}{(s:\sigma)}$ is a binary relation between the validator
 state $v$ and the server state $s$.  To define this relation, I first discuss
 the semantics of validator states.
 
-The validator state is a set of validation states that consist of an
-address-variable mapping and a set of constraints over the variables.  Each
-validation state defines a space of server states.  A validator accepts a trace
-if it has a validation state whose constraints are satisfiable, which indicates
-the existence of a server that produces the trace.  A corresponding server state
-can be constructed from any assignment that satisfies the validation state's
+Each validation state in the validator state consists of an address-variable
+mapping and a set of constraints over the variables.  The validation state
+defines a space of server states.  A validator accepts a trace if it has a
+validation state whose constraints are satisfiable, which indicates the
+existence of a server that produces the trace.  A corresponding server state can
+be constructed from any assignment that satisfies the validation state's
 constraints:
 \[\vs^{\asgn}\quad\triangleq\quad \mathit{addr}\mapsto \asgn!(\vs!\mathit{addr})\]
 Let $(\vs:\Nat\to\Var)$ be a mapping in the validation state,
@@ -53,8 +54,7 @@ server state and the validation state:
 Having defined the loop invariant, we only need to instantiate the hypotheses
 in \autoref{sec:qac-soundness}--\ref{sec:qac-completeness} with $\Prog$-based
 definitions.  The rest of this section proves the hypotheses for establishing
-validators' soundness and completeness.  The entire proof is formalized in the
-Coq proof assitant.
+validators' soundness and completeness.
 
 \subsection{Proving rejection soundness}
 \label{sec:proof-sound}
