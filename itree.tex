@@ -144,9 +144,9 @@ effectively, we need to revise the language definition of monadic binding.
 Instead of binding a program---which might have many events---to a continuation,
 ITree binds a single impure event, as shown in \autoref{fig:itrees}.  I
 use \ilc{(Impure e k)} to replace \ilc{(Bind (Trigger e) k)} representations
-in \ilc{itreeM}.  A \ilc{Pure} computation cannot be bound to a continuation,
-and must be the leaf of an ITree.\footnote{For readability, the ``practical''
-ITree definition is a simplified version from \citet{itree}.  Here \ilc{Pure}
+in \ilc{itreeM}.  A \ilc{Pure} computation cannot be bound to a continuation and
+must be the leaf of an ITree.\footnote{For readability, the ``practical'' ITree
+definition is a simplified version from \citet{itree}.  Here \ilc{Pure}
 and \ilc{Impure} correspond to the \ilc{Ret} and \ilc{Vis} constructors.  I
 dropped the \ilc{(Tau : itree E R -> itree E R)} constructor, which carries no
 semantics and is used for satisfying Coq's guardedness condition.}

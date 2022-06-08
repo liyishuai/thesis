@@ -15,8 +15,8 @@ becomes insufficient for defining the space of asynchronous interactions.
 
 This chapter applies the idea of dualization to testing asynchronous systems.  I
 transition from the QAC language family to the ITree specification language, a
-data structure for modelling programs' asynchronous interactions in the Coq
-proof assistant.  ITree provides more expressiveness than QAC, and allows
+data structure for modeling programs' asynchronous interactions in the Coq
+proof assistant.  ITree provides more expressiveness than QAC and allows
 specifying the external nondeterminism caused by the network environment.  The
 ITree-based specifications are derived into tester programs that can interact
 with the SUT and reveal potential defects.
@@ -31,7 +31,7 @@ with the SUT and reveal potential defects.
 testers.  \autoref{sec:itree} introduces the ITree language that encodes each
 box in the framework.  \autoref{sec:internal-nondet} and
 \autoref{sec:external-nondet} address internal and external nondeterminism in
-the ITree context, and interprets the ``server model'' into a ``nondeterministic
+the ITree context and interprets the ``server model'' into a ``nondeterministic
 tester''.  \autoref{sec:backtrack} then explains how to execute the
 nondterministic tester model as an interactive tester program that runs on
 deterministic machines.

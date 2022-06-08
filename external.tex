@@ -68,7 +68,7 @@ CoFixpoint tcp (buffer: list packet) : itree (netE +' nondetE) void :=
 \label{fig:tcp-model}
 \end{figure}
 
-Notice the \ilc{pick_one} function, which might return (i) \ilc{Some p} or (ii)
+Note the \ilc{pick_one} function, which might return (i) \ilc{Some p} or (ii)
 \ilc{None}.  The network model then (i) emits packet \ilc p or (ii) absorbs a
 packet into \ilc{buffer}.
 

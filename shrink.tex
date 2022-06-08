@@ -22,12 +22,12 @@ that addresses inter-execution nondeterminism.
 I propose a generic framework for generating and shrinking interactive tests.
 The key idea is to introduce an abstract representation for test inputs that
 embeds trace-based heuristics.  When shrinking the counterexample, the test
-harness picks a substructure of the abstract representation, and computes the
+harness picks a substructure of the abstract representation and computes the
 corresponding test input using the new runtime trace.
 
 For example, when generating a timestamp, instead of producing the concrete
 value, \eg, ``\httpdate\today~\currenttime~GMT'', the generator returns an
-abstract representation that says ``use the timestamp observed in the last
+abstract representation that says, ``use the timestamp observed in the last
 response''.  When rerunning the test, the timestamp is computed from the new
 trace, \eg, ``\httpdate\DayAfter~\currenttime~GMT''.
 
@@ -54,7 +54,7 @@ It involves four languages, from right to left:
     corresponds to concrete inputs and outputs, whereas Jexp defines a
     computation from trace to IR.  The generator provides test inputs in terms
     of Jexps; The test harness {\em instantiates} the generated Jexps into
-    request IR, and {\em prints} them into byte representation.
+    request IR and {\em prints} them into byte representation.
 
     When shrinking test inputs, the test harness shrinks the sequence of Jexps.
     The shrunk Jexps are then instantiated by the new trace during runtime.
@@ -80,7 +80,7 @@ and trace-based heuristics.
 \subsection{Abstract representation languages}
 \label{sec:shrink-ir}
 I choose JSON as the IR in this framework, which allows syntax trees to be
-arbitrarily wide and deep, and provides sufficient expressiveness for encoding
+arbitrarily wide and deep and provides sufficient expressiveness for encoding
 message data types in general.
 
 \begin{figure}
@@ -187,7 +187,7 @@ $(\Label.\Jpath.\Function)$ that represents trace-based heuristics, specified as
 
 As a result, the trace-based heuristics are preserved and adapted to new
 executions during the shrinking process.
-\item The $\Jpath$ is a path in the IR's syntax tree, and refers to a
+\item The $\Jpath$ is a path in the IR's syntax tree and refers to a
   substructure of the IR that the heuristics uses.
 
   For example, suppose request \ilc{q2} lists files in a directory using the

@@ -54,10 +54,10 @@ machine model:
 \[\existT{S}{\Nat\to\Int}{(\sstep_f,s_0)}\]
 
 Dualizing an integer machine model requires structural analysis of its memory
-manipulation.  Next I'll introduce a programming language to encode computations
+manipulation.  Next, I'll introduce a programming language to encode computations
 $(\Nat\to\Int)\to(\Nat\to\Int)$.
 
-\subsection{The $\Prog$ modelling language}
+\subsection{The $\Prog$ modeling language}
 \label{sec:prog-lang}
 \paragraph{Syntax}
 A program in the $\Prog$ language may read and write at any address of the
@@ -72,7 +72,7 @@ memory, perform arithmetic operations, and make conditional branches:
 \end{array}\]
 
 For example, the following program computes the absolute value of data stored in
-$!1$, and stores it in address $!1$:
+$!1$ and stores it in address $!1$:
 \[\begin{array}{ll}
   \If&!1\le0\\
   \tthen&!1\gets(0-!1);\;\Return\\
@@ -123,7 +123,7 @@ by applying $\serverOf$ to the following program:
 \end{array}\]
 The constructed server stores its data $n$ in address $!2$.  When the query
 stored in $!1$ is less than or equal to $!2$ (case 1), the server writes $0$ to
-address $!1$ as response, and leaves the data untouched in address $!2$.  For
+address $!1$ as response and leaves the data untouched in address $!2$.  For
 queries greater than $!2$ (case 2), the server writes $1$ as response, and
 updates the data in $!2$ with the internal choice stored in $!0$.
 
@@ -148,7 +148,7 @@ whether there exists a sequences of internal choices $C$ that explains how the
 server produces the trace in \autoref{def:trace-validity}.
 
 The idea is similar to the \ilc{tester} in \autoref{sec:interactive-testing},
-which \ilc{validate}s the trace by executing the \ilc{serverSpec}, and comparing
+which \ilc{validate}s the trace by executing the \ilc{serverSpec} and comparing
 the expected response against the tester's observations.
 
 However, executing a nondeterministic specification does not produce a specific
@@ -187,7 +187,7 @@ different iterations.  The validation state maps each address to its current
 representing variable $(\Nat\to\Var)$, which updates as the validator
 symbolically executes the server program.
 
-Notice that the server program in \autoref{sec:prog-lang} has conditional
+Note that the server program in \autoref{sec:prog-lang} has conditional
 branches.  When executing the specification program, the branch condition might
 depend on the internal choices, which is invisible to the validator.  As a
 result, the validator doesn't know the exact branch taken by the specification,
@@ -198,7 +198,7 @@ path:
 The initial state of the validator is a single validation state that corresponds
 to the specification's initial state:
 \[\{(\_\mapsto\#0,\{\#0=0\})\}\]
-Here the initial validation state says ``all addresses are mapped to variable
+Here the initial validation state says, ``all addresses are mapped to variable
 $\#0$, and the value of variable $\#0$ is constrained to be zero''.  This
 reflects the initial server state that maps all addresses to zero value.
 

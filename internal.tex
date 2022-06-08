@@ -13,7 +13,7 @@ symbolic model.
 
 The server specification is derived into a tester client by {\em interpreting}
 interaction trees.  To interpret is to define semantic rules that transform one
-ITree program into another, and corresponds to the arrows in
+ITree program into another and corresponds to the arrows in
 \autoref{fig:framework}.  \autoref{sec:interp} explains the interpretation of
 ITrees.
 
@@ -188,7 +188,7 @@ model represents it as \ilc{Choice} event.
 Note that the server model exhibits three kinds of branches:
 \begin{enumerate}
 \item The \ilc{if} branch in \autoref{line:etag-pure-if} is provided by ITree's
-embedding language Coq, and takes a boolean value as condition;
+embedding language Coq, and takes a boolean value as condition.
 \item The \ilc{IFX} branch in \autoref{line:etag-ifx} constructs an ITree that
 nondeterministically branches over a condition written as a symbolic expression
 of type bool:
@@ -232,7 +232,7 @@ specification, and will be handled differently during testing:
   on the server's internal choices, so the tester needs to consider both cases.
 \item The \ilc{or} branch defines multiple control flows the server may take.
   In the HTTP example, the server may generate an ETag for the resource's new
-  content, but is not obliged to do so.  It may choose to generate no ETags
+  content but is not obliged to do so.  It may choose to generate no ETags
   instead, using \ilc{(Pure (Const EmptyString))} as an alternative
   to \ilc{(trigger Choice)}.
 \end{enumerate}
@@ -289,7 +289,7 @@ derivation rules (\ref{rule:write})--(\ref{rule:return}) for $\Prog$
 
 This interpretation phase produces a symbolic observer that models the tester's
 observation and validation behavior.  The observer sends a request when the
-server wants to receive one, and receives a response when the server wants to
+server wants to receive one and receives a response when the server wants to
 send one.  It also creates constraints over the server's internal choices based
 on its observations.
 
@@ -354,7 +354,7 @@ solved in \autoref{sec:symbolic-eval}.
 The dualization algorithm in \autoref{fig:symbolic-observer} does the follows:
 \begin{enumerate}
 \item When the symbolic model receives a packet, in
-\autoref{line:observe-absorb}, the observer generates a request packet;
+\autoref{line:observe-absorb}, the observer generates a request packet.
 
 \item When the symbolic model sends a symbolic packet \ilc{px}, in
 \autoref{line:observe-emit}, the observer receives a concrete packet \ilc p, and
@@ -369,7 +369,7 @@ For each branch, the observer adds a \ilc{Unify} constraint that the symbolic
 condition matches the chosen branch.
 
 \item Nondeterministic branches in \autoref{line:observe-or} are preserved in
-this interpretation phase, and will be resolved in \autoref{sec:backtrack}.
+this interpretation phase and will be resolved in \autoref{sec:backtrack}.
 
 \item Internal choices in \autoref{line:observe-choice} are addressed by the
 next phase in \autoref{sec:symbolic-eval}, along with the constraints created in
@@ -469,7 +469,7 @@ constraints over them.  The derivation rules are as follows:
     the tester creates a fresh variable and adds it to the validation state.
   \item When the observer creates a constraint in
     \autoref{line:unify-constraint}, the tester adds the constraint to the
-    validation state, and solves the new set of constraints.  If the constraints
+    validation state and solves the new set of constraints.  If the constraints
     become unsatisfiable, then the tester \ilc{Throw}s an exception that
     indicates the current execution branch cannot accept the observations:
 \begin{coq}

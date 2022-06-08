@@ -56,7 +56,7 @@ My tester rejected the Apache HTTP Server, which uses strong comparison
 (Page \pageref{foot:etag}) for PUT requests conditioned
 over \inlinec{If-None-Match}, while RFC~7232 specified that
 \inlinec{If-None-Match} preconditions must be evaluated with weak comparison.  I
-reported this bug to the developers, and figured out that Apache was conforming
+reported this bug to the developers and figured out that Apache was conforming
 with an obsoleted \http standard~\cite{rfc2616}.  The latest standard has
 changed the semantics of \inlinec{If-None-Match} preconditions, but Apache
 didn't update the logic correspondingly.
@@ -68,7 +68,7 @@ the container.
 The tester accepted the fixed implementation, which can be explained in two
 ways: (1) The server now complies with the specification, or (2) The server has
 a bug that the tester cannot detect.  To provide more confidence that (1) is the
-case, I ran the tester against servers that are known as buggy, and expected the
+case, I ran the tester against servers that are known as buggy and expected the
 tester to detect all the intentional bugs.
 
 The buggy implementations were created by mutating the Apache source code
@@ -131,7 +131,7 @@ responded.  My experiments have shown the complementarity between testing and
 verification for improving software quality.
 
 These results show that my tester is capable of finding different kinds of bugs
-in server implementations, within and beyond functional correctness.  Next I'll
+in server implementations, within and beyond functional correctness.  Next, I'll
 evaluate how long the tester takes to reveal bugs.
 
 \subsection{Quantitative Results}
@@ -163,9 +163,9 @@ rejected all the buggy implementations within 1 minute, and in most cases,
 within 1 second.  This does not include the time for shrinking counterexamples.
 
 Some bugs took longer time to find, and they usually required more interactions
-to reveal.  This may be caused by (1) The counter-example has a certain pattern
+to reveal.  This may be caused by (1) The counterexample has a certain pattern
 that my generator didn't optimize for, or (2) The tester did produce a
-counter-example, but failed to reject the wrong behavior.  I determine the real
+counterexample, but failed to reject the wrong behavior.  I determine the real
 cause by analyzing the bugs and their counterexamples:
 
 \begin{figure}
@@ -183,7 +183,7 @@ cause by analyzing the bugs and their counterexamples:
 \begin{itemize}
   \item Mutants 19 and 20 are related to the WebDAV module, which handles PUT
     requests that modify the target's contents.  The buggy servers wrote to a
-    different target from that requested, but responds a successful status to
+    different target from that requested but responds a successful status to
     the client.
 
     The tester cannot tell that the server is faulty until it queries the
@@ -192,7 +192,7 @@ cause by analyzing the bugs and their counterexamples:
     order, as shown in \autoref{fig:put-bug}.
 
   \item Mutant 18 is similar to the bug in vanilla Apache: the server should
-    have responded with 304 Not Modified, but sent back 200 OK instead.  To
+    have responded with 304 Not Modified but sent back 200 OK instead.  To
     reveal such a violation, a minimal counterexample consists of 4 messages:
     \begin{enumerate}
     \item GET request,
@@ -201,7 +201,7 @@ cause by analyzing the bugs and their counterexamples:
     \item 200 OK response, indicating that the ETag \inlinec{"x"} did not match
       itself.
     \end{enumerate}
-    Notice that (2) must be observed before (3), otherwise the tester will not
+    Note that (2) must be observed before (3), otherwise the tester will not
     reject the server, with a similar reason as in \autoref{fig:put-bug}.
 
   \item Mutant 5 is the one shown in \autoref{fig:mutant-example}.  It causes
@@ -272,7 +272,7 @@ the propagated updates.
 
 My specification consists of two parts:
 \begin{enumerate}
-  \item A file system model represented as a tree, where the leaves are files
+  \item A file system model represented as a tree, where the leaves are files,
     and the branches are directories.  As shown in \autoref{fig:file-spec}, the
     file system model is a simplified abstraction from the POSIX file interface,
     ignoring metadata and file permissions.  Specifying more aspects of the file
@@ -301,7 +301,7 @@ leaves the dirty files untouched in both replicas.
 The third parameter of the reconcile function represents the subset of the two
 replicas that were synchronized: \ilc{(reconcile (a,b,g))} syncs replicas \ilc a
 and \ilc b based on their previous consensus \ilc g.  The consensus is initially
-empty, and updated when a change in one replica is propagated to another, or the
+empty and updated when a change in one replica is propagated to another, or the
 two replicas have made identical changes.
 \end{enumerate}
 
@@ -329,7 +329,7 @@ Variant A :=          (* response type *)
 \label{fig:file-type}
 \end{figure}
 
-Having specified the file system interface and the reconcilation semantics, I
+Having specified the file system interface and the reconciliation semantics, I
 modelled the SUT as a deterministic QA server described in
 \autoref{def:qaserver}.  As shown in \autoref{fig:file-type}, the request type
 \ilc Q can be file operations or the synchronization command; the response type
@@ -431,6 +431,6 @@ These experiments show that my testing methodology can effectively reject
 implementations that do not comply with the specification.  The incompliance
 indicates that either (i) the implementation does not conform with the protocol,
 \eg, Apache and Nginx violating RFC 7232, or (2) the specification is
-incorrect, \eg, my initial file synchronizer specification not modelling all
+incorrect, \eg, my initial file synchronizer specification not modeling all
 features of Unison.  Automatically detecting the incompliances helps developers
 to correctly specify and implement systems in real-world practices.

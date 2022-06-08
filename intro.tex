@@ -387,12 +387,12 @@ different order from that on the tester side.  Conversely, responses sent by the
 server might be reordered before arriving at the tester, as shown in
 \autoref{fig:reordered-trace}.  Such an observation can be explained by various
 outputs on the SUT side.  The validator needs to consider all possible outputs
-that can explain such an observation, and see if any one of them complies with
+that can explain such an observation and see if any one of them complies with
 the specification.  If no valid output can explain the observation, then the
 tester should reject the SUT, as shown in \autoref{fig:invalid-trace}.
 
 We need to construct a tester that can handle external nondeterminism
-systematically, and provide a generic way for reasoning on the environment.
+systematically and provide a generic way for reasoning on the environment.
 
 \section{Test harness and inter-execution nondeterminism}
 \label{sec:inter-execution-nondeterminism}
@@ -479,7 +479,7 @@ generator's design.
 \section{State of the Art}
 \label{sec:existing-work}
 This section explains the context for this thesis.  I sketch the state of the
-art in the relevant parts of the field of testing, and describe its limitations
+art in the relevant parts of the field of testing and describe its limitations
 in addressing the challenges posed by nondeterminism.
 
 \subsection{Property-based testing: QuickCheck}
@@ -504,10 +504,10 @@ a tester observes an SUT's behavior, it checks whether the behavior is
 producible by the specification model.
 
 Practical tools for model-based testing include TorXakis~\cite{TorXakis}, whose
-modelling language is inspired by Language of Temporal Ordering Specification
+modeling language is inspired by Language of Temporal Ordering Specification
 (LOTOS)~\cite{lotos}, the ISO standard for specifying distributed systems.  The
-tool can compile process algebra specifications into tester programs, and can be
-used for testing dropbox~\cite{torxakis-dropbox}.
+tool can compile process algebra specifications into tester programs and can be
+used for testing DropBox~\cite{torxakis-dropbox}.
 
 \subsection{Limitations}
 In property-based testing, internal and external nondeterminism makes predicates

@@ -57,7 +57,7 @@ Now we can define the server model in terms of state monad:
   computes a state monad with state type $S$ and result type $A$, where type $A$
   represents the response.
 
-  Notice that the server's state type is existentially quantified~\cite{tapl},
+  Note that the server's state type is existentially quantified~\cite{tapl},
   while its query and response types are not.  This is because a protocol
   specification only defines the space of valid traces, and doesn't require the
   implementation's internal state to be a specific type.
@@ -98,7 +98,7 @@ behaviors by parameterizing it over the server's internal choice.
 \begin{definition}[Nondeterministic server model]
   \label{def:server}
   A nondeterministic server is an infinite loop whose loop body takes a query
-  and an internal choice to produce a responses.  The nondeterministic server
+  and an internal choice to produce a response.  The nondeterministic server
   definition extends \autoref{def:qaserver} with a choice argument of type $C$:
   \[\Server\triangleq\sigT S{(Q\times C\to S\to A\times S)\times S}\]
 \end{definition}
@@ -200,13 +200,13 @@ For example, a validator for the CMP-SET protocol is written as:
     },\\
     &0)}
 \end{align*}
-Here the validator state the same as the server model's.  The loop body computes
+Here the validator state is the same as the server model's.  The loop body computes
 the expected response and compares it with the observed response.  If they are
 the same, then the next server state is used as the next validator state.
 Otherwise, the function returns $\None$, indicating that the response is
 invalid.
 
-Having defined the validator type, we can now instantiate the trace acception
+Having defined the validator type, we can now instantiate the trace acceptation
 notation ``$\accepts v t$'' in \autoref{def:tester} in terms of operational
 semantics.
 

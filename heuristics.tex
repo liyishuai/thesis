@@ -87,7 +87,7 @@ with trace-based heuristics in the next subsection.
 
 When the SUT makes internal choices, \eg, generating ETags, the
 specification represents them as symbolic variables.  These variables' concrete
-value are not stored in the specification state, but may be observed during
+values are not stored in the specification state, but may be observed during
 execution.  For example, when an HTTP server responds to a GET request, it might
 include the resource's ETag as shown in \autoref{sec:internal-nondeterminism}.
 
@@ -128,10 +128,10 @@ as the recursion parameter:
                                  execute fuel' trace (k pkt)
         ... (* similar to %\autoref{fig:execute}% *)
 \end{coq}
-\lys{\ilc{trace ++ [q]} is indeed less inefficient than storing a reversed trace,
-but this code is to show the concept of ``appending'' requests and responses to
-a trace, and assumes that readers have the ability of optimizing its
-performance.}
+%% \lys{\ilc{trace ++ [q]} is indeed less inefficient than storing a reversed trace,
+%% but this code is to show the concept of ``appending'' requests and responses to
+%% a trace, and assumes that readers have the ability of optimizing its
+%% performance.}
 
 When the tester sends or receives a packet, the packet is appended to the
 runtime \ilc{trace}.  Then the \ilc{gen_packet} generator can take the trace

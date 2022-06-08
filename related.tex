@@ -37,7 +37,7 @@ to constraint solving.
 
 \paragraph{External nondeterminism}
 \citet{testing-dropbox} have used QuickCheck to test Dropbox.  The specification
-does not involve internal nondeterminism, but does handle external
+does not involve internal nondeterminism but does handle external
 nondeterminism that local nodes may communicate with the server at any time.
 This is done by introducing ``conjectured events'' to represent the possible
 communications.  The validator checks if the conjectured events can be inserted
@@ -69,7 +69,7 @@ Language of termporal ordering specification (LOTOS)~\cite{lotos} is the ISO
 standard for specifying OSI protocols.  It defines distributed concurrent
 systems as {\em processes} that interact via {\em channels}.  Using a formal
 language strongly inspired by LOTOS, \citet{torxakis-dropbox} implemented a test
-generation tool called TorXakis, and used it for testing Dropbox.
+generation tool called TorXakis and used it for testing DropBox.
 
 TorXakis supports internal nondeterminism by defining a process for each
 possible value.  This requires the space of invisible values to be finite.  In
@@ -90,12 +90,12 @@ nondeterminism in real-world implementations, they used symbolic the model
 states, which are then evaluated with a special-purpose symbolic model checker.
 The tester helped reveal their post-hoc specifications' mismatch with mainstream
 systems like FreeBSD, Linux, and WinXP.  I borrowed the idea of symbolic
-evaluation in validating observations, and used it for detecting mainstream
+evaluation in validating observations and used it for detecting mainstream
 servers' violations against the formalized RFC specification.
 
 \citet{modbat} have generated test cases for Java network API, which involves
 blocking and non-blocking communications.  Their abstract model was based on
-extended finite state machines (EFSM), and could capture bugs in the network
+extended finite state machines (EFSM) and could capture bugs in the network
 library \verb|java.nio|.  Their validator rejects the SUT upon unexpected
 exceptions or observations that fail its {\em encoded} assertions.  In
 comparison, assertions in my validator are {\em derived} from the abstract
@@ -121,7 +121,7 @@ The reason for introducing heuristics is to increase the chance of triggering
 invalid behavior.  I specified the heuristics as ``how to produce interesting
 input'', while, in some cases, it's more convenient to specify ``what inputs are
 interesting''.  For example, well-typed lambda expressions can be easily defined
-in terms of typing rules, but are less intuitive to enumerate by a generator.
+in terms of typing rules but are less intuitive to enumerate by a generator.
 
 Narrowing~\cite{narrowing} allows generating data that satisfy certain
 constraints.  \citet{gengood} have applied the idea of narrowing to the
@@ -167,7 +167,7 @@ interactive testing of systems' functional correctness.
 To address inter-execution nondeterminism in Quviq QuickCheck,
 \citet{Hughes2016} introduced the idea of shrinking abstract representations of
 test input.  The tester first generates a {\em script} using state-based
-heuristics, and instantiates the script with the tester's runtime state.  The
+heuristics and instantiates the script with the tester's runtime state.  The
 scripts can be shrunk and adapted to new runtimes when rerunning the test.
 
 The language design of my test harness is inspired by the QuickCheck approach,

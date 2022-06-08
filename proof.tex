@@ -1,4 +1,4 @@
-So far I have introduced the $\Prog$ language for writing specifications and
+So far, I have introduced the $\Prog$ language for writing specifications and
 shown how to construct a validator from it.  This section shows how to prove the
 soundness and completeness of all validators dualized from $\Prog$-based
 specifications:
@@ -185,7 +185,7 @@ The core of this proof is to find the internal choice $c$ for server step
 $\triggers sc{(q,a)}s'$.  The choice was computed with the assignment deduced
 from the loop invariant.  The assignment contains the value of all symbolic
 variables, which includes all choices made by the server, past and future.  The
-loop invariant requires the assignment to explain the past choices, but cannot
+loop invariant requires the assignment to explain the past choices but cannot
 predict future choices.  Therefore, we can only infer the server step from the
 validator step using backward induction.
 \end{lemma}
@@ -215,5 +215,5 @@ Therefore, $s_0$ is the only server state that $(\vs,\cs)$ simulates.
 Now we have proven that all $\Prog$-based validators satisfy the hypotheses
 defined in \autoref{sec:qac-soundness}--\ref{sec:qac-completeness}, and we can
 conclude that the validators constructed by dualization are sound and complete.
-Next I'll show how to apply this dualization technique to test real-world
+Next, I'll show how to apply this dualization technique to test real-world
 programs.
