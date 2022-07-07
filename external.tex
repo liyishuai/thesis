@@ -58,6 +58,7 @@ CoFixpoint tcp (buffer: list packet) : itree (netE +' nondetE) void :=
   then emit pkt
   else absorb.
 \end{coq}
+\vspace*{1em}
 \caption[Network model for concurrent TCP connections]{Network model for
   concurrent TCP connections.  The model is an infinite program iterating over a
   \ilc{buffer} of all packets en route.  In each iteration, the model either
@@ -149,6 +150,7 @@ CoFixpoint compose {E} (srv: itree smE void)          (* server  model *)
   | Pure vd => match vd in void with end
   end.
 \end{lstlisting}
+\vspace*{1em}
 \caption[Network composition algorithm]{Network composition algorithm.  When the
   server wants to send a packet in \autoref{line:srv-send}, the packet is
   appended to the outgoing buffer until absorbed by the network

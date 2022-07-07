@@ -364,7 +364,7 @@ transmitted via the network, until reaching the client side as observations.
   2> GET k
   2< "old"
 \end{coq}
-  \end{minipage}\begin{minipage}[c]{.4\textwidth}
+  \end{minipage}\begin{minipage}[c]{.35\textwidth}
   \includegraphics[width=\linewidth]{figures/invalid-trace}
   \end{minipage}\begin{minipage}[c]{.3\textwidth}\
   \end{minipage}
@@ -406,7 +406,7 @@ Intuitively, a tester generates a test input and launches the test execution.
 It then validates the observation and accepts/rejects the SUT, as shown in
 \autoref{fig:gen-only}.
 \begin{figure}
-  \includegraphics[width=.5\linewidth]{figures/gen-only}
+  \includegraphics[width=.4\linewidth]{figures/gen-only}
   \caption{Simple tester architecture without shrinking.}
   \label{fig:gen-only}
 \end{figure}
@@ -422,7 +422,7 @@ in \autoref{fig:gen-shrink}, if a test input has no substructure that can cause
 any failure, then we report it as the minimal counterexample.
 \begin{figure}
 \vspace*{2em}
-  \includegraphics[width=.8\linewidth]{figures/gen-shrink}
+  \includegraphics[width=.64\linewidth]{figures/gen-shrink}
   \caption{Tester architecture with shrinking mechanism.}
   \label{fig:gen-shrink}
 \end{figure}
@@ -459,6 +459,7 @@ than the precondition's:
                              /* Server: */
                              HTTP/1.1 304 Not Modified
 \end{lstlisting}
+
 In this scenario, an interesting candidate for the \inlinec{If-Modified-Since}
 precondition in a test case is the \inlinec{Last-Modified} timestamp of a
 previous response.  To emphasize this request pattern, the tester needs to

@@ -72,6 +72,7 @@ exchange:
       }
     ].
 \end{coq}
+
 This trace encodes a transaction between client 1 and the server (represented as
 endpoint 0).  The client sends a GET request to fetch the resource in path
 \ilc{"/index.html"}, and the server responds with 200 OK and content
@@ -81,6 +82,7 @@ types that here are used to distinguish requests from responses:
   Context inl: forall {X Y}, X -> X + Y.
   Context inr: forall {X Y}, Y -> X + Y.
 \end{coq}
+\vspace*{1em}
 
 \paragraph{Symbolic representation}
 To specify systems' nondeterministic behavior, the $\Prog$ language in
@@ -109,15 +111,13 @@ may generate, which was discussed in \autoref{sec:internal-nondeterminism}.  The
 type interface can be adjusted to other protocols under test.
 
 Symbolic expressions may be constructed as constant values, as variables, or
-with operators.  Here is an example of expressions of type string:
+with operators.  Here are some examples of expressions:
 \begin{coq}
-  Context x y : var.
+  Context x : var.
 
-  Example expressions: list (exp string) :=
-    [ Const   "foo"
-    ; Var      x
-    ; Compare "bar" (Var y) Weak
-    ].
+  Example expression1: exp string := Const "foo".
+  Example expression2: exp string := Var x.
+  Example expression3: exp bool   := Compare "bar" expression2 Weak.
 \end{coq}
 
 The \ilc{Compare} constructor takes an expression of type string and compares it
@@ -139,39 +139,40 @@ is provided by the request, and the symbolic one comes from the server state.
 
 \begin{figure}
 \begin{lstlisting}[numbers=left]
-  Notation sigma := (path -> resource).
+Notation sigma := (path -> resource).
 
-  Context OK PreconditionFailed : symbolic_response.
-  Context process: request -> sigma -> itree smE (symbolic_response * sigma).
+Context OK PreconditionFailed : symbolic_response.
+Context process: request -> sigma -> itree smE (symbolic_response * sigma).
 
-  CoFixpoint server_http (state: sigma) :=
-    pq <- trigger Recv;;
-    let respond_with a :=
-      trigger (Send { Source      := server_conn
-                    ; Destination := pq.(Source)
-                    ; Payload     := inr a } ) in
-    let q : request    := request_of pq        in
-    let v : string     := q.(Content)          in
-    let k : path       := q.(TargetPath)       in
-    let t : string     := if_match q           in
-    let tx: exp string := (state k).(ETag)     in
-    IFX (Compare t tx Strong)%\label{line:etag-ifx}%
-    THEN
-      if q.(Method) is Put%\label{line:etag-pure-if}%
-      then
-        tx' <- or (trigger Choice)%\label{line:etag-choice}%
-                  (Pure (Const EmptyString));;
-        let state' := state [k |-> {Content := v; ETag := tx'}] in
-        respond_with OK;;
-        server_http state'
-      else                 (* handling other kinds of requests *)
-        (a, state') <- process q state;;
-        respond_with a;;
-        server_http state'
-    ELSE
-      respond_with PreconditionFailed;;
-      server_http s.%\label{line:etag-end}%
+CoFixpoint server_http (state: sigma) :=
+  pq <- trigger Recv;;
+  let respond_with a :=
+    trigger (Send { Source      := server_conn
+                  ; Destination := pq.(Source)
+                  ; Payload     := inr a } ) in
+  let q : request    := request_of pq        in
+  let v : string     := q.(Content)          in
+  let k : path       := q.(TargetPath)       in
+  let t : string     := if_match q           in
+  let tx: exp string := (state k).(ETag)     in
+  IFX (Compare t tx Strong)%\label{line:etag-ifx}%
+  THEN
+    if q.(Method) is Put%\label{line:etag-pure-if}%
+    then
+      tx' <- or (trigger Choice)%\label{line:etag-choice}%
+                (Pure (Const EmptyString));;
+      let state' := state [k |-> {Content := v; ETag := tx'}] in
+      respond_with OK;;
+      server_http state'
+    else                 (* handling other kinds of requests *)
+      (a, state') <- process q state;;
+      respond_with a;;
+      server_http state'
+  ELSE
+    respond_with PreconditionFailed;;
+    server_http s.%\label{line:etag-end}%
 \end{lstlisting}
+\vspace*{1em}
 \caption{Server model for HTTP conditional requests}
 \label{fig:if-match-server}
 \end{figure}
@@ -315,6 +316,7 @@ Definition observe {R} (e: smE R) : itree oE R :=
 Definition observer_http: itree oE void :=
   interp observe sm_http.
 \end{lstlisting}
+\vspace*{1em}
 \caption{Dualizing symbolic model into symbolic observer.}
 \label{fig:symbolic-observer}
 \end{figure}
@@ -419,6 +421,7 @@ computations of symbolic evaluation.
         interp observe (server_http s)
        ).
 \end{coq}
+\vspace*{1em}
 \caption{Symbolic observer example.}
 \label{fig:observer-example}
 \end{figure}
@@ -455,6 +458,7 @@ Definition nondet_tester_http: itree ntE void :=
   (_, vd) <- interp_state unify observer_http initV;;
   match vd in void with end.
 \end{lstlisting}
+\vspace*{1em}
 \caption{Resolving symbolic constraints.}
 \label{fig:nondet-tester}
 \end{figure}

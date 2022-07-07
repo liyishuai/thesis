@@ -68,11 +68,13 @@ the actual type definition used in practice.
   | Trigger : E R -> itreeM E R
   | Bind    : forall {X : Type}, itreeM E X -> (X -> itreeM E R) -> itreeM E R.
 \end{coq}
+\vspace*{1em}
 \caption{Mock definition of interaction trees.}
 \label{fig:mock-itree}
 \end{figure}
 
 \begin{figure}
+\vspace*{1em}
   \includegraphics[width=.5\linewidth]{figures/echo-itree}
   \caption{Interaction tree for echo program}
   \label{fig:echo-itree}
@@ -175,6 +177,7 @@ write programs in the monadic syntax:
     | Bind m1 k => x <- translateM m1;; translateM (k x)
     end.
 \end{coq}
+\vspace*{1em}
 
 \subsection{QAC in ITrees}
 \label{sec:qac-itree}

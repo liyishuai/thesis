@@ -94,6 +94,7 @@ static int default_handler(request_rec *r) {
         }
     ...
 \end{cpp}
+\vspace*{1em}
 \caption{Server mutant example, created by commenting out a line of code.}
 \label{fig:mutant-example}
 \end{figure}
@@ -169,7 +170,7 @@ counterexample, but failed to reject the wrong behavior.  I determine the real
 cause by analyzing the bugs and their counterexamples:
 
 \begin{figure}
-  \includegraphics[width=\linewidth]{figures/http-put-bug}
+  \includegraphics[width=.9\linewidth]{figures/http-put-bug}
   \caption[GET-after-PUT bug pattern in Apache mutants.]{GET-after-PUT bug
     pattern in Apache mutants.  The trace on the left does not convince the
     tester that the server is buggy, because there exists a certain network
@@ -266,6 +267,7 @@ the propagated updates.
   Context ls   : path -> node    -> list name.
   Context rm   : path -> node    -> option node.
 \end{coq}
+\vspace*{1em}
 \caption{File system specification.}
 \label{fig:file-spec}
 \end{figure}
@@ -289,7 +291,7 @@ My specification consists of two parts:
   \item A file synchronizer model that syncs updates between two replicas,
     implementing the reconcilation algorithm by \citet{what-sync}:
 \begin{coq}
-  Definition sigma := node*node*node.
+  Definition sigma := node * node * node.
       
   Context reconcile: sigma -> sigma.
 \end{coq}
@@ -307,25 +309,26 @@ two replicas have made identical changes.
 
 \begin{figure}
 \begin{coq}
-  Variant F :=        (* file operations *)
-  Fls    (p: path)
-| Fread  (p: path)
-| Fwrite (p: path) (c: content)
-| Fmkdir (p: path)
-| Frm    (p: path).
+    Variant F :=        (* file operations *)
+    Fls    (p: path)
+  | Fread  (p: path)
+  | Fwrite (p: path) (c: content)
+  | Fmkdir (p: path)
+  | Frm    (p: path).
 
-Variant R := R1 | R2. (* replicas      *)
+  Variant R := R1 | R2. (* replicas      *)
 
-Variant Q :=          (* query type    *)
-  QFile (r: R) (f: F)
-| QSync.
+  Variant Q :=          (* query type    *)
+    QFile (r: R) (f: F)
+  | QSync.
 
-Variant A :=          (* response type *)
-  Als   (l: list name)
-| Aread (c: content)
-| Aexit (z: Z).       (* exit code     *)
+  Variant A :=          (* response type *)
+    Als   (l: list name)
+  | Aread (c: content)
+  | Aexit (z: Z).       (* exit code     *)
 \end{coq}
-\caption{Query and response types for testing file synchronizer.}
+\vspace*{1em}
+\caption{Query and response types for testing file synchronizers.}
 \label{fig:file-type}
 \end{figure}
 

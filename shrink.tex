@@ -32,7 +32,7 @@ response''.  When rerunning the test, the timestamp is computed from the new
 trace, \eg, ``\httpdate\DayAfter~\currenttime~GMT''.
 
 \begin{figure}
-  \includegraphics[width=.8\textwidth]{figures/shrink}
+  \includegraphics[width=.85\textwidth]{figures/shrink}
   \caption{Complete architecture of the test harness.}
   \label{fig:shrink}
 \end{figure}
@@ -149,6 +149,7 @@ Example mode_add_write (j: IR) : IR :=
 Example id (j: IR) : IR := j.
 \end{coq}
   \end{minipage}
+\vspace*{1em}
   \caption{IR, Jpath, and heuristics function example.}
   \label{fig:ir-jpath}
 \end{figure}
@@ -222,10 +223,9 @@ following Jexp:
   (* e5 = *)
   {
     "command": "chmod",
-    "args": [
-      4.(this@"files"#2@"mode").mode_add_write,
-      4.(this@"files"#2@"name").id
-    ]
+    "args":
+      [ 4.(this@"files"#2@"mode").mode_add_write
+      , 4.(this@"files"#2@"name").id ]
   }
 \end{json}
 
@@ -265,8 +265,7 @@ To instantiate the original Jexp in such situations, I loosen the
   evaluation with any other element in the array.
 
   For example, consider evaluating \ilj{(this@3#"bar")} on the following IR's:
-  \begin{center}
-\begin{minipage}[t]{.5\linewidth}
+  \begin{multicols}{2}
 \begin{json}
   (* j2 = *)
   [
@@ -274,7 +273,7 @@ To instantiate the original Jexp in such situations, I loosen the
     { "bar": 22 }
   ]
 \end{json}
-\end{minipage}\begin{minipage}[t]{.5\linewidth}
+\columnbreak
 \begin{json}
   (* j3 = *)
   [
@@ -283,8 +282,7 @@ To instantiate the original Jexp in such situations, I loosen the
     { "foo": 33 }
   ]
 \end{json}
-\end{minipage}
-  \end{center}
+  \end{multicols}
 
   Here \ilj{j2} doesn't have a third element, and \ilj{j3}'s third element
   doesn't have field \ilj{"bar"}.  In these cases, \ilj{get_jpath} chooses other

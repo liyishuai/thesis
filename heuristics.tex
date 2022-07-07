@@ -43,12 +43,16 @@ model in \autoref{fig:if-match-server}, which iterates over the server state
 To expose the server state to the request generator, I extend the symbolic
 server model's \ilc{Recv} event type on Page~\pageref{def:symbolic-qae} to
 include the server state:
+
+\begin{minipage}{\linewidth}
 \begin{coq}
   Variant qaE: Type -> Type :=
     Recv : sigma      -> qaE packet
   | Send : packet -> qaE unit.
 \end{coq}
+\end{minipage}
 
+\vspace*{1em}
 Now when the server wants to receive a request, it triggers \ilc{(Recv state)},
 where \ilc{(state: sigma)} contains the server's paths and resources at that
 point.  The \ilc{state} argument is then carried to the generator, by adding

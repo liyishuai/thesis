@@ -73,14 +73,17 @@ For example, consider a compare-and-set (CMP-SET) protocol: The server stores a
 number \inlinec n.  If the client sends a request that is smaller than \inlinec
 S, then the server responds with \inlinec 0.  Otherwise, the server sets
 \inlinec n to the request and responds with \inlinec 1:
-\begin{lstlisting}[style=customc]
+
+\begin{minipage}{\linewidth}
+\begin{cpp}
   int n = 0;
   while (true) {
     int request = recv();
     if (request <= n) send(0);
     else { n = request; send(1); }
   }
-\end{lstlisting}
+\end{cpp}
+\end{minipage}
 
 Such a server can be modelled as:
 \begin{align*}
@@ -88,7 +91,7 @@ Such a server can be modelled as:
         (0,s)&q\le n\\
         (1,q)&\mathrm{otherwise}
     \end{cases}}\\
-    ,&\;0)}
+    &,0)}
 \end{align*}
 In general, servers' responses and transitions might depend on choices that are
 invisible to the testers, so called internal nondeterminism, as discussed in
@@ -106,7 +109,8 @@ behaviors by parameterizing it over the server's internal choice.
 Consider changing the aforementioned CMP-SET into compare-and-reset (CMP-RST):
 When the request is greater than \inlinec S, the server may reset \inlinec S to
 any arbitrary number:
-\begin{lstlisting}[style=customc]
+
+\begin{cpp}
   int arbitrary();
   int n = 0;
   while (true) {
@@ -114,7 +118,8 @@ any arbitrary number:
     if (request <= n) send(0);
     else { n = arbitrary(); send(1); }
   }
-\end{lstlisting}
+\end{cpp}
+
 Its corresponding server model can be written as:
 \begin{align*}
   \existT{S}{\Int}{(&\lam{(q,c)(n)}{
@@ -123,7 +128,7 @@ Its corresponding server model can be written as:
         (1,c)&\mathrm{otherwise}
       \end{cases}
     }\\
-    ,&\;0)}
+    &,0)}
 \end{align*}
 This model represents the space of uncertain behavior with the internal choice
 parameter of type integer.  For any value $(c:\Int)$, the server is allowed to
@@ -197,8 +202,8 @@ For example, a validator for the CMP-SET protocol is written as:
         \If a\Is 1\Then\Some v\Else\None&q\le v\\
         \If a\Is 1\Then\Some q\Else\None&\mathrm{otherwise}
       \end{cases}
-    },\\
-    &0)}
+    }\\
+    &,0)}
 \end{align*}
 Here the validator state is the same as the server model's.  The loop body computes
 the expected response and compares it with the observed response.  If they are

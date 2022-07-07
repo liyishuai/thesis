@@ -64,6 +64,7 @@ CoFixpoint backtrack (current:      itree ntE void)
 Definition tester_http: itree tE void :=
   backtrack nondet_tester_http [].
 \end{lstlisting}
+\vspace*{1em}
 \caption{Backtrack execution of nondeterministic tester.}
 \label{fig:backtrack}
 \end{figure}
@@ -107,6 +108,7 @@ Definition expect {R} (e: observeE R) (r: R)
   : list (itree ntE (V * void)) -> list (itree ntE (V * void))
   := map (match_observe e r).
 \end{lstlisting}
+\vspace*{1em}
 \caption{Matching tester model against existing observation.}
 \label{fig:match-observe}
 \end{figure}
@@ -199,20 +201,20 @@ ITree until reaching a certain depth.
 \begin{lstlisting}[numbers=left]
 Fixpoint execute (fuel: nat) (m: itree tE void) : IO bool :=
   match fuel with
-  | O       => ret true               (* accept if out of fuel *)%\label{line:execute-accept}%
+  | O       => ret true            (* accept if out of fuel *)%\label{line:execute-accept}%
   | S fuel' =>
     match m with
     | Impure e k =>
       match e with
-      | (||Throw _)     => ret false  (* reject upon exception *)%\label{line:execute-reject}%
-      | (ClientSend q|) => client_send q;;
-                           execute fuel' (k tt)
-      | (ClientRecv|)   => oa <- client_recv;;
-                           execute fuel' (k oa)
-      | (|GenPacket|)   => pkt <- gen_packet;;%\label{line:execute-gen}%
-                           execute fuel' (k pkt)
-      | (|GenBool|)     => b <- ORandom.bool;;
-                           execute fuel' (k b)
+      | Throw _      => ret false  (* reject upon exception *)%\label{line:execute-reject}%
+      | ClientSend q => client_send q;;
+                        execute fuel' (k tt)
+      | ClientRecv   => oa <- client_recv;;
+                        execute fuel' (k oa)
+      | GenPacket    => pkt <- gen_packet;;%\label{line:execute-gen}%
+                        execute fuel' (k pkt)
+      | GenBool      => b <- ORandom.bool;;
+                        execute fuel' (k b)
       end
     | Pure vd => match vd in void with end
     end
@@ -221,6 +223,7 @@ Fixpoint execute (fuel: nat) (m: itree tE void) : IO bool :=
 Definition test_http: IO bool :=
   execute bigNumber tester_http.
 \end{lstlisting}
+\vspace*{1em}
 \caption{Interpreting ITree tester to IO monad.}
 \label{fig:execute}
 \end{figure}
