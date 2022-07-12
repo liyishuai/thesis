@@ -59,7 +59,7 @@ CoFixpoint tcp (buffer: list packet) : itree (netE +' nondetE) void :=
   else absorb.
 \end{coq}
 \vspace*{1em}
-\caption[Network model for concurrent TCP connections]{Network model for
+\caption[Network model for concurrent TCP connections.]{Network model for
   concurrent TCP connections.  The model is an infinite program iterating over a
   \ilc{buffer} of all packets en route.  In each iteration, the model either
   \ilc{absorb}s or \ilc{emit}s some packet, depending on the current
@@ -103,7 +103,7 @@ emit a packet before the server is ready to receive it.
 
 \begin{figure}
   \includegraphics[width=\textwidth]{figures/net-compose}
-  \caption{Network composition architecture}
+  \caption{Network composition architecture.}
   \label{fig:net-compose}
 \end{figure}
 
@@ -151,7 +151,7 @@ CoFixpoint compose {E} (srv: itree smE void)          (* server  model *)
   end.
 \end{lstlisting}
 \vspace*{1em}
-\caption[Network composition algorithm]{Network composition algorithm.  When the
+\caption[Network composition algorithm.]{Network composition algorithm.  When the
   server wants to send a packet in \autoref{line:srv-send}, the packet is
   appended to the outgoing buffer until absorbed by the network
   in \autoref{line:net-absorb}, and eventually emitted to the client

@@ -76,7 +76,7 @@ the actual type definition used in practice.
 \begin{figure}
 \vspace*{1em}
   \includegraphics[width=.5\linewidth]{figures/echo-itree}
-  \caption{Interaction tree for echo program}
+  \caption{Interaction tree for echo program.}
   \label{fig:echo-itree}
 \end{figure}
 
@@ -139,7 +139,7 @@ effectively, we need to revise the language definition of monadic binding.
     Pure   : R -> itree E R
   | Impure : forall {X : Type}, E X -> (X -> itree E R) -> itree E R.
 \end{coq}
-\caption{Formal definition of interaction trees (simplified)}
+\caption{Formal definition of interaction trees (simplified).}
 \label{fig:itrees}
 \end{figure}
 
