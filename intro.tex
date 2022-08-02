@@ -7,7 +7,7 @@ This thesis studies how to test the semantics of interactive systems: The system
 under test (SUT) interacts with the tester by sending and receiving messages,
 and the tester determines whether the messages sent by the SUT are valid with
 respect to the protocol specification.  This kind of testing is applicable in
-many scenarios, including web servers, distributed file systems, {\it etc}.
+many scenarios, including web servers, distributed file systems, etc.
 
 This chapter provides a brief view of interactive testing
 (\autoref{sec:interactive-testing}), explains why nondeterminism makes this
@@ -442,9 +442,9 @@ another form of nondeterminism discussed as follows.
 \label{sec:inter-execution}
 Consider \http, where requests may be conditioned over timestamps.  If a client
 has cached a version with a certain timestamp, then it can send the timestamp as
-\inlinec{If-Modified-Since} precondition.  The server should not transmit the
-request target's content if its \inlinec{Last-Modified} timestamp is not newer
-than the precondition's:
+the \inlinec{If-Modified-Since} precondition.  The server should not transmit
+the request target's content if its \inlinec{Last-Modified} timestamp is not
+newer than the precondition's:
 \begin{lstlisting}[style=customc,escapeinside={(*}{*)}]
   /* Client: */
   GET /index.html HTTP/1.1

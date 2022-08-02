@@ -25,16 +25,16 @@ The Unison file synchronizer in \autoref{sec:sync} was specified and tested as a
 command line tool that is manually triggered.  Whereas, Unison can run as a
 background process that monitors the file system and automatically propagates
 the updates, just like Dropbox.  Running in the background introduces more
-nondeterminism, e.g., whether the tester's modification has been buffered or
+nondeterminism, \eg, whether the tester's modification has been buffered or
 propagated to the file system, whether the operating system has scheduled the
 synchronizer process to check the file system's updates, whether the
-synchronizer has finished propagating the changes to the other replica, {\it
-etc}.  Migrating testing scenarios might expose the limitations of my
+synchronizer has finished propagating the changes to the other replica, etc.
+Migrating testing scenarios might expose the limitations of my
 methodology or introduce new challenges in testing.
 
 \paragraph{Integrating other testing techniques to the framework}
 The experiments with Apache and Unison have shown that some bugs are
-time-related, e.g., only revealed by specific request and response orders, or
+time-related, \eg, only revealed by specific request and response orders, or
 require conflicting modifications to occur within the same millisecond.  My
 current test harness doesn't tune the timing of executions and might benefit
 from integrating packet dynamics by \citet{pkt-dyn}.
